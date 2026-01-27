@@ -1370,14 +1370,16 @@ def _format_workbook(wb: Workbook) -> None:
 
 
 app = FastAPI(title="Envidicy Media Plan API", version="0.2.0")
+_default_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+]
+_extra_origins = [o.strip() for o in (os.getenv("FRONTEND_ORIGINS") or "").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:8000",
-        "http://localhost:8000",
-    ],
+    allow_origins=[*_default_origins, *_extra_origins],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
