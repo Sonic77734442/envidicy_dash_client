@@ -1,6 +1,6 @@
 const form = document.getElementById('register-form')
 const statusEl = document.getElementById('register-status')
-const apiBase = 'http://127.0.0.1:8000'
+const apiBase = window.API_BASE || 'http://127.0.0.1:8000'
 
 if (form && statusEl) {
   form.addEventListener('submit', async (event) => {

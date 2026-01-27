@@ -15,7 +15,7 @@ const state = {
   impressionsLabel: 'Показы/просмотры',
 }
 
-const apiBase = 'http://127.0.0.1:8000'
+const apiBase = window.API_BASE || 'http://127.0.0.1:8000'
 const metaDateFrom = document.getElementById('meta-date-from')
 const metaDateTo = document.getElementById('meta-date-to')
 const metaAccount = document.getElementById('meta-account')

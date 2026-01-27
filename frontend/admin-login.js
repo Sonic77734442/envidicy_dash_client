@@ -1,4 +1,4 @@
-const apiBase = 'http://127.0.0.1:8000'
+const apiBase = window.API_BASE || 'http://127.0.0.1:8000'
 const params = new URLSearchParams(window.location.search)
 const adminKey = params.get('key')
 if (!adminKey) {
