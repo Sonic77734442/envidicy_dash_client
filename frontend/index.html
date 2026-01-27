@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy · Media Plan Dashboard</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="bg-blur"></div>
+      <div id="header-root"></div>
+
+      <section class="panel" id="strategy-form">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Тип планирования</p>
+            <h2>Smart Plan или Strategy Plan</h2>
+          </div>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>Режим</span>
+            <select id="plan-mode">
+              <option value="smart">Smart Plan (SMB)</option>
+              <option value="strategy">Strategy Plan (Agency)</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="panel smart-only" id="smart-form">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Smart Plan</p>
+            <h2>Минимум вводов — система сама подбирает каналы</h2>
+          </div>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>Бюджет, $</span>
+            <input id="smart-budget" type="number" value="2000" />
+          </label>
+          <label class="field">
+            <span>Период, дней</span>
+            <input id="smart-period" type="number" value="30" />
+          </label>
+          <label class="field">
+            <span>Гео</span>
+            <select id="smart-market">
+              <option value="kz">Kazakhstan</option>
+              <option value="uz">Uzbekistan</option>
+              <option value="ru">Russia</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Цель</span>
+            <select id="smart-goal">
+              <option value="leads">Заявки</option>
+              <option value="sales">Продажи</option>
+              <option value="traffic">Трафик</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Тип бизнеса</span>
+            <select id="smart-business">
+              <option value="services">Услуги</option>
+              <option value="ecom">Ecom</option>
+              <option value="b2b">B2B</option>
+              <option value="local">Локальный бизнес</option>
+              <option value="content">Контент/медиа</option>
+            </select>
+          </label>
+        </div>
+        <div class="actions-row">
+          <button class="btn primary" id="btn-estimate">Рассчитать план</button>
+          <button class="btn ghost" id="btn-excel">Скачать Excel</button>
+        </div>
+      </section>
+
+      <section class="panel strategy-only">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Входы</p>
+            <h2>Client, budget, рынок, аудитория</h2>
+          </div>
+          <div class="chips small">
+            <span class="chip chip-ghost">match: account</span>
+          </div>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>Client</span>
+            <input id="client-name" type="text" placeholder="ACME Holding" />
+          </label>
+          <label class="field">
+            <span>Brand</span>
+            <input id="brand" type="text" placeholder="ACME Corp" />
+          </label>
+          <label class="field">
+            <span>Product</span>
+            <input id="product" type="text" placeholder="ACME App" />
+          </label>
+          <label class="field">
+            <span>Бюджет, $</span>
+            <input id="budget" type="number" value="2000" />
+          </label>
+          <label class="field">
+            <span>Валюта</span>
+            <select id="currency">
+              <option value="USD">USD</option>
+              <option value="KZT">KZT</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Период, дней</span>
+            <input id="period" type="number" value="30" />
+          </label>
+          <label class="field">
+            <span>Objective</span>
+            <select id="goal">
+              <option value="leads">Лиды</option>
+              <option value="traffic">Трафик</option>
+              <option value="reach">Охват</option>
+              <option value="conversions">Конверсии</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Market</span>
+            <select id="market">
+              <option value="kz">Kazakhstan</option>
+              <option value="uz">Uzbekistan</option>
+              <option value="ru">Russia</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Возраст min</span>
+            <input id="age-min" type="number" value="18" />
+          </label>
+          <label class="field">
+            <span>Возраст max</span>
+            <input id="age-max" type="number" value="55" />
+          </label>
+          <label class="field">
+            <span>Индустрия</span>
+            <select id="industry">
+              <option value="fmcg">FMCG</option>
+              <option value="pharma">Pharma</option>
+              <option value="finance">Finance</option>
+              <option value="travel">Travel</option>
+              <option value="ecommerce">E-commerce</option>
+              <option value="auto">Auto</option>
+              <option value="real_estate">Real estate</option>
+              <option value="education">Education</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Geo split (free form)</span>
+            <input id="geo-split" type="text" placeholder="KZ 60% / UZ 40%" />
+          </label>
+          <label class="field">
+            <span>Audience size (if known)</span>
+            <input id="audience-size" type="number" placeholder="1000000" />
+          </label>
+          <label class="field">
+            <span>Creative count</span>
+            <input id="creative-count" type="number" placeholder="6" />
+          </label>
+        </div>
+        <div class="actions-row strategy-only">
+          <button class="btn primary" id="btn-estimate">Рассчитать план</button>
+          <button class="btn ghost" id="btn-excel">Скачать Excel</button>
+        </div>
+        <details class="field details">
+          <summary>Агентские настройки</summary>
+          <div class="extras">
+            <label class="field">
+              <span>Автор</span>
+              <input id="author" type="text" placeholder="Media manager" />
+            </label>
+            <label class="field">
+              <span>Курс (KZT→USD)</span>
+              <input id="fx" type="number" step="0.01" placeholder="460" />
+            </label>
+            <label class="field">
+              <span>Дата начала</span>
+              <input id="date-start" type="date" />
+            </label>
+            <label class="field">
+              <span>Дата конца</span>
+              <input id="date-end" type="date" />
+            </label>
+            <label class="field">
+              <span>Города (через запятую)</span>
+              <input id="cities" type="text" placeholder="Almaty, Astana" />
+            </label>
+            <label class="field">
+              <span>Интересы</span>
+              <input id="interests" type="text" placeholder="travel, fitness" />
+            </label>
+            <label class="field">
+              <span>Pricing mode</span>
+              <select id="pricing">
+                <option value="auto">Auto</option>
+                <option value="cpm">CPM</option>
+                <option value="cpc">CPC</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Частота</span>
+              <input id="freq" type="number" step="0.1" value="1.6" />
+            </label>
+            <label class="field">
+              <span>Таргетинг</span>
+              <select id="depth">
+                <option value="balanced">Сбаланс.</option>
+                <option value="broad">Широкий</option>
+                <option value="focused">Узкий</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Сезонность</span>
+              <input id="seasonality" type="number" step="0.02" value="1" />
+            </label>
+            <label class="field">
+              <span>Match стратегия</span>
+              <select id="match">
+                <option value="account">ad_account_id</option>
+                <option value="campaign">campaign_name</option>
+                <option value="platform">platform</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>KPI тип</span>
+              <select id="kpi-type">
+                <option value="cpl">CPL</option>
+                <option value="cpa">CPA</option>
+                <option value="cpc">CPC</option>
+                <option value="cpm">CPM</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>KPI цель, $</span>
+              <input id="kpi-target" type="number" step="0.1" value="14" />
+            </label>
+            <label class="field">
+              <span>LTV per conversion, $</span>
+              <input id="ltv" type="number" value="100" />
+            </label>
+            <label class="field">
+              <span>UTM template</span>
+              <input id="utm" type="text" placeholder="utm_source={{platform}}&utm_campaign={{name}}" />
+            </label>
+            <label class="field">
+              <span>Assumption profile</span>
+              <select id="assumption-profile">
+                <option value="">Не выбран</option>
+                <option value="base">Base</option>
+                <option value="conservative">Conservative</option>
+                <option value="aggressive">Aggressive</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Benchmarks source</span>
+              <input id="assumption-benchmarks" type="text" placeholder="Market benchmarks" />
+            </label>
+            <label class="field">
+              <span>History source</span>
+              <input id="assumption-history" type="text" placeholder="Client history / CRM" />
+            </label>
+            <label class="field">
+              <span>Methodology</span>
+              <input id="assumption-method" type="text" placeholder="Методология расчёта" />
+            </label>
+            <label class="field">
+              <span>Recalc after 7 days</span>
+              <input id="assumption-recalc" type="text" placeholder="Что пересчитываем после learning phase" />
+            </label>
+            <label class="field checkbox">
+              <span>Пиксели настроены</span>
+              <input id="pixels" type="checkbox" />
+            </label>
+            <label class="field">
+              <span>Комиссия, %</span>
+              <input id="fee" type="number" step="0.1" placeholder="10" />
+            </label>
+            <label class="field">
+              <span>НДС, %</span>
+              <input id="vat" type="number" step="0.1" placeholder="12" />
+            </label>
+            <label class="field">
+              <span>Funnel split · Awareness %</span>
+              <input id="split-awareness" type="number" step="1" placeholder="40" />
+            </label>
+            <label class="field">
+              <span>Funnel split · Consideration %</span>
+              <input id="split-consideration" type="number" step="1" placeholder="35" />
+            </label>
+            <label class="field">
+              <span>Funnel split · Performance %</span>
+              <input id="split-performance" type="number" step="1" placeholder="25" />
+            </label>
+          </div>
+        </details>
+      </section>
+
+      <section class="grid-3" id="kpi-cards"></section>
+
+      <section class="panel strategy-only">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Выходы</p>
+            <h2>Стандартный формат</h2>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Метрика</th>
+                <th>Значение</th>
+                <th>Тип</th>
+              </tr>
+            </thead>
+            <tbody id="output-summary"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Модули каналов</p>
+            <h2>Свои вводные для Meta, Google Search, Telegram</h2>
+          </div>
+          <span class="chip chip-ghost">Overrides</span>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>Meta CPM</span>
+            <input id="meta-cpm" type="number" step="0.01" placeholder="2.1" />
+          </label>
+          <label class="field">
+            <span>Meta CTR</span>
+            <input id="meta-ctr" type="number" step="0.001" placeholder="0.013" />
+          </label>
+          <label class="field">
+            <span>Meta CVR</span>
+            <input id="meta-cvr" type="number" step="0.001" placeholder="0.016" />
+          </label>
+          <label class="field">
+            <span>Google Search CPC</span>
+            <input id="gsearch-cpc" type="number" step="0.01" placeholder="0.55" />
+          </label>
+          <label class="field">
+            <span>Google Search CVR</span>
+            <input id="gsearch-cvr" type="number" step="0.001" placeholder="0.028" />
+          </label>
+          <label class="field">
+            <span>Telegram CPM</span>
+            <input id="tg-cpm" type="number" step="0.01" placeholder="2.5" />
+          </label>
+          <label class="field">
+            <span>Telegram CTR</span>
+            <input id="tg-ctr" type="number" step="0.001" placeholder="0.012" />
+          </label>
+        </div>
+      </section>
+
+      <section class="panel strategy-only" id="month-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Агентский режим</p>
+            <h2>Календарь по месяцам</h2>
+          </div>
+          <label class="field checkbox" style="max-width: 260px;">
+            <span>Включить сплит по месяцам</span>
+            <label class="toggle">
+              <input type="checkbox" id="toggle-agency" />
+              <span class="slider"></span>
+            </label>
+          </label>
+        </div>
+        <div id="month-grid-wrap" class="hidden">
+          <div id="month-grid" class="month-grid"></div>
+        </div>
+      </section>
+
+      <section class="panel strategy-only">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Плейсменты (опционально)</p>
+            <h2>Включайте/отключайте инвентарь</h2>
+          </div>
+          <span class="chip chip-ghost">По умолчанию включены все</span>
+        </div>
+        <div id="placement-container" class="placement-list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Расчёты</p>
+            <h2>Медиасплит и расчётные метрики</h2>
+          </div>
+          <div id="warnings" class="warnings"></div>
+        </div>
+        <div class="table-wrapper">
+          <table class="table" id="plan-table">
+            <thead>
+              <tr>
+                <th>Платформа</th>
+                <th class="smart-only">Зачем канал</th>
+                <th class="strategy-only">Доля</th>
+                <th>Бюджет (net)</th>
+                <th>Комиссия/VAT</th>
+                <th>Пополнение (gross)</th>
+                <th>Охват</th>
+                <th>Показы</th>
+                <th>Клики</th>
+                <th>Лиды</th>
+                <th>Конв.</th>
+                <th class="strategy-only">CPM</th>
+                <th class="strategy-only">CPC</th>
+                <th class="strategy-only">CVR</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Бюджет по периодам</p>
+            <h2>Месяцы и недели</h2>
+          </div>
+          <span class="chip chip-ghost">Авто-сплит по период_days</span>
+        </div>
+        <div id="flight-container"></div>
+      </section>
+
+    </div>
+    <script src="./shared.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

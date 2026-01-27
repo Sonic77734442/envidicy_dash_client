@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy · Dashboard</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="bg-blur"></div>
+      <div id="header-root"></div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Импорт отчетов</p>
+            <h2>Универсальный CSV</h2>
+          </div>
+          <span class="chip chip-ghost">Google · Meta · TikTok · Яндекс</span>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>CSV файл</span>
+            <input id="stats-file" type="file" accept=".csv" />
+          </label>
+          <label class="field">
+            <span>Валюта расходов</span>
+            <select id="stats-currency">
+              <option value="KZT">KZT</option>
+              <option value="USD">USD</option>
+            </select>
+          </label>
+        </div>
+        <p id="stats-status" class="lede"></p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Сводка</p>
+            <h2>Ключевые метрики</h2>
+          </div>
+          <span class="chip chip-ghost">CTR, CPC, CPM</span>
+        </div>
+        <div id="stats-cards" class="grid-3"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Meta</p>
+            <h2>Insights по кампаниям</h2>
+          </div>
+          <span class="chip chip-ghost">Campaign</span>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>Период с</span>
+            <input id="meta-date-from" type="date" />
+          </label>
+          <label class="field">
+            <span>Период по</span>
+            <input id="meta-date-to" type="date" />
+          </label>
+          <label class="field">
+            <span>Аккаунт</span>
+            <select id="meta-account"></select>
+          </label>
+          <div class="panel-actions">
+            <button class="btn primary" id="meta-load">Загрузить</button>
+          </div>
+        </div>
+        <p id="meta-status" class="muted small"></p>
+        <div id="meta-cards" class="grid-3"></div>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Campaign</th>
+                <th>Spend</th>
+                <th>CTR</th>
+                <th>CPC</th>
+                <th>CPM</th>
+                <th>Impr</th>
+                <th>Clicks</th>
+                <th>Reach</th>
+              </tr>
+            </thead>
+            <tbody id="meta-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Google Ads</p>
+            <h2>Insights по кампаниям</h2>
+          </div>
+          <span class="chip chip-ghost">Campaign</span>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>Период с</span>
+            <input id="google-date-from" type="date" />
+          </label>
+          <label class="field">
+            <span>Период по</span>
+            <input id="google-date-to" type="date" />
+          </label>
+          <label class="field">
+            <span>Аккаунт</span>
+            <select id="google-account"></select>
+          </label>
+          <div class="panel-actions">
+            <button class="btn primary" id="google-load">Загрузить</button>
+          </div>
+        </div>
+        <p id="google-status" class="muted small"></p>
+        <div id="google-cards" class="grid-3"></div>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Campaign</th>
+                <th>Spend</th>
+                <th>CTR</th>
+                <th>CPC</th>
+                <th>CPM</th>
+                <th>Impr</th>
+                <th>Clicks</th>
+                <th>Conv</th>
+              </tr>
+            </thead>
+            <tbody id="google-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Визуализация</p>
+            <h2>Доли и динамика</h2>
+          </div>
+          <span class="chip chip-ghost">Charts</span>
+        </div>
+        <div class="chart-grid">
+          <div class="chart-card">
+            <p class="eyebrow">KPI кольца</p>
+            <div id="kpi-rings" class="ring-grid"></div>
+          </div>
+          <div class="chart-card">
+            <p class="eyebrow">Доля расходов</p>
+            <div id="spend-donut" class="chart-donut"></div>
+            <div id="spend-legend" class="legend"></div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-head">
+            <p class="eyebrow">Динамика по дням</p>
+            <div class="chip chip-ghost">Spend vs Clicks</div>
+          </div>
+          <div id="line-chart" class="chart-line"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Динамика</p>
+            <h2>День за днем</h2>
+          </div>
+          <span class="chip chip-ghost">CSV rows</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th>Показы/просмотры</th>
+                <th>Клики</th>
+                <th>Расход</th>
+                <th>CTR</th>
+                <th>CPC</th>
+                <th>CPM</th>
+                <th>Конверсии</th>
+              </tr>
+            </thead>
+            <tbody id="stats-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+    <script src="./shared.js"></script>
+    <script src="./dashboard.js"></script>
+  </body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy · Admin · Клиенты</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="bg-blur"></div>
+      <div id="header-root"></div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Клиенты</p>
+            <h2>Распределения бюджета</h2>
+          </div>
+          <span class="chip chip-ghost">allocations</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Клиент</th>
+                <th>Новые распределения</th>
+                <th style="text-align:right;">Действие</th>
+              </tr>
+            </thead>
+            <tbody id="admin-clients"></tbody>
+          </table>
+        </div>
+        <p id="admin-clients-status" class="muted"></p>
+      </section>
+
+      <div id="client-modal" class="modal">
+        <div class="modal-dialog modal-large">
+          <div class="modal-head">
+            <div>
+              <p class="eyebrow">Клиент</p>
+              <h3 id="client-title">Распределения</h3>
+            </div>
+            <button class="btn ghost small" id="client-close">Закрыть</button>
+          </div>
+          <div class="modal-body">
+            <div class="table-wrapper">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Дата</th>
+                    <th>Платформа</th>
+                    <th>Аккаунт</th>
+                    <th>Сумма</th>
+                    <th>Статус</th>
+                  </tr>
+                </thead>
+                <tbody id="client-allocations"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="./shared.js"></script>
+    <script src="./admin-clients.js"></script>
+  </body>
+</html>

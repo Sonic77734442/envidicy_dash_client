@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy · Админ-доступ</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app login-app auth-center">
+      <div class="bg-blur"></div>
+      <div class="login-shell">
+        <section class="login-card">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Админ</p>
+              <h2>Сброс пароля</h2>
+            </div>
+            <span class="chip chip-ghost">Private</span>
+          </div>
+          <form id="reset-form" class="login-form">
+            <label class="field">
+              <span>Email</span>
+              <input id="reset-email" type="email" placeholder="name@gmail.com" required />
+            </label>
+            <label class="field">
+              <span>Новый пароль</span>
+              <input id="reset-password" type="password" placeholder="••••••••" required />
+            </label>
+            <label class="field">
+              <span>Admin token</span>
+              <input id="reset-token" type="text" placeholder="Bearer token" required />
+            </label>
+            <button class="btn primary full" type="submit">Сбросить пароль</button>
+            <a class="btn ghost full login-secondary" href="./login.html">Вернуться ко входу</a>
+          </form>
+          <p id="reset-status" class="login-status">Нужен админ-токен для сброса.</p>
+        </section>
+      </div>
+    </div>
+    <script src="./admin-login.js"></script>
+  </body>
+</html>

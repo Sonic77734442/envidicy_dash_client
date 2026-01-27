@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy · Admin · Аккаунты</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="bg-blur"></div>
+      <div id="header-root"></div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Аккаунты</p>
+            <h2>Привязка к клиенту и договору</h2>
+          </div>
+          <div class="panel-actions">
+            <button class="btn ghost small" id="export-accounts">Экспорт Excel</button>
+            <span class="chip chip-ghost">ad_accounts</span>
+          </div>
+        </div>
+        <form id="account-bind-form" class="form-grid">
+          <input type="hidden" id="account-id" />
+          <label class="field">
+            <span>Клиент</span>
+            <select id="account-user" required></select>
+          </label>
+          <label class="field">
+            <span>Платформа</span>
+            <select id="account-platform" required>
+              <option value="meta">Meta</option>
+              <option value="google">Google Ads</option>
+              <option value="tiktok">TikTok</option>
+              <option value="yandex">Yandex</option>
+              <option value="telegram">Telegram Ads</option>
+              <option value="monochrome">Monochrome</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Название</span>
+            <input id="account-name" type="text" placeholder="Основной аккаунт" required />
+          </label>
+          <label class="field">
+            <span>External ID</span>
+            <input id="account-external" type="text" placeholder="ID аккаунта" />
+          </label>
+          <label class="field">
+            <span>Договор/код</span>
+            <input id="account-code" type="text" placeholder="Код договора" />
+          </label>
+          <label class="field">
+            <span>Валюта</span>
+            <input id="account-currency" type="text" placeholder="USD" />
+          </label>
+          <label class="field">
+            <span>Статус</span>
+            <select id="account-status">
+              <option value="">—</option>
+              <option value="active">active</option>
+              <option value="paused">paused</option>
+              <option value="archived">archived</option>
+            </select>
+          </label>
+        </form>
+        <div class="panel-actions" style="margin-top: 16px;">
+          <button class="btn primary" id="account-save" type="button">Сохранить привязку</button>
+          <button class="btn ghost" id="account-reset" type="button">Сбросить</button>
+        </div>
+        <p id="account-bind-status" class="muted"></p>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th>Клиент</th>
+                <th>Платформа</th>
+                <th>Название</th>
+                <th>Договор/код</th>
+                <th>External ID</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="admin-accounts"></tbody>
+          </table>
+        </div>
+        <p id="admin-accounts-status" class="muted"></p>
+      </section>
+    </div>
+    <script src="./shared.js"></script>
+    <script src="./admin-accounts.js"></script>
+  </body>
+</html>

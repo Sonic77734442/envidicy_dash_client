@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy · Настройки</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="bg-blur"></div>
+      <div id="header-root"></div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Профиль</p>
+            <h2>Настройки аккаунта</h2>
+          </div>
+          <span class="chip chip-ghost">Private</span>
+        </div>
+        <div class="tabs">
+          <div class="tab-buttons">
+            <button class="tab-button active" data-tab="profile">Данные</button>
+            <button class="tab-button" data-tab="security">Безопасность</button>
+            <button class="tab-button" data-tab="fees">Комиссии</button>
+            <button class="tab-button" data-tab="docs">Документы</button>
+          </div>
+          <div class="tab-panels">
+            <div class="tab-panel active" data-tab-panel="profile">
+              <div class="form-grid">
+                <label class="field">
+                  <span>Имя</span>
+                  <input id="profile-name" type="text" placeholder="Анна Маркетолог" />
+                </label>
+                <label class="field">
+                  <span>Компания</span>
+                  <input id="profile-company" type="text" placeholder="ACME Corp" />
+                </label>
+                <label class="field">
+                  <span>Email</span>
+                  <input id="profile-email" type="email" disabled />
+                </label>
+                <label class="field">
+                  <span>Язык</span>
+                  <select id="profile-language">
+                    <option value="ru">Русский</option>
+                    <option value="en">English</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>WhatsApp</span>
+                  <input id="profile-whatsapp" type="text" placeholder="+7 700 000 00 00" />
+                </label>
+                <label class="field">
+                  <span>Telegram</span>
+                  <input id="profile-telegram" type="text" placeholder="@username" />
+                </label>
+              </div>
+              <div class="panel-actions">
+                <button class="btn primary" id="profile-save">Сохранить</button>
+              </div>
+              <p id="profile-status" class="muted small"></p>
+            </div>
+
+            <div class="tab-panel" data-tab-panel="security">
+              <div class="form-grid">
+                <label class="field">
+                  <span>Текущий пароль</span>
+                  <input id="password-current" type="password" placeholder="••••••••" />
+                </label>
+                <label class="field">
+                  <span>Новый пароль</span>
+                  <input id="password-new" type="password" placeholder="••••••••" />
+                </label>
+                <label class="field">
+                  <span>Повторите пароль</span>
+                  <input id="password-confirm" type="password" placeholder="••••••••" />
+                </label>
+              </div>
+              <div class="panel-actions">
+                <button class="btn primary" id="password-save">Обновить пароль</button>
+              </div>
+              <p id="password-status" class="muted small"></p>
+            </div>
+
+            <div class="tab-panel" data-tab-panel="fees">
+              <div class="table-wrapper">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Платформа</th>
+                      <th>Комиссия</th>
+                      <th>Комментарий</th>
+                    </tr>
+                  </thead>
+                  <tbody id="fees-body"></tbody>
+                </table>
+              </div>
+              <p class="muted small">Комиссия применяется при пополнении рекламных аккаунтов.</p>
+            </div>
+
+            <div class="tab-panel" data-tab-panel="docs">
+              <div id="docs-empty" class="notice" hidden>Документы пока не загружены.</div>
+              <div class="table-wrapper">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Документ</th>
+                      <th>Дата</th>
+                      <th style="text-align:right;">Действие</th>
+                    </tr>
+                  </thead>
+                  <tbody id="docs-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <script src="./shared.js"></script>
+    <script src="./settings.js"></script>
+  </body>
+</html>

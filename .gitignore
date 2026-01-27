@@ -1,0 +1,11 @@
+.env
+.server.log
+local.db
+*.db
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.DS_Store
+node_modules/
+mediaplan.xlsx

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy · Admin · Кошелек</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="bg-blur"></div>
+      <div id="header-root"></div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Кошелек</p>
+            <h2>Балансы клиентов</h2>
+          </div>
+          <span class="chip chip-ghost">wallets</span>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>Email клиента</span>
+            <input id="wallet-email" type="email" placeholder="client@email.com" />
+          </label>
+          <label class="field">
+            <span>Сумма (₸)</span>
+            <input id="wallet-amount" type="number" placeholder="100000" />
+          </label>
+          <label class="field">
+            <span>Комментарий</span>
+            <input id="wallet-note" type="text" placeholder="Пополнение" />
+          </label>
+          <div class="actions-row">
+            <button class="btn primary" id="wallet-add">Начислить</button>
+            <button class="btn ghost" id="wallet-subtract">Списать</button>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Клиент</th>
+                <th>Баланс</th>
+                <th>Порог</th>
+                <th>Обновлено</th>
+              </tr>
+            </thead>
+            <tbody id="admin-wallets"></tbody>
+          </table>
+        </div>
+        <p id="admin-wallets-status" class="muted"></p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Уведомления</p>
+            <h2>Низкий баланс (&lt;= 50 000 ₸)</h2>
+          </div>
+          <span class="chip chip-warn">Low balance</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Клиент</th>
+                <th>Баланс</th>
+                <th>Порог</th>
+                <th>Обновлено</th>
+              </tr>
+            </thead>
+            <tbody id="admin-wallets-low"></tbody>
+          </table>
+        </div>
+        <p id="admin-wallets-low-status" class="muted"></p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">История операций</p>
+            <h2>Wallet transactions</h2>
+          </div>
+          <span class="chip chip-ghost">wallet_transactions</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th>Клиент</th>
+                <th>Тип</th>
+                <th>Сумма</th>
+                <th>Комментарий</th>
+              </tr>
+            </thead>
+            <tbody id="admin-wallet-transactions"></tbody>
+          </table>
+        </div>
+        <p id="admin-wallet-transactions-status" class="muted"></p>
+      </section>
+    </div>
+    <script src="./shared.js"></script>
+    <script src="./admin-wallet.js"></script>
+  </body>
+</html>

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy · Движение средств</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="bg-blur"></div>
+      <div id="header-root"></div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Фильтры</p>
+            <h2>Период и аккаунты</h2>
+          </div>
+          <div class="panel-actions">
+            <button class="btn primary" id="wallet-topup-open">Пополнить баланс</button>
+          </div>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>С</span>
+            <input id="date-from" type="date" />
+          </label>
+          <label class="field">
+            <span>По</span>
+            <input id="date-to" type="date" />
+          </label>
+          <label class="field">
+            <span>Платформа</span>
+            <select id="filter-platform">
+              <option value="">Все</option>
+              <option value="meta">Meta</option>
+              <option value="google">Google</option>
+              <option value="tiktok">TikTok</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Аккаунт</span>
+            <input id="filter-account" type="text" placeholder="meta-001" />
+          </label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Сводка</p>
+            <h2>Итого по выборке</h2>
+          </div>
+          <div class="chips small" id="summary-chips"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Транзакции</p>
+            <h2>Пополнения и возвраты</h2>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th>Платформа</th>
+                <th>Аккаунт</th>
+                <th>Тип</th>
+                <th>Сумма</th>
+                <th>Курс</th>
+                <th>Валюта</th>
+                <th>Примечание</th>
+              </tr>
+            </thead>
+            <tbody id="funds-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+    <div id="wallet-topup-modal" class="modal">
+      <div class="modal-dialog">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Баланс платформы</p>
+            <h3>Пополнение баланса</h3>
+          </div>
+          <button class="btn ghost small" id="wallet-topup-close">Закрыть</button>
+        </div>
+        <div class="modal-body">
+          <label class="field">
+            <span>Контрагент</span>
+            <select id="wallet-topup-legal-entity"></select>
+          </label>
+          <div class="notice" id="wallet-entity-notice" hidden></div>
+          <div class="inline-actions">
+            <button class="btn ghost small" id="wallet-entity-toggle" type="button">Добавить контрагента</button>
+          </div>
+          <div id="wallet-entity-form" class="modal-step" hidden>
+            <label class="field">
+              <span>Наименование контрагента</span>
+              <input id="wallet-entity-name" type="text" placeholder="ТОО Пример" />
+            </label>
+            <label class="field">
+              <span>БИН/ИИН</span>
+              <input id="wallet-entity-bin" type="text" placeholder="123456789012" />
+            </label>
+            <label class="field">
+              <span>Адрес</span>
+              <input id="wallet-entity-address" type="text" placeholder="Город, улица, дом" />
+            </label>
+            <label class="field">
+              <span>E-mail</span>
+              <input id="wallet-entity-email" type="email" placeholder="accounting@company.kz" />
+            </label>
+            <div class="inline-actions">
+              <button class="btn primary small" id="wallet-entity-save" type="button">Сохранить</button>
+            </div>
+          </div>
+          <label class="field">
+            <span>Сумма пополнения, ₸</span>
+            <input id="wallet-topup-amount" type="number" min="0" step="100" placeholder="100000" />
+          </label>
+          <label class="field">
+            <span>Комментарий (опционально)</span>
+            <input id="wallet-topup-note" type="text" placeholder="Например: январь 2026" />
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost" id="wallet-topup-cancel">Отмена</button>
+          <button class="btn primary" id="wallet-topup-submit">Сформировать счет</button>
+        </div>
+        <p class="muted small">После формирования счёта откроется страница оплаты.</p>
+      </div>
+    </div>
+    <script src="./shared.js"></script>
+    <script src="./funds.js"></script>
+  </body>
+</html>

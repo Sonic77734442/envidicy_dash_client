@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy · Регистрация</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app login-app auth-center">
+      <div class="bg-blur"></div>
+      <div class="login-shell">
+        <section class="login-card">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Регистрация</p>
+              <h2>Новый доступ</h2>
+            </div>
+            <span class="chip chip-ghost">Invite</span>
+          </div>
+          <form id="register-form" class="login-form">
+            <label class="field">
+              <span>Имя</span>
+              <input id="register-name" type="text" placeholder="Анна Маркетолог" required />
+            </label>
+            <label class="field">
+              <span>Компания</span>
+              <input id="register-company" type="text" placeholder="ACME Corp" />
+            </label>
+            <label class="field">
+              <span>Email</span>
+              <input id="register-email" type="email" placeholder="name@gmail.com" required />
+            </label>
+            <label class="field">
+              <span>Пароль</span>
+              <input id="register-password" type="password" placeholder="••••••••" required />
+            </label>
+            <label class="field">
+              <span>Повторите пароль</span>
+              <input id="register-password-confirm" type="password" placeholder="••••••••" required />
+            </label>
+            <div class="login-actions">
+              <label class="field checkbox">
+                <span>Согласен с условиями</span>
+                <label class="toggle">
+                  <input id="register-terms" type="checkbox" required />
+                  <span class="slider"></span>
+                </label>
+              </label>
+            </div>
+            <button class="btn primary full" type="submit">Создать аккаунт</button>
+            <a class="btn primary full login-secondary" href="./login.html">Уже есть аккаунт</a>
+          </form>
+          <p id="register-status" class="login-status">Мы проверим данные и отправим приглашение.</p>
+        </section>
+      </div>
+    </div>
+    <script src="./register.js"></script>
+  </body>
+</html>
