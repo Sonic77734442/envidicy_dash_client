@@ -95,7 +95,7 @@ function loadWalletBalance() {
     el.textContent = 'Баланс: —'
     return
   }
-  fetch('http://127.0.0.1:8000/wallet', { headers: authHeaders() })
+  fetch('https://envidicy-dash-client.onrender.com/wallet', { headers: authHeaders() })
     .then((res) => (res.ok ? res.json() : null))
     .then((data) => {
       if (!data) return

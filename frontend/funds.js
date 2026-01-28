@@ -1,4 +1,4 @@
-const apiBase = window.API_BASE || 'http://127.0.0.1:8000'
+const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 let funds = []
 let legalEntities = []
 

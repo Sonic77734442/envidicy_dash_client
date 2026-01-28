@@ -1,4 +1,4 @@
-const apiBase = window.API_BASE || 'http://127.0.0.1:8000'
+const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 const getAuthTokenSafe =
   typeof getAuthToken === 'function' ? getAuthToken : () => localStorage.getItem('auth_token')
 const authHeadersSafe =
