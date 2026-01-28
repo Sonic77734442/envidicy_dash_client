@@ -949,6 +949,9 @@ h1 {
   padding: 16px;
   width: min(480px, 90vw);
   box-shadow: 0 10px 50px rgba(0, 0, 0, 0.4);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-head {
@@ -964,6 +967,8 @@ h1 {
   grid-template-columns: 1fr;
   gap: 10px;
   margin-bottom: 12px;
+  overflow: auto;
+  max-height: 65vh;
 }
 
 .modal-step {
@@ -976,6 +981,7 @@ h1 {
   justify-content: flex-end;
   gap: 10px;
   margin-bottom: 8px;
+  margin-top: auto;
 }
 
 .btn.small {
