@@ -49,7 +49,7 @@ if (form && statusEl) {
         }
       }
       statusEl.textContent = 'Аккаунт создан. Перенаправляем...'
-      window.location.href = './index.html'
+      window.location.href = '/plan'
     } catch (e) {
       if (e.name === 'AbortError') {
         statusEl.textContent = 'Сервер не отвечает. Проверьте что API запущен на :8000.'

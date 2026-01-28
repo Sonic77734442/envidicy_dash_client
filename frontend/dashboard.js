@@ -3,10 +3,10 @@ renderHeader({
   title: 'Универсальный дашборд',
   subtitle: 'Загрузите CSV отчеты из кабинетов, чтобы получить единую сводку по метрикам.',
   buttons: [
-    { label: 'Пополнить аккаунты', href: './topup.html', kind: 'ghost' },
-    { label: 'Движение средств', href: './funds.html', kind: 'ghost' },
-    { label: 'Медиаплан', href: './index.html', kind: 'ghost' },
-    { label: 'Вход', href: './login.html', kind: 'ghost' },
+    { label: 'Пополнить аккаунты', href: '/topup', kind: 'ghost' },
+    { label: 'Движение средств', href: '/funds', kind: 'ghost' },
+    { label: 'Медиаплан', href: '/plan', kind: 'ghost' },
+    { label: 'Вход', href: '/login', kind: 'ghost' },
   ],
 })
 
@@ -63,7 +63,7 @@ async function loadMetaAccounts() {
   try {
     const res = await fetch(`${apiBase}/accounts`, { headers: authHeaders() })
     if (res.status === 401) {
-      window.location.href = './login.html'
+      window.location.href = '/login'
       return
     }
     if (!res.ok) throw new Error('Failed to load accounts')
@@ -141,7 +141,7 @@ async function loadMetaInsights() {
   try {
     const res = await fetch(`${apiBase}/meta/insights?${params.toString()}`, { headers: authHeaders() })
     if (res.status === 401) {
-      window.location.href = './login.html'
+      window.location.href = '/login'
       return
     }
     if (!res.ok) throw new Error('Failed to load meta insights')
@@ -213,7 +213,7 @@ async function loadGoogleInsights() {
   try {
     const res = await fetch(`${apiBase}/google/insights?${params.toString()}`, { headers: authHeaders() })
     if (res.status === 401) {
-      window.location.href = './login.html'
+      window.location.href = '/login'
       return
     }
     if (!res.ok) throw new Error('Failed to load google insights')

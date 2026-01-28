@@ -27,10 +27,10 @@ renderHeader({
   buttons: [
     { label: 'Пересчитать план', id: 'btn-estimate', kind: 'primary' },
     { label: 'Скачать Excel', id: 'btn-excel', kind: 'ghost' },
-    { label: 'Дашборд', href: './dashboard.html', kind: 'ghost' },
-    { label: 'Пополнить аккаунты', href: './topup.html', kind: 'ghost' },
-    { label: 'Движение средств', href: './funds.html', kind: 'ghost' },
-    { label: 'Вход', href: './login.html', kind: 'ghost' },
+    { label: 'Дашборд', href: '/dashboard', kind: 'ghost' },
+    { label: 'Пополнить аккаунты', href: '/topup', kind: 'ghost' },
+    { label: 'Движение средств', href: '/funds', kind: 'ghost' },
+    { label: 'Вход', href: '/login', kind: 'ghost' },
   ],
 })
 

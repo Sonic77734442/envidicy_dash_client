@@ -2,14 +2,14 @@ const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 const params = new URLSearchParams(window.location.search)
 const adminKey = params.get('key')
 if (!adminKey) {
-  window.location.href = './login.html'
+  window.location.href = '/login'
 } else {
   fetch(`${apiBase}/admin/check-key?key=${encodeURIComponent(adminKey)}`)
     .then((res) => {
       if (!res.ok) throw new Error('invalid')
     })
     .catch(() => {
-      window.location.href = './login.html'
+      window.location.href = '/login'
     })
 }
 const resetForm = document.getElementById('reset-form')

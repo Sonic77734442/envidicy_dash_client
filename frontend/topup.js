@@ -14,10 +14,10 @@ renderHeader({
   title: 'Пополнение рекламных аккаунтов',
   subtitle: 'Выберите аккаунт Meta, Google или TikTok, оставьте e-mail и данные компании для выставления счёта.',
   buttons: [
-    { label: 'Дашборд', href: './dashboard.html', kind: 'ghost' },
-    { label: 'Движение средств', href: './funds.html', kind: 'ghost' },
-    { label: 'Медиаплан', href: './index.html', kind: 'ghost' },
-    { label: 'Вход', href: './login.html', kind: 'ghost' },
+    { label: 'Дашборд', href: '/dashboard', kind: 'ghost' },
+    { label: 'Движение средств', href: '/funds', kind: 'ghost' },
+    { label: 'Медиаплан', href: '/plan', kind: 'ghost' },
+    { label: 'Вход', href: '/login', kind: 'ghost' },
   ],
 })
 
@@ -137,7 +137,7 @@ const createState = {
 function handleAuthFailure(res) {
   if (res.status === 401) {
     alert('Для доступа к кабинету нужно войти.')
-    window.location.href = './login.html'
+    window.location.href = '/login'
     return true
   }
   return false

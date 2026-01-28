@@ -7,20 +7,20 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
   const isAdmin = email === 'romant997@gmail.com'
   const navItems = isAdmin
     ? [
-        { label: 'Админ · Заявки', href: './admin-requests.html' },
-        { label: 'Админ · Клиенты', href: './admin-clients.html' },
-        { label: 'Админ · Аккаунты', href: './admin-accounts.html' },
-        { label: 'Админ · Контрагенты', href: './admin-legal-entities.html' },
-        { label: 'Админ · Компания', href: './admin-company.html' },
-        { label: 'Админ · Пополнения', href: './admin-topups.html' },
-        { label: 'Админ · Кошелек', href: './admin-wallet.html' },
+        { label: 'Админ · Заявки', href: '/admin/requests' },
+        { label: 'Админ · Клиенты', href: '/admin/clients' },
+        { label: 'Админ · Аккаунты', href: '/admin/accounts' },
+        { label: 'Админ · Контрагенты', href: '/admin/legal-entities' },
+        { label: 'Админ · Компания', href: '/admin/company' },
+        { label: 'Админ · Пополнения', href: '/admin/topups' },
+        { label: 'Админ · Кошелек', href: '/admin/wallet' },
       ]
     : [
-        { label: 'Пополнение аккаунтов', href: './topup.html' },
-        { label: 'Движение средств', href: './funds.html' },
-        { label: 'Медиапланирование', href: './index.html' },
-        { label: 'Дашборд', href: './dashboard.html' },
-        { label: 'Настройки', href: './settings.html' },
+        { label: 'Пополнение аккаунтов', href: '/topup' },
+        { label: 'Движение средств', href: '/funds' },
+        { label: 'Медиапланирование', href: '/plan' },
+        { label: 'Дашборд', href: '/dashboard' },
+        { label: 'Настройки', href: '/settings' },
       ]
   const current = location.pathname.split('/').pop()
   const navHtml = navItems
@@ -32,7 +32,7 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
   const hasAuth = Boolean(getAuthToken?.() || localStorage.getItem('auth_token'))
   const authHtml = hasAuth
     ? '<button class="nav-link nav-exit" id="nav-logout" type="button">Выход</button>'
-    : '<a class="nav-link" href="./login.html">Вход</a>'
+    : '<a class="nav-link" href="/login">Вход</a>'
   root.innerHTML = `
     <nav class="sidebar">
       <div class="sidebar-brand">
@@ -57,7 +57,7 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
       localStorage.removeItem('auth_token')
       localStorage.removeItem('auth_email')
       localStorage.removeItem('auth_user_id')
-      window.location.href = './login.html'
+      window.location.href = '/login'
     })
   }
   const topupBtn = document.getElementById('sidebar-topup')
@@ -72,7 +72,7 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
         if (note) note.value = ''
         return
       }
-      window.location.href = './funds.html#topup'
+      window.location.href = '/funds#topup'
     })
   }
   loadWalletBalance()
@@ -82,8 +82,8 @@ function enforceAuth() {
   const token = localStorage.getItem('auth_token')
   if (token) return
   const current = location.pathname.split('/').pop()
-  if (current === 'login.html' || current === 'register.html' || current === 'admin-login.html') return
-  window.location.href = './login.html'
+  if (current === 'login' || current === 'register') return
+  window.location.href = '/login'
 }
 
 function getAuthToken() {

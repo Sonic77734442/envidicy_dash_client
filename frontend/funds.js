@@ -69,7 +69,7 @@ async function submitWalletTopupRequest() {
       body: JSON.stringify(payload),
     })
     if (res.status === 401) {
-      window.location.href = './login.html'
+      window.location.href = '/login'
       return
     }
     if (!res.ok) throw new Error('Failed to create topup request')
@@ -230,7 +230,7 @@ function bind() {
 async function fetchFunds() {
   const res = await fetch(`${apiBase}/wallet/transactions`, { headers: authHeaders() })
   if (res.status === 401) {
-    window.location.href = './login.html'
+    window.location.href = '/login'
     return
   }
   if (!res.ok) {

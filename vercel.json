@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/register", "destination": "/register.html" },
+    { "source": "/dashboard", "destination": "/dashboard.html" },
+    { "source": "/topup", "destination": "/topup.html" },
+    { "source": "/funds", "destination": "/funds.html" },
+    { "source": "/settings", "destination": "/settings.html" },
+    { "source": "/plan", "destination": "/index.html" },
+    { "source": "/landing", "destination": "/landing.html" },
+    { "source": "/admin/login", "destination": "/admin-login.html" },
+    { "source": "/admin/requests", "destination": "/admin-requests.html" },
+    { "source": "/admin/clients", "destination": "/admin-clients.html" },
+    { "source": "/admin/accounts", "destination": "/admin-accounts.html" },
+    { "source": "/admin/legal-entities", "destination": "/admin-legal-entities.html" },
+    { "source": "/admin/company", "destination": "/admin-company.html" },
+    { "source": "/admin/topups", "destination": "/admin-topups.html" },
+    { "source": "/admin/wallet", "destination": "/admin-wallet.html" }
+  ]
+}

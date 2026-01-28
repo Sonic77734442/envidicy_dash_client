@@ -26,7 +26,7 @@ if (form && statusEl) {
       localStorage.setItem('auth_email', data.email)
       localStorage.setItem('auth_user_id', String(data.id))
       statusEl.textContent = 'Вход выполнен. Перенаправляем в панель...'
-      window.location.href = './index.html'
+      window.location.href = '/plan'
     } catch (e) {
       statusEl.textContent = 'Не удалось войти. Проверьте почту и пароль.'
     }

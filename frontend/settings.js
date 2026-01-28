@@ -58,7 +58,7 @@ async function loadProfile() {
   try {
     const res = await fetch(`${apiBase}/profile`, { headers: authHeaders() })
     if (res.status === 401) {
-      window.location.href = './login.html'
+      window.location.href = '/login'
       return
     }
     if (!res.ok) throw new Error('profile failed')
@@ -90,7 +90,7 @@ async function saveProfile() {
       body: JSON.stringify(payload),
     })
     if (res.status === 401) {
-      window.location.href = './login.html'
+      window.location.href = '/login'
       return
     }
     if (!res.ok) throw new Error('save failed')
@@ -120,7 +120,7 @@ async function changePassword() {
       body: JSON.stringify({ current_password: current, new_password: next }),
     })
     if (res.status === 401) {
-      window.location.href = './login.html'
+      window.location.href = '/login'
       return
     }
     if (!res.ok) throw new Error('change failed')
@@ -162,7 +162,7 @@ async function loadDocuments() {
   try {
     const res = await fetch(`${apiBase}/documents`, { headers: authHeaders() })
     if (res.status === 401) {
-      window.location.href = './login.html'
+      window.location.href = '/login'
       return
     }
     if (!res.ok) throw new Error('docs failed')
