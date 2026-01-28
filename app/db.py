@@ -124,6 +124,7 @@ def apply_schema():
                 if stmt.strip():
                     conn.execute(stmt)
             conn.execute("ALTER TABLE account_requests ADD COLUMN IF NOT EXISTS account_code TEXT")
+            conn.execute("ALTER TABLE account_requests ADD COLUMN IF NOT EXISTS comment TEXT")
             conn.execute("ALTER TABLE ad_accounts ADD COLUMN IF NOT EXISTS budget_total DOUBLE PRECISION")
             conn.commit()
         return
@@ -351,6 +352,7 @@ def apply_schema():
         _ensure_column(conn, "legal_entities", "full_name", "TEXT")
         _ensure_column(conn, "legal_entities", "legal_address", "TEXT")
         _ensure_column(conn, "account_requests", "manager_email", "TEXT")
+        _ensure_column(conn, "account_requests", "comment", "TEXT")
         _ensure_column(conn, "users", "password_hash", "TEXT")
         _ensure_column(conn, "users", "salt", "TEXT")
         _ensure_column(conn, "ad_accounts", "user_id", "INTEGER")

@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS account_requests (
   name TEXT NOT NULL,
   payload JSONB NOT NULL,
   account_code TEXT,
+  comment TEXT,
   manager_email TEXT,
   status TEXT DEFAULT 'new',
   created_at TIMESTAMPTZ DEFAULT NOW()

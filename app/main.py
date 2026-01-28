@@ -4063,6 +4063,11 @@ def admin_update_account_request_status(
                 "UPDATE account_requests SET manager_email=? WHERE id=?",
                 (payload.manager_email, request_id),
             )
+        if payload.comment is not None:
+            conn.execute(
+                "UPDATE account_requests SET comment=? WHERE id=?",
+                (payload.comment, request_id),
+            )
         if payload.account_code is not None:
             conn.execute(
                 "UPDATE account_requests SET account_code=? WHERE id=?",
@@ -4143,6 +4148,11 @@ def admin_create_account_request_event(
             conn.execute(
                 "UPDATE account_requests SET manager_email=? WHERE id=?",
                 (payload.manager_email, request_id),
+            )
+        if payload.comment is not None:
+            conn.execute(
+                "UPDATE account_requests SET comment=? WHERE id=?",
+                (payload.comment, request_id),
             )
         _insert_request_event(
             conn,

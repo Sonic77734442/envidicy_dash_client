@@ -68,7 +68,7 @@ function renderRows(rows) {
         <td>${row.platform}</td>
         <td>${row.name}</td>
         <td>
-          <input class="field-input small" data-code="${row.id}" type="text" placeholder="Напр. KZ-2024-01" />
+          <input class="field-input small" data-code="${row.id}" type="text" placeholder="Напр. KZ-2024-01" value="${row.account_code || row.account_code_db || ''}" />
         </td>
         <td>${statusLabel(row.status)}</td>
         <td style="text-align:right; display:flex; gap:6px; justify-content:flex-end;">
@@ -145,7 +145,7 @@ function openRequestModal(row) {
         <input class="field-input small" id="modal-account-code" type="text" placeholder="Код договора/аккаунта" value="${row.account_code || ''}" />
         <input class="field-input small" id="modal-budget-total" type="number" step="0.01" placeholder="Бюджет (${currency})" value="${row.budget_total ?? ''}" />
         <input class="field-input small" id="modal-manager-email" type="text" placeholder="Менеджер (email)" value="${row.manager_email || ''}" />
-        <textarea class="field-input small textarea" id="modal-comment" rows="2" placeholder="Комментарий"></textarea>
+        <textarea class="field-input small textarea" id="modal-comment" rows="2" placeholder="Комментарий">${row.comment || ''}</textarea>
         <div class="modal-actions-buttons">
           <button class="btn ghost" data-action="save" data-id="${row.id}">Сохранить</button>
           <button class="btn ghost" data-action="processing" data-id="${row.id}">В работе</button>
