@@ -4,7 +4,7 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
   document.body.classList.add('with-sidebar')
   void buttons
   const email = localStorage.getItem('auth_email') || ''
-  const isAdmin = email === 'romant997@gmail.com'
+  const isAdmin = email === 'romant997@gmail.com' || email === 'kolyadov.denis@gmail.com'
   const navItems = isAdmin
     ? [
         { label: 'Админ · Заявки', href: '/admin/requests' },
