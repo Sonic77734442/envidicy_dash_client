@@ -4326,9 +4326,11 @@ def invoice_by_topup(
         number = _invoice_number("INV", row["created_at"], row["id"])
         company = _get_company_profile(conn)
         beneficiary_bin = company.get("bin") or company.get("iin") or BENEFICIARY["bin"]
+        created_at = row["created_at"]
+        date_str = created_at.date().isoformat() if isinstance(created_at, datetime) else str(created_at).split(" ")[0]
         payload = {
             "number": number,
-            "date": row["created_at"].split(" ")[0],
+            "date": date_str,
             "beneficiary_name": company.get("name") or BENEFICIARY["name"],
             "beneficiary_bin": beneficiary_bin,
             "beneficiary_bank": company.get("bank") or BENEFICIARY["bank"],
