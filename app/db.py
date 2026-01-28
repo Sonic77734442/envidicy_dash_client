@@ -1,13 +1,15 @@
 import os
 import re
 import sqlite3
+from urllib.parse import urlparse
 from contextlib import contextmanager
 
-DB_URL = os.getenv("DATABASE_URL", "sqlite:///local.db")
+DB_URL = (os.getenv("DATABASE_URL") or "sqlite:///local.db").strip()
 
 
 def _is_postgres(url: str) -> bool:
-    return url.startswith("postgres://") or url.startswith("postgresql://")
+    scheme = urlparse(url).scheme.lower()
+    return scheme in {"postgres", "postgresql", "postgresql+psycopg", "postgres+psycopg"}
 
 
 def _rewrite_query(query: str) -> str:
@@ -81,7 +83,7 @@ def _connect():
             raise RuntimeError("psycopg is required for Postgres support") from exc
         conn = psycopg.connect(DB_URL, row_factory=dict_row)
         return PgConn(conn)
-    raise RuntimeError("Unsupported DATABASE_URL scheme")
+    raise RuntimeError(f"Unsupported DATABASE_URL scheme: {urlparse(DB_URL).scheme}")
 
 
 @contextmanager
