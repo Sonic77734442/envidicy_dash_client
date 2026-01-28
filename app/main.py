@@ -3,7 +3,9 @@ from io import BytesIO
 from typing import Dict, List, Literal, Optional, Tuple
 from enum import Enum
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Form
+from fastapi import Depends, FastAPI, Header, HTTPException, Form, Request
+import logging
+import traceback
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse, HTMLResponse, FileResponse
@@ -1385,6 +1387,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Log unhandled errors to Render runtime logs for debugging.
+@app.middleware("http")
+async def log_exceptions(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception:
+        logging.error("Unhandled error on %s %s", request.method, request.url.path)
+        logging.error(traceback.format_exc())
+        raise
 try:
     from app.db import apply_schema
 
