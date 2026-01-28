@@ -140,7 +140,7 @@ function openRequestModal(row) {
   if (modalActions) {
     modalActions.innerHTML = `
       <div class="modal-actions-row">
-        <input class="field-input small" id="modal-account-code" type="text" placeholder="Код договора/аккаунта" value="" />
+        <input class="field-input small" id="modal-account-code" type="text" placeholder="Код договора/аккаунта" value="${row.account_code || ''}" />
         <input class="field-input small" id="modal-manager-email" type="text" placeholder="Менеджер (email)" value="${row.manager_email || ''}" />
         <textarea class="field-input small textarea" id="modal-comment" rows="2" placeholder="Комментарий"></textarea>
         <div class="modal-actions-buttons">

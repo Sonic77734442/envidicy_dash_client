@@ -123,6 +123,7 @@ def apply_schema():
             for stmt in ddl.split(";"):
                 if stmt.strip():
                     conn.execute(stmt)
+            conn.execute("ALTER TABLE account_requests ADD COLUMN IF NOT EXISTS account_code TEXT")
             conn.commit()
         return
     schema_path = os.path.join(os.path.dirname(__file__), "..", "db", "schema.sql")

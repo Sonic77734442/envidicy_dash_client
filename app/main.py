@@ -4040,6 +4040,11 @@ def admin_update_account_request_status(
                 "UPDATE account_requests SET manager_email=? WHERE id=?",
                 (payload.manager_email, request_id),
             )
+        if payload.account_code is not None:
+            conn.execute(
+                "UPDATE account_requests SET account_code=? WHERE id=?",
+                (payload.account_code, request_id),
+            )
         if payload.status == "approved":
             existing = conn.execute(
                 "SELECT id FROM ad_accounts WHERE user_id=? AND platform=? AND name=?",
