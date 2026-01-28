@@ -67,7 +67,7 @@ function renderTopups(rows) {
           <td>${formatMoney(gross)} ${row.currency || ''}</td>
           <td>${row.status || '—'}</td>
           <td style="text-align:right;">
-            <button class="btn ghost small" data-topup-status="paid" data-topup-id="${row.id}">Оплачен</button>
+            <button class="btn ghost small" data-topup-status="completed" data-topup-id="${row.id}">Оплачен</button>
           </td>
         </tr>
       `
