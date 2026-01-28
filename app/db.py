@@ -1,7 +1,7 @@
 import os
 import re
 import sqlite3
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 from contextlib import contextmanager
 
 DB_URL = (os.getenv("DATABASE_URL") or "sqlite:///local.db").strip()
@@ -10,6 +10,21 @@ DB_URL = (os.getenv("DATABASE_URL") or "sqlite:///local.db").strip()
 def _is_postgres(url: str) -> bool:
     scheme = urlparse(url).scheme.lower()
     return scheme in {"postgres", "postgresql", "postgresql+psycopg", "postgres+psycopg"}
+
+
+def _extract_search_path(url: str) -> str | None:
+    parsed = urlparse(url)
+    qs = parse_qs(parsed.query or "")
+    options = qs.get("options")
+    if not options:
+        return None
+    # options may include --search_path%3Denvidicy or --search_path=envidicy
+    for opt in options:
+        decoded = unquote(opt)
+        match = re.search(r"--search_path=([A-Za-z0-9_]+)", decoded)
+        if match:
+            return match.group(1)
+    return None
 
 
 def _rewrite_query(query: str) -> str:
@@ -101,6 +116,10 @@ def apply_schema():
         with open(schema_path, "r", encoding="utf-8") as f:
             ddl = f.read()
         with get_conn() as conn:
+            schema_name = _extract_search_path(DB_URL)
+            if schema_name:
+                conn.execute(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
+                conn.execute(f"SET search_path TO {schema_name}")
             for stmt in ddl.split(";"):
                 if stmt.strip():
                     conn.execute(stmt)
