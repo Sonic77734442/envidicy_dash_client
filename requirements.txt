@@ -7,3 +7,4 @@ httpx==0.28.1
 python-multipart==0.0.12
 python-dotenv==1.0.1
 google-ads==28.4.1
+psycopg[binary]==3.2.5

@@ -1,8 +1,70 @@
 import os
+import re
 import sqlite3
 from contextlib import contextmanager
 
 DB_URL = os.getenv("DATABASE_URL", "sqlite:///local.db")
+
+
+def _is_postgres(url: str) -> bool:
+    return url.startswith("postgres://") or url.startswith("postgresql://")
+
+
+def _rewrite_query(query: str) -> str:
+    q = query.replace("?", "%s")
+    q = q.replace("json(%s)", "%s::jsonb")
+    if re.search(r"(?i)\\bINSERT\\s+OR\\s+IGNORE\\b", q):
+        q = re.sub(r"(?i)INSERT\\s+OR\\s+IGNORE\\s+INTO\\s+", "INSERT INTO ", q)
+        if "ON CONFLICT" not in q.upper():
+            q = q.rstrip().rstrip(";") + " ON CONFLICT DO NOTHING"
+    return q
+
+
+class PgCursor:
+    def __init__(self, cursor, conn):
+        self._cursor = cursor
+        self._conn = conn
+
+    def fetchone(self):
+        return self._cursor.fetchone()
+
+    def fetchall(self):
+        return self._cursor.fetchall()
+
+    @property
+    def lastrowid(self):
+        try:
+            row = self._conn.execute("SELECT lastval() AS id").fetchone()
+            if isinstance(row, dict):
+                return row.get("id")
+            if row and len(row) > 0:
+                return row[0]
+        except Exception:
+            return None
+        return None
+
+
+class PgConn:
+    def __init__(self, conn):
+        self._conn = conn
+
+    def execute(self, query, params=None):
+        q = _rewrite_query(query)
+        if params is None:
+            cur = self._conn.execute(q)
+        else:
+            cur = self._conn.execute(q, params)
+        return PgCursor(cur, self._conn)
+
+    def executemany(self, query, params):
+        q = _rewrite_query(query)
+        return self._conn.executemany(q, params)
+
+    def commit(self):
+        self._conn.commit()
+
+    def close(self):
+        self._conn.close()
 
 
 def _connect():
@@ -11,7 +73,15 @@ def _connect():
         conn = sqlite3.connect(path, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         return conn
-    raise RuntimeError("Only sqlite is supported in this stub. Set DATABASE_URL=sqlite:///path.db")
+    if _is_postgres(DB_URL):
+        try:
+            import psycopg
+            from psycopg.rows import dict_row
+        except Exception as exc:
+            raise RuntimeError("psycopg is required for Postgres support") from exc
+        conn = psycopg.connect(DB_URL, row_factory=dict_row)
+        return PgConn(conn)
+    raise RuntimeError("Unsupported DATABASE_URL scheme")
 
 
 @contextmanager
@@ -24,6 +94,16 @@ def get_conn():
 
 
 def apply_schema():
+    if _is_postgres(DB_URL):
+        schema_path = os.path.join(os.path.dirname(__file__), "..", "db", "schema_postgres.sql")
+        with open(schema_path, "r", encoding="utf-8") as f:
+            ddl = f.read()
+        with get_conn() as conn:
+            for stmt in ddl.split(";"):
+                if stmt.strip():
+                    conn.execute(stmt)
+            conn.commit()
+        return
     schema_path = os.path.join(os.path.dirname(__file__), "..", "db", "schema.sql")
     with open(schema_path, "r", encoding="utf-8") as f:
         ddl = f.read()

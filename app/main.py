@@ -1392,7 +1392,7 @@ try:
 except Exception:
     pass
 
-ADMIN_EMAILS = {"romant997@gmail.com"}
+ADMIN_EMAILS = {"romant997@gmail.com", "kolyadov.denis@gmail.com"}
 BENEFICIARY = {
     "name": "ИП Art Book Inc.",
     "bin": "960910300234",
