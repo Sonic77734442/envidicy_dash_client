@@ -2120,6 +2120,11 @@ class TopUpStatus(str, Enum):
     failed = "failed"
 
 
+class AdminTopupUpdate(BaseModel):
+    amount_net: Optional[float] = None
+    fx_rate: Optional[float] = None
+
+
 class TopUpRequest(BaseModel):
     platform: Literal["meta", "google", "tiktok", "yandex", "telegram", "monochrome"]
     account_id: str
@@ -3841,7 +3846,7 @@ def admin_list_topups(admin_user=Depends(get_admin_user)):
     with get_conn() as conn:
         rows = conn.execute(
             """
-            SELECT t.*, a.name as account_name, a.platform as account_platform, u.email as user_email
+            SELECT t.*, a.name as account_name, a.platform as account_platform, a.currency as account_currency, u.email as user_email
             FROM topups t
             JOIN ad_accounts a ON a.id = t.account_id
             JOIN users u ON u.id = t.user_id
@@ -3859,7 +3864,10 @@ def admin_list_clients(admin_user=Depends(get_admin_user)):
         rows = conn.execute(
             """
             SELECT u.id, u.email,
-              COALESCE(SUM(CASE WHEN t.seen_by_admin=0 THEN 1 ELSE 0 END), 0) as unread_topups
+              COALESCE(SUM(CASE WHEN t.seen_by_admin=0 THEN 1 ELSE 0 END), 0) as unread_topups,
+              COALESCE(SUM(CASE WHEN t.status!='completed' THEN 1 ELSE 0 END), 0) as pending_requests,
+              COALESCE(SUM(CASE WHEN t.status='completed' THEN t.amount_net ELSE 0 END), 0) as completed_total,
+              MAX(t.created_at) as last_activity
             FROM users u
             LEFT JOIN topups t ON t.user_id = u.id
             GROUP BY u.id, u.email
@@ -3885,6 +3893,78 @@ def admin_client_allocations(user_id: int, admin_user=Depends(get_admin_user)):
             (user_id,),
         ).fetchall()
         return [dict(row) for row in rows]
+
+
+@app.get("/admin/clients/{user_id}/requests")
+def admin_client_requests(user_id: int, admin_user=Depends(get_admin_user)):
+    if not get_conn:
+        return []
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT t.*, a.name as account_name, a.platform as account_platform, a.currency as account_currency
+            FROM topups t
+            JOIN ad_accounts a ON a.id = t.account_id
+            WHERE t.user_id=? AND t.status!='completed'
+            ORDER BY t.created_at DESC
+            """,
+            (user_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+@app.get("/admin/clients/{user_id}/topups")
+def admin_client_topups(user_id: int, admin_user=Depends(get_admin_user)):
+    if not get_conn:
+        return []
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT t.*, a.name as account_name, a.platform as account_platform, a.currency as account_currency
+            FROM topups t
+            JOIN ad_accounts a ON a.id = t.account_id
+            WHERE t.user_id=? AND t.status='completed'
+            ORDER BY t.created_at DESC
+            """,
+            (user_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+@app.get("/admin/clients/{user_id}/accounts")
+def admin_client_accounts(user_id: int, admin_user=Depends(get_admin_user)):
+    if not get_conn:
+        return []
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT a.*
+            FROM ad_accounts a
+            WHERE a.user_id=?
+            ORDER BY a.created_at DESC
+            """,
+            (user_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+@app.get("/admin/clients/{user_id}/profile")
+def admin_client_profile(user_id: int, admin_user=Depends(get_admin_user)):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    with get_conn() as conn:
+        row = conn.execute(
+            """
+            SELECT u.id, u.email, p.name, p.company, p.language, p.whatsapp_phone, p.telegram_handle
+            FROM users u
+            LEFT JOIN user_profiles p ON p.user_id = u.id
+            WHERE u.id=?
+            """,
+            (user_id,),
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="User not found")
+        return dict(row)
 
 
 @app.post("/admin/clients/{user_id}/mark-seen")
@@ -4040,12 +4120,47 @@ def admin_update_topup_status(topup_id: int, status: TopUpStatus, admin_user=Dep
     if not get_conn:
         raise HTTPException(status_code=500, detail="DB not initialized")
     with get_conn() as conn:
-        row = conn.execute("SELECT id FROM topups WHERE id=?", (topup_id,)).fetchone()
+        row = conn.execute(
+            "SELECT id, status, account_id, amount_input, amount_net FROM topups WHERE id=?",
+            (topup_id,),
+        ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Topup not found")
         conn.execute("UPDATE topups SET status=? WHERE id=?", (status.value, topup_id))
+        if row["status"] != "completed" and status.value == "completed":
+            acc = conn.execute("SELECT budget_total FROM ad_accounts WHERE id=?", (row["account_id"],)).fetchone()
+            base_amount = row["amount_net"] if row["amount_net"] else row["amount_input"]
+            new_total = (acc["budget_total"] or 0) + (base_amount or 0)
+            conn.execute(
+                "UPDATE ad_accounts SET budget_total=? WHERE id=?",
+                (new_total, row["account_id"]),
+            )
         conn.commit()
         return {"id": topup_id, "status": status.value}
+
+
+@app.patch("/admin/topups/{topup_id}")
+def admin_update_topup(topup_id: int, payload: AdminTopupUpdate, admin_user=Depends(get_admin_user)):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    if payload.amount_net is None and payload.fx_rate is None:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    with get_conn() as conn:
+        row = conn.execute("SELECT id FROM topups WHERE id=?", (topup_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Topup not found")
+        updates = []
+        params: List[object] = []
+        if payload.amount_net is not None:
+            updates.append("amount_net=?")
+            params.append(payload.amount_net)
+        if payload.fx_rate is not None:
+            updates.append("fx_rate=?")
+            params.append(payload.fx_rate)
+        params.append(topup_id)
+        conn.execute(f"UPDATE topups SET {', '.join(updates)} WHERE id=?", params)
+        conn.commit()
+        return {"id": topup_id, "status": "updated"}
 
 
 @app.post("/admin/account-requests/{request_id}/status")
@@ -4265,7 +4380,7 @@ def list_topups(account_id: Optional[int] = None, status: Optional[str] = None, 
     if not get_conn:
         return []
     with get_conn() as conn:
-        query = "SELECT t.*, a.name as account_name, a.platform as account_platform FROM topups t JOIN ad_accounts a ON a.id=t.account_id WHERE 1=1"
+        query = "SELECT t.*, a.name as account_name, a.platform as account_platform, a.currency as account_currency FROM topups t JOIN ad_accounts a ON a.id=t.account_id WHERE 1=1"
         params: List[object] = []
         if account_id:
             query += " AND t.account_id=?"

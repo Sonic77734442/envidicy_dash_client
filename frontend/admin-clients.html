@@ -15,16 +15,17 @@
         <div class="panel-head">
           <div>
             <p class="eyebrow">Клиенты</p>
-            <h2>Распределения бюджета</h2>
+            <h2>Клиенты и заявки</h2>
           </div>
-          <span class="chip chip-ghost">allocations</span>
+          <span class="chip chip-ghost">clients</span>
         </div>
         <div class="table-wrapper">
           <table class="table">
             <thead>
               <tr>
                 <th>Клиент</th>
-                <th>Новые распределения</th>
+                <th>Заявки</th>
+                <th>Пополнено</th>
                 <th style="text-align:right;">Действие</th>
               </tr>
             </thead>
@@ -44,19 +45,77 @@
             <button class="btn ghost small" id="client-close">Закрыть</button>
           </div>
           <div class="modal-body">
-            <div class="table-wrapper">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Дата</th>
-                    <th>Платформа</th>
-                    <th>Аккаунт</th>
-                    <th>Сумма</th>
-                    <th>Статус</th>
-                  </tr>
-                </thead>
-                <tbody id="client-allocations"></tbody>
-              </table>
+            <div class="grid-3" id="client-summary"></div>
+
+            <div class="tabs">
+              <div class="tab-buttons">
+                <button class="tab-button active" data-tab="requests">Заявки</button>
+                <button class="tab-button" data-tab="topups">Пополнения</button>
+                <button class="tab-button" data-tab="accounts">Аккаунты</button>
+                <button class="tab-button" data-tab="profile">Профиль</button>
+              </div>
+
+              <div class="tab-panels">
+                <div class="tab-panel active" data-panel="requests">
+                  <div class="table-wrapper">
+                    <table class="table">
+                      <thead>
+                        <tr>
+                          <th>Дата</th>
+                          <th>Платформа</th>
+                          <th>Аккаунт</th>
+                          <th>Счёт</th>
+                          <th>Курс</th>
+                          <th>В аккаунт</th>
+                          <th>Статус</th>
+                          <th style="text-align:right;">Действие</th>
+                        </tr>
+                      </thead>
+                      <tbody id="client-requests"></tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div class="tab-panel" data-panel="topups">
+                  <div class="table-wrapper">
+                    <table class="table">
+                      <thead>
+                        <tr>
+                          <th>Дата</th>
+                          <th>Платформа</th>
+                          <th>Аккаунт</th>
+                          <th>Счёт</th>
+                          <th>Курс</th>
+                          <th>В аккаунт</th>
+                          <th>Статус</th>
+                        </tr>
+                      </thead>
+                      <tbody id="client-topups"></tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div class="tab-panel" data-panel="accounts">
+                  <div class="table-wrapper">
+                    <table class="table">
+                      <thead>
+                        <tr>
+                          <th>Платформа</th>
+                          <th>Аккаунт</th>
+                          <th>Договор</th>
+                          <th>Валюта</th>
+                          <th>Бюджет</th>
+                        </tr>
+                      </thead>
+                      <tbody id="client-accounts"></tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div class="tab-panel" data-panel="profile">
+                  <div class="details-grid" id="client-profile"></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
