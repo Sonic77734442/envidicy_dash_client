@@ -78,6 +78,14 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
   loadWalletBalance()
 }
 
+function enforceAuth() {
+  const token = localStorage.getItem('auth_token')
+  if (token) return
+  const current = location.pathname.split('/').pop()
+  if (current === 'login.html' || current === 'register.html' || current === 'admin-login.html') return
+  window.location.href = './login.html'
+}
+
 function getAuthToken() {
   return localStorage.getItem('auth_token')
 }
@@ -109,3 +117,5 @@ function loadWalletBalance() {
       el.textContent = 'Баланс: —'
     })
 }
+
+enforceAuth()
