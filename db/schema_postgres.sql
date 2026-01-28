@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS ad_accounts (
   name TEXT NOT NULL,
   account_code TEXT,
   currency TEXT DEFAULT 'USD',
+  budget_total DOUBLE PRECISION DEFAULT 0,
   status TEXT DEFAULT 'active',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

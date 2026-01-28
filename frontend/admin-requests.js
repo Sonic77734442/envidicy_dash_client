@@ -134,16 +134,20 @@ if (modalEl) {
 
 function openRequestModal(row) {
   if (!modalEl || !modalTitle || !modalBody) return
+  activeRow = row
   const payload = normalizePayload(row.payload)
   modalTitle.textContent = `${row.platform} · ${row.name}`
   modalBody.innerHTML = buildDetailsHtml(row, payload)
   if (modalActions) {
+    const currency = row.account_currency || (row.platform === 'telegram' ? 'EUR' : 'USD')
     modalActions.innerHTML = `
       <div class="modal-actions-row">
         <input class="field-input small" id="modal-account-code" type="text" placeholder="Код договора/аккаунта" value="${row.account_code || ''}" />
+        <input class="field-input small" id="modal-budget-total" type="number" step="0.01" placeholder="Бюджет (${currency})" value="${row.budget_total ?? ''}" />
         <input class="field-input small" id="modal-manager-email" type="text" placeholder="Менеджер (email)" value="${row.manager_email || ''}" />
         <textarea class="field-input small textarea" id="modal-comment" rows="2" placeholder="Комментарий"></textarea>
         <div class="modal-actions-buttons">
+          <button class="btn ghost" data-action="save" data-id="${row.id}">Сохранить</button>
           <button class="btn ghost" data-action="processing" data-id="${row.id}">В работе</button>
           <button class="btn primary" data-action="approved" data-id="${row.id}">Одобрить</button>
           <button class="btn ghost" data-action="rejected" data-id="${row.id}">Отклонить</button>
@@ -168,19 +172,31 @@ if (modalActions) {
     const managerEmail = managerInput?.value?.trim() || null
     const commentInput = document.getElementById('modal-comment')
     const comment = commentInput?.value?.trim() || null
+    const budgetInput = document.getElementById('modal-budget-total')
+    const budgetValueRaw = budgetInput?.value?.trim()
+    const budgetTotal = budgetValueRaw ? Number(budgetValueRaw) : null
+    if (budgetValueRaw && Number.isNaN(budgetTotal)) {
+      if (statusEl) statusEl.textContent = 'Введите корректный бюджет.'
+      return
+    }
     if (status === 'comment' && !comment && !managerEmail) {
       if (statusEl) statusEl.textContent = 'Введите комментарий или менеджера.'
       return
     }
     try {
-      const url =
-        status === 'comment'
-          ? `${apiBase}/admin/account-requests/${id}/events`
-          : `${apiBase}/admin/account-requests/${id}/status`
-      const body =
-        status === 'comment'
-          ? { type: 'comment', comment, manager_email: managerEmail }
-          : { status, account_code: accountCode, manager_email: managerEmail, comment }
+      const isEvent = status === 'comment'
+      const url = isEvent
+        ? `${apiBase}/admin/account-requests/${id}/events`
+        : `${apiBase}/admin/account-requests/${id}/status`
+      const body = isEvent
+        ? { type: 'comment', comment, manager_email: managerEmail }
+        : {
+            status: status === 'save' ? activeRow?.status || 'processing' : status,
+            account_code: accountCode,
+            manager_email: managerEmail,
+            comment,
+            budget_total: budgetTotal,
+          }
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeadersSafe() },
@@ -203,6 +219,13 @@ function buildDetailsHtml(row, payload) {
     ? payload.access.map((item) => `${item.email} (${item.role})`)
     : []
   const tiktokIds = Array.isArray(payload.tiktok_business_ids) ? payload.tiktok_business_ids : []
+  const currency = row.account_currency || (row.platform === 'telegram' ? 'EUR' : 'USD')
+  const budgetTotal = row.budget_total != null ? Number(row.budget_total) : null
+  const topupTotal = row.topup_completed_total != null ? Number(row.topup_completed_total) : null
+  const formatMoney = (value) =>
+    value == null || Number.isNaN(value)
+      ? '—'
+      : `${value.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
   return `
     <div class="details-grid">
       ${section('Основное', [
@@ -212,6 +235,10 @@ function buildDetailsHtml(row, payload) {
         ['Статус', statusLabel(row.status)],
         ['Менеджер', row.manager_email || '—'],
         ['Дата', row.created_at || '—'],
+      ])}
+      ${section('Финансы', [
+        ['Бюджет (ручной)', formatMoney(budgetTotal)],
+        ['Пополнено (completed)', formatMoney(topupTotal)],
       ])}
       ${section('Ссылки', [
         ['Сайт', payload.website || '—'],
@@ -352,3 +379,4 @@ if (filterEmail) filterEmail.addEventListener('input', applyFilters)
 if (exportRequests) exportRequests.addEventListener('click', () => exportFile('/admin/export/requests.xlsx'))
 
 fetchRequests()
+let activeRow = null

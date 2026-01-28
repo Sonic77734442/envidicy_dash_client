@@ -2256,6 +2256,7 @@ class AccountRequestUpdate(BaseModel):
     account_code: Optional[str] = None
     manager_email: Optional[str] = None
     comment: Optional[str] = None
+    budget_total: Optional[float] = None
 
 
 class AccountRequestEventCreate(BaseModel):
@@ -3706,9 +3707,18 @@ def admin_list_account_requests(admin_user=Depends(get_admin_user)):
     with get_conn() as conn:
         rows = conn.execute(
             """
-            SELECT r.*, u.email as user_email
+            SELECT r.*,
+                   u.email as user_email,
+                   a.id as account_id,
+                   a.account_code as account_code_db,
+                   a.budget_total as budget_total,
+                   a.currency as account_currency,
+                   COALESCE((SELECT SUM(t.amount_input)
+                             FROM topups t
+                             WHERE t.account_id = a.id AND t.status='completed'), 0) as topup_completed_total
             FROM account_requests r
             JOIN users u ON u.id = r.user_id
+            LEFT JOIN ad_accounts a ON a.user_id = r.user_id AND a.platform = r.platform AND a.name = r.name
             ORDER BY r.created_at DESC
             """
         ).fetchall()
@@ -4045,6 +4055,22 @@ def admin_update_account_request_status(
                 "UPDATE account_requests SET account_code=? WHERE id=?",
                 (payload.account_code, request_id),
             )
+        default_currency = "EUR" if row["platform"] == "telegram" else "USD"
+        if payload.budget_total is not None:
+            existing_acc = conn.execute(
+                "SELECT id, currency FROM ad_accounts WHERE user_id=? AND platform=? AND name=?",
+                (row["user_id"], row["platform"], row["name"]),
+            ).fetchone()
+            if existing_acc:
+                conn.execute(
+                    "UPDATE ad_accounts SET budget_total=? WHERE id=?",
+                    (payload.budget_total, existing_acc["id"]),
+                )
+            elif payload.status == "approved":
+                conn.execute(
+                    "INSERT INTO ad_accounts (user_id, platform, name, external_id, currency, account_code, budget_total) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (row["user_id"], row["platform"], row["name"], None, default_currency, payload.account_code, payload.budget_total),
+                )
         if payload.status == "approved":
             existing = conn.execute(
                 "SELECT id FROM ad_accounts WHERE user_id=? AND platform=? AND name=?",
@@ -4052,8 +4078,8 @@ def admin_update_account_request_status(
             ).fetchone()
             if not existing:
                 conn.execute(
-                    "INSERT INTO ad_accounts (user_id, platform, name, external_id, currency, account_code) VALUES (?, ?, ?, ?, ?, ?)",
-                    (row["user_id"], row["platform"], row["name"], None, "KZT", payload.account_code),
+                    "INSERT INTO ad_accounts (user_id, platform, name, external_id, currency, account_code, budget_total) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (row["user_id"], row["platform"], row["name"], None, default_currency, payload.account_code, payload.budget_total),
                 )
             elif payload.account_code:
                 conn.execute(

@@ -124,6 +124,7 @@ def apply_schema():
                 if stmt.strip():
                     conn.execute(stmt)
             conn.execute("ALTER TABLE account_requests ADD COLUMN IF NOT EXISTS account_code TEXT")
+            conn.execute("ALTER TABLE ad_accounts ADD COLUMN IF NOT EXISTS budget_total DOUBLE PRECISION")
             conn.commit()
         return
     schema_path = os.path.join(os.path.dirname(__file__), "..", "db", "schema.sql")
@@ -354,6 +355,7 @@ def apply_schema():
         _ensure_column(conn, "users", "salt", "TEXT")
         _ensure_column(conn, "ad_accounts", "user_id", "INTEGER")
         _ensure_column(conn, "ad_accounts", "account_code", "TEXT")
+        _ensure_column(conn, "ad_accounts", "budget_total", "DOUBLE PRECISION")
         _ensure_column(conn, "topups", "user_id", "INTEGER")
         _ensure_column(conn, "topups", "seen_by_admin", "INTEGER")
         conn.commit()
