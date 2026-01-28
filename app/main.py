@@ -1476,11 +1476,14 @@ def _format_legal_entity_name(entity: Dict[str, object]) -> Optional[str]:
     return full or short or None
 
 
-def _invoice_number(prefix: str, created_at: str, inv_id: int) -> str:
-    try:
-        dt = datetime.fromisoformat(created_at)
-    except ValueError:
-        dt = datetime.utcnow()
+def _invoice_number(prefix: str, created_at, inv_id: int) -> str:
+    if isinstance(created_at, datetime):
+        dt = created_at
+    else:
+        try:
+            dt = datetime.fromisoformat(created_at)
+        except ValueError:
+            dt = datetime.utcnow()
     return f"{prefix}-{dt.strftime('%Y%m%d')}-{inv_id:04d}"
 
 
