@@ -3675,7 +3675,20 @@ def list_account_requests(current_user=Depends(get_current_user)):
         return []
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT * FROM account_requests WHERE user_id=? ORDER BY created_at DESC",
+            """
+            SELECT r.*,
+                   a.id as account_id,
+                   a.account_code as account_code_db,
+                   a.budget_total as budget_total,
+                   a.currency as account_currency,
+                   COALESCE((SELECT SUM(t.amount_input)
+                             FROM topups t
+                             WHERE t.account_id = a.id AND t.status='completed'), 0) as topup_completed_total
+            FROM account_requests r
+            LEFT JOIN ad_accounts a ON a.user_id = r.user_id AND a.platform = r.platform AND a.name = r.name
+            WHERE r.user_id=?
+            ORDER BY r.created_at DESC
+            """,
             (current_user["id"],),
         ).fetchall()
         return [dict(row) for row in rows]

@@ -171,12 +171,16 @@ function renderOpenAccounts() {
   state.openAccounts.forEach((row) => {
     const hasAccount = Boolean(row.account_db_id)
     const tr = document.createElement('tr')
+    const budgetLabel =
+      row.budget == null
+        ? '—'
+        : `${Number(row.budget).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${row.currency || 'USD'}`
     tr.innerHTML = `
       <td>${platformLabel(row.platform)}</td>
       <td>${row.account_id}</td>
       <td>${row.company}</td>
       <td>${row.email}</td>
-      <td>${row.budget ? `$${row.budget}` : '—'}</td>
+      <td>${budgetLabel}</td>
       <td><span class="status ${statusClass(row.status)}">${row.status}</span></td>
       <td style="text-align:right; display:flex; gap:6px; justify-content:flex-end;">
         ${
@@ -685,6 +689,8 @@ async function fetchAccountRequests() {
         email,
         status: normalizeRequestStatus(row.status),
         created_at: row.created_at,
+        budget_total: row.budget_total ?? null,
+        account_currency: row.account_currency || (row.platform === 'telegram' ? 'EUR' : 'USD'),
       }
     })
     state.openAccounts = state.accountRequests.map((req) => ({
@@ -693,7 +699,8 @@ async function fetchAccountRequests() {
       account_db_id: accountIndex.get(`${req.platform}:${req.name}`) || null,
       company: '',
       email: req.email || '—',
-      budget: null,
+      budget: req.budget_total,
+      currency: req.account_currency,
       status: req.status,
     }))
     renderOpenAccounts()
