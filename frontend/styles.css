@@ -1554,3 +1554,138 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 1024px) {
+  .app {
+    max-width: 1000px;
+    padding: 28px 16px 64px;
+  }
+
+  .topbar-right {
+    gap: 8px;
+  }
+
+  .profile-meta #header-email {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .topbar-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .balance-pill {
+    width: 100%;
+    text-align: center;
+  }
+
+  .topbar-right .btn.primary {
+    width: 100%;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .sidebar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .nav {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+    padding-bottom: 4px;
+  }
+
+  .nav-link {
+    white-space: nowrap;
+  }
+
+  .nav-footer {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .dropdown-menu {
+    min-width: min(320px, 90vw);
+  }
+
+  .help-popover {
+    width: min(320px, 90vw);
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 26px;
+  }
+
+  .lede {
+    font-size: 13px;
+  }
+
+  .profile-meta {
+    display: none;
+  }
+
+  .profile-btn {
+    padding: 4px;
+  }
+
+  .icon-circle {
+    width: 32px;
+    height: 32px;
+  }
+
+  .dropdown-menu {
+    right: 0;
+  }
+}
+
+@media (max-width: 375px) {
+  .topbar-right {
+    gap: 6px;
+  }
+
+  .balance-pill {
+    font-size: 12px;
+  }
+
+  .btn {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+
+  .tab-button {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 320px) {
+  .topbar-right .btn.primary {
+    padding: 8px;
+  }
+
+  .sidebar {
+    padding: 12px;
+  }
+
+  .nav-link {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+}
