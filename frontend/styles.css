@@ -33,7 +33,7 @@ body {
   margin: 0 auto;
   padding: 32px 20px 80px;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .with-sidebar .app {
@@ -126,7 +126,7 @@ body {
   gap: 16px;
   align-items: center;
   position: relative;
-  z-index: 1;
+  z-index: 3000;
 }
 
 .topbar-left {
@@ -157,6 +157,7 @@ body {
   align-items: center;
   gap: 10px;
   position: relative;
+  z-index: 3001;
 }
 
 .icon-circle {
@@ -258,7 +259,7 @@ body {
   border-radius: 12px;
   padding: 8px;
   display: none;
-  z-index: 2000;
+  z-index: 4000;
 }
 
 .dropdown-menu.show {
@@ -339,7 +340,7 @@ body {
   padding: 12px;
   width: 240px;
   display: none;
-  z-index: 2000;
+  z-index: 4000;
 }
 
 .help-popover.show {
