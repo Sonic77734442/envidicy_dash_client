@@ -1583,7 +1583,7 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
     <style>
       @page {{
         size: A4;
-        margin: 15mm;
+        margin: 12mm;
       }}
       body {{
         font-family: "Arial", sans-serif;
@@ -1592,7 +1592,8 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
         background: #fff;
       }}
       .wrap {{
-        max-width: 900px;
+        width: 190mm;
+        max-width: 100%;
         margin: 0 auto;
         padding: 8px 16px 24px;
       }}
