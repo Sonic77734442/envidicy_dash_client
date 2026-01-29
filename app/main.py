@@ -1574,6 +1574,9 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
     contract_note = payload.get("contract_note", "")
     amount_words = payload.get("amount_words", "")
     request_id = payload.get("request_id", "")
+    token = payload.get("token", "")
+    token_query = f"?token={token}" if token else ""
+    pdf_url = f"/wallet/topup-requests/{request_id}/pdf-generated{token_query}"
     return f"""
 <!doctype html>
 <html lang="ru">
@@ -1671,7 +1674,7 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
   </head>
   <body>
     <div class="wrap">
-      <a class="print-btn" href="/wallet/topup-requests/{request_id}/pdf-generated">Скачать PDF</a>
+      <a class="print-btn" href="{pdf_url}">Скачать PDF</a>
       <table class="bank-table">
         <tr>
           <td>
@@ -3641,6 +3644,7 @@ def wallet_topup_invoice_page(
             "amount": amount,
             "currency": currency,
             "amount_words": amount_words,
+            "token": token or "",
         }
         return HTMLResponse(content=_invoice_1c_html(payload))
 

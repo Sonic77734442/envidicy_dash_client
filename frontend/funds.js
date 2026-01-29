@@ -1,6 +1,7 @@
 const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 let funds = []
 let legalEntities = []
+let invoices = []
 
 renderHeader({
   eyebrow: 'Envidicy · Billing Desk',
@@ -168,6 +169,38 @@ function renderTable(rows) {
   })
 }
 
+function renderInvoices(rows) {
+  const tbody = document.getElementById('wallet-invoices-body')
+  if (!tbody) return
+  tbody.innerHTML = ''
+  rows.forEach((r) => {
+    const tr = document.createElement('tr')
+    const token = typeof getAuthToken === 'function' ? getAuthToken() : localStorage.getItem('auth_token')
+    const pdfUrl = `${apiBase}/wallet/topup-requests/${r.id}/pdf-generated${token ? `?token=${encodeURIComponent(token)}` : ''}`
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td>${r.counterparty}</td>
+      <td>${fmtAmt(r.amount, r.currency)}</td>
+      <td>${r.number || '—'}</td>
+      <td style="text-align:right;">
+        <a class="btn ghost small" href="${pdfUrl}" target="_blank" rel="noopener">PDF</a>
+      </td>
+    `
+    tbody.appendChild(tr)
+  })
+}
+
+function formatDate(value) {
+  if (!value) return ''
+  if (typeof value === 'string') {
+    if (value.includes('T')) return value.split('T')[0]
+    if (value.includes(' ')) return value.split(' ')[0]
+    return value.slice(0, 10)
+  }
+  if (value instanceof Date) return value.toISOString().slice(0, 10)
+  return ''
+}
+
 function fmtAmt(v, ccy) {
   const sign = v < 0 ? '-' : ''
   return `${sign}${Math.abs(v).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${ccy}`
@@ -227,6 +260,22 @@ function bind() {
   })
 }
 
+function initTabs() {
+  const buttons = Array.from(document.querySelectorAll('.tab-button'))
+  const panels = Array.from(document.querySelectorAll('.tab-panel'))
+  if (!buttons.length || !panels.length) return
+  const activateTab = (tab) => {
+    buttons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tab))
+    panels.forEach((panel) => panel.classList.toggle('active', panel.dataset.tabPanel === tab))
+  }
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      activateTab(btn.dataset.tab)
+    })
+  })
+  activateTab('invoices')
+}
+
 async function fetchFunds() {
   const res = await fetch(`${apiBase}/wallet/transactions`, { headers: authHeaders() })
   if (res.status === 401) {
@@ -239,7 +288,7 @@ async function fetchFunds() {
   }
   const data = await res.json()
   funds = data.map((row) => ({
-    date: row.created_at?.split(' ')[0] || '',
+    date: formatDate(row.created_at),
     platform: row.account_platform || '',
     account: row.account_name || '—',
     type: row.type === 'topup' ? 'Списание' : 'Пополнение',
@@ -251,9 +300,33 @@ async function fetchFunds() {
   applyFilters()
 }
 
+async function fetchInvoices() {
+  const res = await fetch(`${apiBase}/wallet/topup-requests`, { headers: authHeaders() })
+  if (res.status === 401) {
+    window.location.href = '/login'
+    return
+  }
+  if (!res.ok) {
+    console.error('Failed to load wallet invoices')
+    return
+  }
+  const data = await res.json()
+  invoices = data.map((row) => ({
+    id: row.id,
+    date: formatDate(row.created_at),
+    counterparty: row.legal_entity_name || row.client_name || '—',
+    amount: row.invoice_amount ?? row.amount ?? 0,
+    currency: row.invoice_currency || row.currency || 'KZT',
+    number: row.invoice_number || row.invoice_number_text || '',
+  }))
+  renderInvoices(invoices)
+}
+
 function init() {
   bind()
+  initTabs()
   fetchFunds()
+  fetchInvoices()
   fetchLegalEntities()
   if (walletTopup.open) walletTopup.open.addEventListener('click', openWalletTopupModal)
   if (walletTopup.close) walletTopup.close.addEventListener('click', closeWalletTopupModal)

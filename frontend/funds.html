@@ -49,36 +49,59 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Сводка</p>
-            <h2>Итого по выборке</h2>
-          </div>
-          <div class="chips small" id="summary-chips"></div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Транзакции</p>
-            <h2>Пополнения и возвраты</h2>
+            <p class="eyebrow">Финансы</p>
+            <h2>Счета и транзакции</h2>
           </div>
         </div>
-        <div class="table-wrapper">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Дата</th>
-                <th>Платформа</th>
-                <th>Аккаунт</th>
-                <th>Тип</th>
-                <th>Сумма</th>
-                <th>Курс</th>
-                <th>Валюта</th>
-                <th>Примечание</th>
-              </tr>
-            </thead>
-            <tbody id="funds-body"></tbody>
-          </table>
+        <div class="tabs">
+          <div class="tab-buttons">
+            <button class="tab-button active" data-tab="invoices">Счета</button>
+            <button class="tab-button" data-tab="transactions">Транзакции</button>
+          </div>
+          <div class="tab-panels">
+            <div class="tab-panel active" data-tab-panel="invoices">
+              <div class="table-wrapper">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Дата</th>
+                      <th>Контрагент</th>
+                      <th>Сумма</th>
+                      <th>Номер</th>
+                      <th style="text-align:right;">Файл</th>
+                    </tr>
+                  </thead>
+                  <tbody id="wallet-invoices-body"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="tab-panel" data-tab-panel="transactions">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Сводка</p>
+                  <h2>Итого по выборке</h2>
+                </div>
+                <div class="chips small" id="summary-chips"></div>
+              </div>
+              <div class="table-wrapper">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Дата</th>
+                      <th>Платформа</th>
+                      <th>Аккаунт</th>
+                      <th>Тип</th>
+                      <th>Сумма</th>
+                      <th>Курс</th>
+                      <th>Валюта</th>
+                      <th>Примечание</th>
+                    </tr>
+                  </thead>
+                  <tbody id="funds-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </div>
