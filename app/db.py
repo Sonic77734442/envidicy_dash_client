@@ -343,6 +343,7 @@ def apply_schema():
         _ensure_column(conn, "wallet_transactions", "account_id", "INTEGER")
         _ensure_column(conn, "user_profiles", "whatsapp_phone", "TEXT")
         _ensure_column(conn, "user_profiles", "telegram_handle", "TEXT")
+        _ensure_column(conn, "user_profiles", "avatar_path", "TEXT")
         _ensure_column(conn, "invoice_uploads", "status", "TEXT")
         _ensure_column(conn, "invoice_uploads", "updated_at", "TEXT")
         _ensure_column(conn, "wallet_topup_requests", "legal_entity_id", "INTEGER")

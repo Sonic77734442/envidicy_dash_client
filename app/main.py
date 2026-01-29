@@ -2461,6 +2461,21 @@ def _save_document(file: UploadFile) -> str:
     return path
 
 
+def _avatar_storage_dir() -> str:
+    base_dir = os.path.join(os.path.dirname(__file__), "..", "storage", "avatars")
+    os.makedirs(base_dir, exist_ok=True)
+    return base_dir
+
+
+def _save_avatar(file: UploadFile) -> str:
+    safe_ext = os.path.splitext(file.filename or "")[1] or ".jpg"
+    filename = f"avatar_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{secrets.token_hex(6)}{safe_ext}"
+    path = os.path.join(_avatar_storage_dir(), filename)
+    with open(path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+    return path
+
+
 def _meta_fetch_insights(account_external_id: str, date_from: str, date_to: str) -> List[Dict[str, object]]:
     token = os.getenv("META_ACCESS_TOKEN")
     if not token:
@@ -2770,6 +2785,8 @@ def get_profile(current_user=Depends(get_current_user)):
     with get_conn() as conn:
         profile = _get_or_create_profile(conn, current_user["id"])
         profile["email"] = current_user["email"]
+        if profile.get("avatar_path"):
+            profile["avatar_url"] = f"/profile/avatar?token={_ensure_token(conn, current_user['id'])}"
         return profile
 
 
@@ -2798,7 +2815,162 @@ def update_profile(payload: ProfilePayload, current_user=Depends(get_current_use
         row = conn.execute("SELECT * FROM user_profiles WHERE user_id=?", (current_user["id"],)).fetchone()
         result = dict(row) if row else {}
         result["email"] = current_user["email"]
+        if result.get("avatar_path"):
+            result["avatar_url"] = f"/profile/avatar?token={_ensure_token(conn, current_user['id'])}"
         return result
+
+
+def _ensure_token(conn, user_id: int) -> str:
+    row = conn.execute("SELECT token FROM user_tokens WHERE user_id=? ORDER BY created_at DESC LIMIT 1", (user_id,)).fetchone()
+    if row and row["token"]:
+        return row["token"]
+    token = secrets.token_hex(32)
+    conn.execute("INSERT INTO user_tokens (user_id, token) VALUES (?, ?)", (user_id, token))
+    conn.commit()
+    return token
+
+
+@app.post("/profile/avatar")
+def upload_avatar(file: UploadFile = File(...), current_user=Depends(get_current_user)):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="File is required")
+    with get_conn() as conn:
+        profile = _get_or_create_profile(conn, current_user["id"])
+        path = _save_avatar(file)
+        conn.execute("UPDATE user_profiles SET avatar_path=?, updated_at=CURRENT_TIMESTAMP WHERE user_id=?", (path, current_user["id"]))
+        conn.commit()
+        token = _ensure_token(conn, current_user["id"])
+        return {"status": "ok", "avatar_url": f"/profile/avatar?token={token}"}
+
+
+@app.get("/profile/avatar")
+def get_avatar(token: Optional[str] = None, current_user=Depends(get_optional_user)):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    if token:
+        current_user = _get_user_by_token(token)
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Missing token")
+    with get_conn() as conn:
+        row = conn.execute("SELECT avatar_path FROM user_profiles WHERE user_id=?", (current_user["id"],)).fetchone()
+        if not row or not row["avatar_path"]:
+            raise HTTPException(status_code=404, detail="Avatar not found")
+        return FileResponse(row["avatar_path"])
+
+
+@app.get("/notifications")
+def list_notifications(current_user=Depends(get_current_user)):
+    if not get_conn:
+        return []
+    with get_conn() as conn:
+        topups = conn.execute(
+            """
+            SELECT id, created_at, status, amount_input, amount_net, currency
+            FROM topups
+            WHERE user_id=?
+            ORDER BY created_at DESC
+            LIMIT 10
+            """,
+            (current_user["id"],),
+        ).fetchall()
+        requests = conn.execute(
+            """
+            SELECT id, created_at, status, platform, name
+            FROM account_requests
+            WHERE user_id=?
+            ORDER BY created_at DESC
+            LIMIT 10
+            """,
+            (current_user["id"],),
+        ).fetchall()
+    items: List[Dict[str, object]] = []
+    for row in topups:
+        items.append(
+            {
+                "type": "topup",
+                "id": row["id"],
+                "created_at": row["created_at"],
+                "title": "Пополнение",
+                "status": row["status"],
+                "amount": row["amount_net"] or row["amount_input"],
+                "currency": row["currency"],
+            }
+        )
+    for row in requests:
+        items.append(
+            {
+                "type": "account_request",
+                "id": row["id"],
+                "created_at": row["created_at"],
+                "title": "Заявка на аккаунт",
+                "status": row["status"],
+                "platform": row["platform"],
+                "name": row["name"],
+            }
+        )
+    items.sort(key=lambda x: str(x.get("created_at") or ""), reverse=True)
+    return items[:10]
+
+
+@app.get("/admin/notifications")
+def admin_notifications(admin_user=Depends(get_admin_user)):
+    if not get_conn:
+        return []
+    with get_conn() as conn:
+        requests = conn.execute(
+            """
+            SELECT r.id, r.created_at, r.status, r.platform, r.name, u.email as user_email
+            FROM account_requests r
+            JOIN users u ON u.id = r.user_id
+            WHERE r.status='new'
+            ORDER BY r.created_at DESC
+            LIMIT 10
+            """
+        ).fetchall()
+        topups = conn.execute(
+            """
+            SELECT t.id, t.created_at, t.status, t.amount_input, t.amount_net, t.currency, u.email as user_email, a.platform, a.name
+            FROM topups t
+            JOIN users u ON u.id = t.user_id
+            JOIN ad_accounts a ON a.id = t.account_id
+            WHERE t.status='pending'
+            ORDER BY t.created_at DESC
+            LIMIT 10
+            """
+        ).fetchall()
+    items: List[Dict[str, object]] = []
+    for row in requests:
+        items.append(
+            {
+                "type": "account_request",
+                "id": row["id"],
+                "created_at": row["created_at"],
+                "title": "Новая заявка",
+                "status": row["status"],
+                "platform": row["platform"],
+                "name": row["name"],
+                "user_email": row["user_email"],
+            }
+        )
+    for row in topups:
+        items.append(
+            {
+                "type": "topup",
+                "id": row["id"],
+                "created_at": row["created_at"],
+                "title": "Новая заявка на пополнение",
+                "status": row["status"],
+                "amount": row["amount_net"] or row["amount_input"],
+                "currency": row["currency"],
+                "platform": row["platform"],
+                "name": row["name"],
+                "user_email": row["user_email"],
+            }
+        )
+    items.sort(key=lambda x: str(x.get("created_at") or ""), reverse=True)
+    return items[:12]
 
 
 @app.post("/auth/change-password")

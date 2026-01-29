@@ -19,6 +19,10 @@ const profile = {
   telegram: document.getElementById('profile-telegram'),
   save: document.getElementById('profile-save'),
   status: document.getElementById('profile-status'),
+  avatarPreview: document.getElementById('profile-avatar-preview'),
+  avatarFile: document.getElementById('profile-avatar-file'),
+  avatarUpload: document.getElementById('profile-avatar-upload'),
+  avatarStatus: document.getElementById('profile-avatar-status'),
 }
 
 const password = {
@@ -69,8 +73,46 @@ async function loadProfile() {
     if (profile.language) profile.language.value = data.language || 'ru'
     if (profile.whatsapp) profile.whatsapp.value = data.whatsapp_phone || ''
     if (profile.telegram) profile.telegram.value = data.telegram_handle || ''
+    if (profile.avatarPreview) {
+      if (data.avatar_url) {
+        profile.avatarPreview.innerHTML = `<img src="${apiBase}${data.avatar_url}" alt="avatar" />`
+      } else {
+        const letter = (data.email || 'U').trim().charAt(0).toUpperCase()
+        profile.avatarPreview.textContent = letter || '?'
+      }
+    }
   } catch (e) {
     if (profile.status) profile.status.textContent = 'Не удалось загрузить профиль.'
+  }
+}
+
+async function uploadAvatar() {
+  const file = profile.avatarFile?.files?.[0]
+  if (!file) {
+    if (profile.avatarStatus) profile.avatarStatus.textContent = 'Выберите файл.'
+    return
+  }
+  if (profile.avatarStatus) profile.avatarStatus.textContent = 'Загружаем...'
+  const form = new FormData()
+  form.append('file', file)
+  try {
+    const res = await fetch(`${apiBase}/profile/avatar`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: form,
+    })
+    if (res.status === 401) {
+      window.location.href = '/login'
+      return
+    }
+    if (!res.ok) throw new Error('upload failed')
+    const data = await res.json()
+    if (profile.avatarPreview && data.avatar_url) {
+      profile.avatarPreview.innerHTML = `<img src="${apiBase}${data.avatar_url}" alt="avatar" />`
+    }
+    if (profile.avatarStatus) profile.avatarStatus.textContent = 'Фото обновлено.'
+  } catch (e) {
+    if (profile.avatarStatus) profile.avatarStatus.textContent = 'Не удалось загрузить фото.'
   }
 }
 
@@ -202,6 +244,7 @@ function init() {
   loadProfile()
   loadDocuments()
   if (profile.save) profile.save.addEventListener('click', saveProfile)
+  if (profile.avatarUpload) profile.avatarUpload.addEventListener('click', uploadAvatar)
   if (password.save) password.save.addEventListener('click', changePassword)
 }
 

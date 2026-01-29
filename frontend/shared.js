@@ -1,3 +1,5 @@
+const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
+
 function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
   const root = document.getElementById('header-root')
   if (!root) return
@@ -37,16 +39,52 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
       <div class="sidebar-brand">
         <span>Envidicy</span>
       </div>
-      <div id="sidebar-balance" class="sidebar-balance">Баланс: —</div>
-      ${isAdmin ? '' : '<button class="btn primary full" id="sidebar-topup" type="button">Пополнить баланс</button>'}
       <div class="nav">${navHtml}</div>
       <div class="nav-footer">${authHtml}</div>
     </nav>
     <div class="topbar">
-      <div>
+      <div class="topbar-left">
         <p class="eyebrow">${eyebrow ?? ''}</p>
         <h1>${title ?? ''}</h1>
         <p class="lede">${subtitle ?? ''}</p>
+      </div>
+      <div class="topbar-right">
+        ${isAdmin ? '' : '<div id="header-balance" class="balance-pill">Баланс: —</div>'}
+        ${isAdmin ? '' : '<button class="btn primary" id="header-topup" type="button">Пополнить баланс</button>'}
+        <div class="header-actions">
+          ${isAdmin ? '' : '<button class="icon-circle" id="help-btn" data-tooltip="Помощь">?</button>'}
+          <div class="dropdown">
+            <button class="icon-circle" id="bell-btn" title="Уведомления">🔔</button>
+            <span id="bell-count" class="badge" hidden></span>
+            <div class="dropdown-menu" id="bell-menu">
+              <div class="dropdown-head">Уведомления</div>
+              <div class="dropdown-body" id="bell-list">Нет уведомлений.</div>
+            </div>
+          </div>
+          <div class="dropdown">
+            <button class="profile-btn" id="profile-btn">
+              <span class="avatar" id="header-avatar">?</span>
+              <span class="profile-meta">
+                <span id="header-name">Профиль</span>
+                <span id="header-email">${email || ''}</span>
+              </span>
+            </button>
+            <div class="dropdown-menu" id="profile-menu">
+              <div class="dropdown-head">Аккаунт</div>
+              <div class="dropdown-body">
+                <div class="dropdown-item">
+                  <div class="dropdown-title" id="profile-menu-name">Профиль</div>
+                  <div class="dropdown-meta" id="profile-menu-email">${email || ''}</div>
+                </div>
+              </div>
+              <div class="dropdown-body">
+                <a class="dropdown-link" href="/settings">Редактировать профиль</a>
+                <button class="dropdown-link" id="profile-logout" type="button">Выйти</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        ${isAdmin ? '' : '<div class="help-popover" id="help-popover"><div class="help-title">Помощь</div><p>Нужна консультация? Оставьте заявку.</p><button class="btn ghost small" id="help-request">Оставить заявку</button></div>'}
       </div>
     </div>
   `
@@ -59,9 +97,9 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
       window.location.href = '/login'
     })
   }
-  const topupBtn = document.getElementById('sidebar-topup')
-  if (topupBtn) {
-    topupBtn.addEventListener('click', () => {
+  const headerTopup = document.getElementById('header-topup')
+  if (headerTopup) {
+    headerTopup.addEventListener('click', () => {
       const modal = document.getElementById('wallet-topup-modal')
       if (modal) {
         modal.classList.add('show')
@@ -74,7 +112,38 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
       window.location.href = '/funds#topup'
     })
   }
+  const profileLogout = document.getElementById('profile-logout')
+  if (profileLogout) {
+    profileLogout.addEventListener('click', () => {
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('auth_email')
+      localStorage.removeItem('auth_user_id')
+      window.location.href = '/login'
+    })
+  }
+  const helpBtn = document.getElementById('help-btn')
+  const helpPopover = document.getElementById('help-popover')
+  if (helpBtn && helpPopover) {
+    helpBtn.addEventListener('click', () => {
+      helpPopover.classList.toggle('show')
+    })
+    document.addEventListener('click', (event) => {
+      if (!helpPopover.contains(event.target) && event.target !== helpBtn) {
+        helpPopover.classList.remove('show')
+      }
+    })
+  }
+  const helpRequest = document.getElementById('help-request')
+  if (helpRequest) {
+    helpRequest.addEventListener('click', () => {
+      alert('Оставьте заявку, и мы свяжемся с вами.')
+    })
+  }
+  bindDropdown('bell-btn', 'bell-menu')
+  bindDropdown('profile-btn', 'profile-menu')
   loadWalletBalance()
+  loadHeaderProfile()
+  loadNotifications(isAdmin)
 }
 
 function enforceAuth() {
@@ -95,14 +164,14 @@ function authHeaders() {
 }
 
 function loadWalletBalance() {
-  const el = document.getElementById('sidebar-balance')
+  const el = document.getElementById('header-balance')
   if (!el) return
   const token = getAuthToken()
   if (!token) {
     el.textContent = 'Баланс: —'
     return
   }
-  fetch('https://envidicy-dash-client.onrender.com/wallet', { headers: authHeaders() })
+  fetch(`${apiBase}/wallet`, { headers: authHeaders() })
     .then((res) => (res.ok ? res.json() : null))
     .then((data) => {
       if (!data) return
@@ -115,6 +184,120 @@ function loadWalletBalance() {
     .catch(() => {
       el.textContent = 'Баланс: —'
     })
+}
+
+function bindDropdown(triggerId, menuId) {
+  const trigger = document.getElementById(triggerId)
+  const menu = document.getElementById(menuId)
+  if (!trigger || !menu) return
+  trigger.addEventListener('click', (event) => {
+    event.stopPropagation()
+    menu.classList.toggle('show')
+  })
+  document.addEventListener('click', (event) => {
+    if (!menu.contains(event.target) && event.target !== trigger) {
+      menu.classList.remove('show')
+    }
+  })
+}
+
+async function loadHeaderProfile() {
+  const nameEl = document.getElementById('header-name')
+  const emailEl = document.getElementById('header-email')
+  const avatarEl = document.getElementById('header-avatar')
+  const menuName = document.getElementById('profile-menu-name')
+  const menuEmail = document.getElementById('profile-menu-email')
+  try {
+    const res = await fetch(`${apiBase}/profile`, { headers: authHeaders() })
+    if (!res.ok) return
+    const data = await res.json()
+    const displayName = data.name || data.company || 'Профиль'
+    if (nameEl) nameEl.textContent = displayName
+    if (emailEl) emailEl.textContent = data.email || ''
+    if (menuName) menuName.textContent = displayName
+    if (menuEmail) menuEmail.textContent = data.email || ''
+    if (avatarEl && data.avatar_url) {
+      avatarEl.innerHTML = `<img src="${apiBase}${data.avatar_url}" alt="avatar" />`
+    } else if (avatarEl) {
+      const letter = (data.email || 'U').trim().charAt(0).toUpperCase()
+      avatarEl.textContent = letter || '?'
+    }
+  } catch (e) {
+    if (emailEl) emailEl.textContent = localStorage.getItem('auth_email') || ''
+    if (menuEmail) menuEmail.textContent = localStorage.getItem('auth_email') || ''
+  }
+}
+
+async function loadNotifications(isAdmin) {
+  const listEl = document.getElementById('bell-list')
+  const countEl = document.getElementById('bell-count')
+  if (!listEl) return
+  try {
+    const url = isAdmin
+      ? `${apiBase}/admin/notifications`
+      : `${apiBase}/notifications`
+    const res = await fetch(url, { headers: authHeaders() })
+    if (!res.ok) throw new Error('notifications failed')
+    const items = await res.json()
+    if (!items.length) {
+      listEl.textContent = 'Нет уведомлений.'
+      if (countEl) countEl.hidden = true
+      return
+    }
+    if (countEl) {
+      countEl.textContent = String(items.length)
+      countEl.hidden = false
+    }
+    if (isAdmin) {
+      const requests = items.filter((i) => i.type === 'account_request')
+      const topups = items.filter((i) => i.type === 'topup')
+      listEl.innerHTML = `
+        <div class="dropdown-section">
+          <div class="dropdown-subhead">Заявки на аккаунт</div>
+          ${renderNotifications(requests)}
+        </div>
+        <div class="dropdown-section">
+          <div class="dropdown-subhead">Пополнения</div>
+          ${renderNotifications(topups)}
+        </div>
+      `
+      return
+    }
+    listEl.innerHTML = renderNotifications(items)
+  } catch (e) {
+    listEl.textContent = 'Не удалось загрузить уведомления.'
+  }
+}
+
+function renderNotifications(items) {
+  if (!items.length) {
+    return `<div class="dropdown-empty">Нет уведомлений</div>`
+  }
+  return items
+    .map((item) => {
+      const date = formatDate(item.created_at)
+      const subtitle =
+        item.type === 'account_request'
+          ? `${item.platform || ''} ${item.name || ''}`.trim()
+          : `${item.platform || ''} ${item.name || ''}`.trim()
+      const amount =
+        item.amount != null ? ` · ${Number(item.amount).toLocaleString('ru-RU')} ${item.currency || ''}` : ''
+      const user = item.user_email ? ` · ${item.user_email}` : ''
+      return `
+        <div class="dropdown-item">
+          <div class="dropdown-title">${item.title}${amount}${user}</div>
+          <div class="dropdown-meta">${subtitle} · ${date}</div>
+        </div>
+      `
+    })
+    .join('')
+}
+
+function formatDate(value) {
+  if (!value) return '—'
+  const str = String(value)
+  if (str.includes('T')) return str.split('T')[0]
+  return str.split(' ')[0]
 }
 
 function enforceAdminRoutes() {

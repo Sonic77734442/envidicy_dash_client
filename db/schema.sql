@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   language TEXT DEFAULT 'ru',
   whatsapp_phone TEXT,
   telegram_handle TEXT,
+  avatar_path TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
