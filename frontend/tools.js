@@ -71,6 +71,31 @@ const googleParams = [
   { key: '{targetid}', desc: 'ID цели/аудитории' },
 ]
 
+const yandexParams = [
+  { key: '{ad_id}', desc: 'Идентификатор объявления' },
+  { key: '{banner_id}', desc: 'Идентификатор объявления (баннер)' },
+  { key: '{addphrases}', desc: 'Доп. релевантные фразы: yes/no' },
+  { key: '{addphrasestext}', desc: 'Текст доп. фразы или none' },
+  { key: '{campaign_type}', desc: 'Тип кампании' },
+  { key: '{campaign_id}', desc: 'Идентификатор кампании' },
+  { key: '{creative_id}', desc: 'Идентификатор креатива' },
+  { key: '{device_type}', desc: 'Тип устройства' },
+  { key: '{gbid}', desc: 'Идентификатор группы' },
+  { key: '{keyword}', desc: 'Ключевая фраза' },
+  { key: '{phrase_id}', desc: 'Идентификатор ключевой фразы' },
+  { key: '{retargeting_id}', desc: 'Идентификатор ретаргетинга' },
+  { key: '{coef_goal_context_id}', desc: 'ID корректировки ставок' },
+  { key: '{interest_id}', desc: 'ID интереса' },
+  { key: '{adtarget_name}', desc: 'Условие нацеливания' },
+  { key: '{adtarget_id}', desc: 'ID условия нацеливания' },
+  { key: '{position}', desc: 'Позиция объявления' },
+  { key: '{position_type}', desc: 'Тип блока' },
+  { key: '{source}', desc: 'Площадка показа' },
+  { key: '{source_type}', desc: 'Тип площадки' },
+  { key: '{region_name}', desc: 'Регион показа' },
+  { key: '{region_id}', desc: 'ID региона' },
+]
+
 let lastFocused = null
 
 function activateTab(name) {
@@ -232,10 +257,10 @@ function exportBulk() {
   URL.revokeObjectURL(link.href)
 }
 
-function renderGoogleParams(containerId) {
+function renderParamList(containerId, items) {
   const container = document.getElementById(containerId)
   if (!container) return
-  container.innerHTML = googleParams
+  container.innerHTML = items
     .map(
       (p) => `
       <div class="param-item">
@@ -285,5 +310,7 @@ if (bulk.presets) {
   })
 }
 
-renderGoogleParams('google-params-single')
-renderGoogleParams('google-params-bulk')
+renderParamList('google-params-single', googleParams)
+renderParamList('google-params-bulk', googleParams)
+renderParamList('yandex-params-single', yandexParams)
+renderParamList('yandex-params-bulk', yandexParams)
