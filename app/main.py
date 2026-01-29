@@ -1456,7 +1456,7 @@ def _get_company_profile(conn) -> Dict[str, object]:
     return base
 
 
-def _next_invoice_number(conn, prefix: str = "БК") -> str:
+def _next_invoice_number(conn) -> str:
     now = datetime.utcnow()
     year = now.year
     row = conn.execute("SELECT seq FROM invoice_counters WHERE year=?", (year,)).fetchone()
@@ -1466,7 +1466,7 @@ def _next_invoice_number(conn, prefix: str = "БК") -> str:
     else:
         seq = 1
         conn.execute("INSERT INTO invoice_counters (year, seq) VALUES (?, ?)", (year, seq))
-    return f"{prefix}{str(year)[2:]}{seq:07d}"
+    return f"{year % 100:02d}{seq:09d}"
 
 
 def _format_legal_entity_name(entity: Dict[str, object]) -> Optional[str]:
