@@ -1573,6 +1573,7 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
     description = payload.get("description", "")
     contract_note = payload.get("contract_note", "")
     amount_words = payload.get("amount_words", "")
+    request_id = payload.get("request_id", "")
     return f"""
 <!doctype html>
 <html lang="ru">
@@ -1670,7 +1671,7 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
   </head>
   <body>
     <div class="wrap">
-      <a class="print-btn" href="#" onclick="window.print(); return false;">Скачать PDF</a>
+      <a class="print-btn" href="/wallet/topup-requests/{request_id}/pdf-generated">Скачать PDF</a>
       <table class="bank-table">
         <tr>
           <td>
@@ -2539,6 +2540,11 @@ def _invoice_storage_dir() -> str:
     base_dir = os.path.join(os.path.dirname(__file__), "..", "storage", "invoices")
     os.makedirs(base_dir, exist_ok=True)
     return base_dir
+
+
+def _wallet_invoice_pdf_path(request_id: int) -> str:
+    filename = f"wallet_invoice_{request_id}.pdf"
+    return os.path.join(_invoice_storage_dir(), filename)
 
 
 def _save_invoice_pdf(pdf: UploadFile) -> str:
@@ -3616,6 +3622,7 @@ def wallet_topup_invoice_page(
         )
         beneficiary_bin = company.get("bin") or company.get("iin") or BENEFICIARY["bin"]
         payload = {
+            "request_id": request_id,
             "number": number,
             "date": date_str,
             "beneficiary_name": company.get("name") or BENEFICIARY["name"],
@@ -3664,6 +3671,84 @@ def wallet_topup_invoice_pdf(
         if not invoice_row or not invoice_row["pdf_path"]:
             raise HTTPException(status_code=404, detail="Invoice PDF not found")
         return FileResponse(invoice_row["pdf_path"], media_type="application/pdf")
+
+
+@app.get("/wallet/topup-requests/{request_id}/pdf-generated")
+def wallet_topup_invoice_generated_pdf(
+    request_id: int,
+    token: Optional[str] = None,
+    current_user=Depends(get_optional_user),
+):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    if token:
+        current_user = _get_user_by_token(token)
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Missing token")
+    with get_conn() as conn:
+        request_row = conn.execute(
+            "SELECT * FROM wallet_topup_requests WHERE id=? AND user_id=?",
+            (request_id, current_user["id"]),
+        ).fetchone()
+        if not request_row:
+            raise HTTPException(status_code=404, detail="Request not found")
+        req = dict(request_row)
+        number = req.get("invoice_number")
+        invoice_date = req.get("invoice_date")
+        if not number:
+            number = _next_invoice_number(conn)
+            invoice_date = datetime.utcnow().date().isoformat()
+            conn.execute(
+                "UPDATE wallet_topup_requests SET invoice_number=?, invoice_date=? WHERE id=?",
+                (number, invoice_date, request_id),
+            )
+            conn.commit()
+        if invoice_date:
+            try:
+                dt = datetime.fromisoformat(invoice_date)
+            except ValueError:
+                dt = datetime.utcnow()
+        else:
+            dt = datetime.utcnow()
+        date_str = _format_date_ru(dt) + " г."
+        amount = _format_amount(req.get("amount") or 0)
+        currency = req.get("currency") or "KZT"
+        amount_words = _amount_to_words_ru(req.get("amount") or 0)
+        company = _get_company_profile(conn)
+        beneficiary_bin = company.get("bin") or company.get("iin") or BENEFICIARY["bin"]
+        description = (
+            f"За услуги по использованию Программного обеспечения Исполнителя "
+            f"\"{company.get('name') or BENEFICIARY['name']}\" по счету {number} от {dt.strftime('%d.%m.%Y')} г."
+        )
+        payload = {
+            "request_id": request_id,
+            "number": number,
+            "date": date_str,
+            "beneficiary_name": company.get("name") or BENEFICIARY["name"],
+            "beneficiary_bin": beneficiary_bin,
+            "beneficiary_bank": company.get("bank") or BENEFICIARY["bank"],
+            "beneficiary_iban": company.get("iban") or BENEFICIARY["iban"],
+            "beneficiary_bic": company.get("bic") or BENEFICIARY["bic"],
+            "beneficiary_kbe": company.get("kbe") or BENEFICIARY["kbe"],
+            "beneficiary_address": company.get("legal_address") or company.get("factual_address") or "",
+            "payment_code": "853",
+            "payer_name": req.get("client_name") or "Плательщик не указан",
+            "payer_bin": req.get("client_bin") or "ИИН/БИН не указан",
+            "payer_address": req.get("client_address") or "Адрес не указан",
+            "description": description,
+            "contract_note": "Публичный договор возмездного оказания услуг от 25.07.2023 г.",
+            "amount": amount,
+            "currency": currency,
+            "amount_words": amount_words,
+        }
+        html = _invoice_1c_html(payload)
+        pdf_path = _wallet_invoice_pdf_path(request_id)
+        try:
+            from weasyprint import HTML
+        except Exception:
+            raise HTTPException(status_code=500, detail="PDF renderer is not available")
+        HTML(string=html, base_url=os.path.dirname(__file__)).write_pdf(pdf_path)
+        return FileResponse(pdf_path, media_type="application/pdf")
 
 
 @app.get("/legal-entities")
