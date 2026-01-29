@@ -334,11 +334,12 @@ body {
   position: absolute;
   top: 60px;
   right: 0;
-  background: #0f1322;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 12px;
-  width: 240px;
+  background: linear-gradient(180deg, rgba(20, 27, 46, 0.96), rgba(12, 16, 28, 0.98));
+  border: 1px solid rgba(106, 227, 255, 0.25);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  border-radius: 16px;
+  padding: 14px;
+  width: 260px;
   display: none;
   z-index: 4000;
 }
@@ -350,6 +351,35 @@ body {
 .help-title {
   font-weight: 700;
   margin-bottom: 6px;
+}
+
+.help-popover .btn {
+  width: 100%;
+}
+
+.help-popover p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 12px;
+}
+
+.help-popover::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 18px;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  border-left: 1px solid rgba(106, 227, 255, 0.25);
+  border-top: 1px solid rgba(106, 227, 255, 0.25);
+  transform: rotate(45deg);
+}
+
+.help-popover .btn.ghost.small {
+  border-color: rgba(106, 227, 255, 0.45);
+  background: rgba(106, 227, 255, 0.12);
+  color: #d7f5ff;
 }
 
 .eyebrow {

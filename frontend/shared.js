@@ -123,6 +123,7 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
   const helpPopover = document.getElementById('help-popover')
   if (helpBtn && helpPopover) {
     helpBtn.addEventListener('click', () => {
+      closeAllPopovers()
       helpPopover.classList.toggle('show')
     })
     document.addEventListener('click', (event) => {
@@ -190,6 +191,7 @@ function bindDropdown(triggerId, menuId) {
   if (!trigger || !menu) return
   trigger.addEventListener('click', (event) => {
     event.stopPropagation()
+    closeAllPopovers()
     menu.classList.toggle('show')
   })
   document.addEventListener('click', (event) => {
@@ -197,6 +199,15 @@ function bindDropdown(triggerId, menuId) {
       menu.classList.remove('show')
     }
   })
+}
+
+function closeAllPopovers() {
+  const bellMenu = document.getElementById('bell-menu')
+  const profileMenu = document.getElementById('profile-menu')
+  const helpPopover = document.getElementById('help-popover')
+  bellMenu?.classList.remove('show')
+  profileMenu?.classList.remove('show')
+  helpPopover?.classList.remove('show')
 }
 
 async function loadHeaderProfile() {
