@@ -1378,6 +1378,7 @@ _default_origins = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
     "https://envidicydashclientv20.vercel.app",
+    "https://app.envidicy.kz",
 ]
 _extra_origins = [o.strip() for o in (os.getenv("FRONTEND_ORIGINS") or "").split(",") if o.strip()]
 app.add_middleware(
