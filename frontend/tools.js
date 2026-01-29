@@ -45,6 +45,9 @@ const presets = {
   monochrome: { source: 'monochrome', medium: 'cpm' },
 }
 
+let singlePreset = null
+let bulkPreset = null
+
 function activateTab(name) {
   tabs.forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.tab === name)
@@ -61,8 +64,36 @@ tabs.forEach((btn) => {
 function applyPreset(target, key) {
   const preset = presets[key]
   if (!preset) return
+  if (target === single) singlePreset = key
+  if (target === bulk) bulkPreset = key
   if (target.source) target.source.value = preset.source
   if (target.medium) target.medium.value = preset.medium
+  if (target.campaign && !target.campaign.value) {
+    target.campaign.value = '{platform}_{date_ymd}'
+  }
+  if (target.content && !target.content.value) {
+    target.content.value = '{platform}_{rand4}'
+  }
+}
+
+function replaceMacros(value, context) {
+  if (!value) return value
+  const now = new Date()
+  const dateYmd = now.toISOString().slice(0, 10)
+  const dateYm = now.toISOString().slice(0, 7)
+  const time = now.toTimeString().slice(0, 5).replace(':', '')
+  const rand4 = Math.random().toString(36).slice(2, 6)
+  const rand6 = Math.random().toString(36).slice(2, 8)
+  return value
+    .replaceAll('{platform}', context.platform || '')
+    .replaceAll('{source}', context.source || '')
+    .replaceAll('{medium}', context.medium || '')
+    .replaceAll('{date}', dateYmd)
+    .replaceAll('{date_ymd}', dateYmd)
+    .replaceAll('{date_ym}', dateYm)
+    .replaceAll('{time}', time)
+    .replaceAll('{rand4}', rand4)
+    .replaceAll('{rand6}', rand6)
 }
 
 function buildUrl(base, params) {
@@ -75,12 +106,17 @@ function buildUrl(base, params) {
 }
 
 function collectParams(group) {
+  const context = {
+    platform: group === single ? singlePreset : bulkPreset,
+    source: group.source?.value.trim(),
+    medium: group.medium?.value.trim(),
+  }
   return {
-    utm_source: group.source?.value.trim(),
-    utm_medium: group.medium?.value.trim(),
-    utm_campaign: group.campaign?.value.trim(),
-    utm_content: group.content?.value.trim(),
-    utm_term: group.term?.value.trim(),
+    utm_source: replaceMacros(group.source?.value.trim(), context),
+    utm_medium: replaceMacros(group.medium?.value.trim(), context),
+    utm_campaign: replaceMacros(group.campaign?.value.trim(), context),
+    utm_content: replaceMacros(group.content?.value.trim(), context),
+    utm_term: replaceMacros(group.term?.value.trim(), context),
   }
 }
 
