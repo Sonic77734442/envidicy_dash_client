@@ -20,42 +20,108 @@
           <span class="chip chip-ghost">utm</span>
         </div>
 
-        <div class="form-grid">
-          <label class="field">
-            <span>Базовая ссылка</span>
-            <input id="utm-url" type="url" placeholder="https://example.com/landing" />
-          </label>
-          <label class="field">
-            <span>Источник (utm_source)</span>
-            <input id="utm-source" type="text" placeholder="google" />
-          </label>
-          <label class="field">
-            <span>Канал (utm_medium)</span>
-            <input id="utm-medium" type="text" placeholder="cpc" />
-          </label>
-          <label class="field">
-            <span>Кампания (utm_campaign)</span>
-            <input id="utm-campaign" type="text" placeholder="brand_launch" />
-          </label>
-          <label class="field">
-            <span>Контент (utm_content)</span>
-            <input id="utm-content" type="text" placeholder="banner_a" />
-          </label>
-          <label class="field">
-            <span>Ключевое слово (utm_term)</span>
-            <input id="utm-term" type="text" placeholder="buy_now" />
-          </label>
-        </div>
+        <div class="tabs">
+          <div class="tab-buttons">
+            <button class="tab-button active" data-tab="single">Одна ссылка</button>
+            <button class="tab-button" data-tab="bulk">Массово</button>
+          </div>
+          <div class="tab-panels">
+            <div class="tab-panel active" data-tab-panel="single">
+              <div class="preset-row" id="utm-presets">
+                <button class="chip chip-ghost" data-preset="meta">Meta</button>
+                <button class="chip chip-ghost" data-preset="google">Google</button>
+                <button class="chip chip-ghost" data-preset="tiktok">TikTok</button>
+                <button class="chip chip-ghost" data-preset="yandex">Yandex</button>
+                <button class="chip chip-ghost" data-preset="telegram">Telegram</button>
+                <button class="chip chip-ghost" data-preset="monochrome">Monochrome</button>
+              </div>
+              <div class="form-grid">
+                <label class="field">
+                  <span>Базовая ссылка</span>
+                  <input id="utm-url" type="url" placeholder="https://example.com/landing" />
+                </label>
+                <label class="field">
+                  <span>Источник (utm_source)</span>
+                  <input id="utm-source" type="text" placeholder="google" />
+                </label>
+                <label class="field">
+                  <span>Канал (utm_medium)</span>
+                  <input id="utm-medium" type="text" placeholder="cpc" />
+                </label>
+                <label class="field">
+                  <span>Кампания (utm_campaign)</span>
+                  <input id="utm-campaign" type="text" placeholder="brand_launch" />
+                </label>
+                <label class="field">
+                  <span>Контент (utm_content)</span>
+                  <input id="utm-content" type="text" placeholder="banner_a" />
+                </label>
+                <label class="field">
+                  <span>Ключевое слово (utm_term)</span>
+                  <input id="utm-term" type="text" placeholder="buy_now" />
+                </label>
+              </div>
 
-        <div class="panel-actions">
-          <button class="btn primary" id="utm-generate">Сгенерировать</button>
-          <button class="btn ghost" id="utm-copy">Скопировать</button>
-          <button class="btn ghost" id="utm-reset">Очистить</button>
-        </div>
+              <div class="panel-actions">
+                <button class="btn primary" id="utm-generate">Сгенерировать</button>
+                <button class="btn ghost" id="utm-copy">Скопировать</button>
+                <button class="btn ghost" id="utm-reset">Очистить</button>
+              </div>
 
-        <div class="field">
-          <span>Результат</span>
-          <textarea id="utm-result" class="field-input small textarea" readonly></textarea>
+              <div class="field">
+                <span>Результат</span>
+                <textarea id="utm-result" class="field-input small textarea" readonly></textarea>
+              </div>
+            </div>
+
+            <div class="tab-panel" data-tab-panel="bulk">
+              <div class="preset-row" id="utm-bulk-presets">
+                <button class="chip chip-ghost" data-preset="meta">Meta</button>
+                <button class="chip chip-ghost" data-preset="google">Google</button>
+                <button class="chip chip-ghost" data-preset="tiktok">TikTok</button>
+                <button class="chip chip-ghost" data-preset="yandex">Yandex</button>
+                <button class="chip chip-ghost" data-preset="telegram">Telegram</button>
+                <button class="chip chip-ghost" data-preset="monochrome">Monochrome</button>
+              </div>
+              <div class="form-grid">
+                <label class="field">
+                  <span>Ссылки (по одной в строке)</span>
+                  <textarea id="utm-bulk-urls" class="field-input small textarea" placeholder="https://site.com/one&#10;https://site.com/two"></textarea>
+                </label>
+                <label class="field">
+                  <span>Источник (utm_source)</span>
+                  <input id="utm-bulk-source" type="text" placeholder="google" />
+                </label>
+                <label class="field">
+                  <span>Канал (utm_medium)</span>
+                  <input id="utm-bulk-medium" type="text" placeholder="cpc" />
+                </label>
+                <label class="field">
+                  <span>Кампания (utm_campaign)</span>
+                  <input id="utm-bulk-campaign" type="text" placeholder="brand_launch" />
+                </label>
+                <label class="field">
+                  <span>Контент (utm_content)</span>
+                  <input id="utm-bulk-content" type="text" placeholder="banner_a" />
+                </label>
+                <label class="field">
+                  <span>Ключевое слово (utm_term)</span>
+                  <input id="utm-bulk-term" type="text" placeholder="buy_now" />
+                </label>
+              </div>
+
+              <div class="panel-actions">
+                <button class="btn primary" id="utm-bulk-generate">Сгенерировать</button>
+                <button class="btn ghost" id="utm-bulk-copy">Скопировать все</button>
+                <button class="btn ghost" id="utm-bulk-export">Экспорт CSV</button>
+              </div>
+
+              <div class="field">
+                <span>Результат</span>
+                <textarea id="utm-bulk-result" class="field-input small textarea" readonly></textarea>
+              </div>
+            </div>
+          </div>
         </div>
 
         <p class="muted small">Скоро тут появится сокращатель ссылок.</p>

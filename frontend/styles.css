@@ -437,6 +437,13 @@ h1 {
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
+.preset-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
