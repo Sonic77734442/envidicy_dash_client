@@ -48,54 +48,6 @@ const presets = {
 let singlePreset = null
 let bulkPreset = null
 
-const googleParams = [
-  { key: '{adgroupid}', desc: 'Идентификатор группы объявлений' },
-  { key: '{adposition}', desc: 'Позиция объявления на странице' },
-  { key: '{campaignid}', desc: 'Идентификатор кампании' },
-  { key: '{creative}', desc: 'Уникальный идентификатор объявления' },
-  { key: '{device}', desc: 'Тип устройства' },
-  { key: '{feeditemid}', desc: 'Идентификатор расширения' },
-  { key: '{keyword}', desc: 'Ключевое слово' },
-  { key: '{loc_interest_ms}', desc: 'Локация из запроса' },
-  { key: '{loc_physical_ms}', desc: 'Физическая локация клика' },
-  { key: '{lpurl}', desc: 'Конечный URL' },
-  { key: '{matchtype}', desc: 'Тип соответствия ключевого слова' },
-  { key: '{merchant_id}', desc: 'ID Merchant Center' },
-  { key: '{placement}', desc: 'Сайт/место размещения' },
-  { key: '{product_channel}', desc: 'Канал продаж товара' },
-  { key: '{product_country}', desc: 'Страна продажи товара' },
-  { key: '{product_id}', desc: 'ID товара' },
-  { key: '{product_language}', desc: 'Язык товара' },
-  { key: '{product_partition_id}', desc: 'ID группы товаров' },
-  { key: '{store_code}', desc: 'Код магазина' },
-  { key: '{targetid}', desc: 'ID цели/аудитории' },
-]
-
-const yandexParams = [
-  { key: '{ad_id}', desc: 'Идентификатор объявления' },
-  { key: '{banner_id}', desc: 'Идентификатор объявления (баннер)' },
-  { key: '{addphrases}', desc: 'Доп. релевантные фразы: yes/no' },
-  { key: '{addphrasestext}', desc: 'Текст доп. фразы или none' },
-  { key: '{campaign_type}', desc: 'Тип кампании' },
-  { key: '{campaign_id}', desc: 'Идентификатор кампании' },
-  { key: '{creative_id}', desc: 'Идентификатор креатива' },
-  { key: '{device_type}', desc: 'Тип устройства' },
-  { key: '{gbid}', desc: 'Идентификатор группы' },
-  { key: '{keyword}', desc: 'Ключевая фраза' },
-  { key: '{phrase_id}', desc: 'Идентификатор ключевой фразы' },
-  { key: '{retargeting_id}', desc: 'Идентификатор ретаргетинга' },
-  { key: '{coef_goal_context_id}', desc: 'ID корректировки ставок' },
-  { key: '{interest_id}', desc: 'ID интереса' },
-  { key: '{adtarget_name}', desc: 'Условие нацеливания' },
-  { key: '{adtarget_id}', desc: 'ID условия нацеливания' },
-  { key: '{position}', desc: 'Позиция объявления' },
-  { key: '{position_type}', desc: 'Тип блока' },
-  { key: '{source}', desc: 'Площадка показа' },
-  { key: '{source_type}', desc: 'Тип площадки' },
-  { key: '{region_name}', desc: 'Регион показа' },
-  { key: '{region_id}', desc: 'ID региона' },
-]
-
 let lastFocused = null
 
 function activateTab(name) {
@@ -257,37 +209,6 @@ function exportBulk() {
   URL.revokeObjectURL(link.href)
 }
 
-function renderParamList(containerId, items) {
-  const container = document.getElementById(containerId)
-  if (!container) return
-  const options = items
-    .map((p) => `<option value="${p.key}">${p.key} — ${p.desc}</option>`)
-    .join('')
-  container.innerHTML = `
-    ${items
-      .map(
-        (p) => `<span class="param-tag" data-insert="${p.key}">${p.key}<small>${p.desc}</small></span>`
-      )
-      .join('')}
-    <select class="param-select" data-select>
-      <option value="">Выберите параметр</option>
-      ${options}
-    </select>
-  `
-  container.addEventListener('click', (event) => {
-    const tag = event.target.closest('.param-tag')
-    if (!tag) return
-    insertToken(tag.dataset.insert)
-  })
-  const select = container.querySelector('select[data-select]')
-  if (select) {
-    select.addEventListener('change', (event) => {
-      const val = event.target.value
-      if (val) insertToken(val)
-      event.target.value = ''
-    })
-  }
-}
 
 if (single.generate) single.generate.addEventListener('click', buildSingle)
 if (single.copy) single.copy.addEventListener('click', copySingle)
@@ -310,19 +231,4 @@ if (bulk.presets) {
     if (!btn) return
     applyPreset(bulk, btn.dataset.preset)
   })
-}
-
-renderParamList('google-params-single', googleParams)
-renderParamList('google-params-bulk', googleParams)
-renderParamList('yandex-params-single', yandexParams)
-renderParamList('yandex-params-bulk', yandexParams)
-
-function insertToken(token) {
-  if (!lastFocused) {
-    alert('Сначала выберите поле для вставки.')
-    return
-  }
-  const value = lastFocused.value || ''
-  lastFocused.value = value ? `${value}${token}` : token
-  lastFocused.focus()
 }
