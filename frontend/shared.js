@@ -10,10 +10,8 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
         { label: 'Админ · Заявки', href: '/admin/requests' },
         { label: 'Админ · Пользователи', href: '/admin/users' },
         { label: 'Админ · Клиенты', href: '/admin/clients' },
-        { label: 'Админ · Аккаунты', href: '/admin/accounts' },
         { label: 'Админ · Контрагенты', href: '/admin/legal-entities' },
         { label: 'Админ · Компания', href: '/admin/company' },
-        { label: 'Админ · Пополнения', href: '/admin/topups' },
         { label: 'Админ · Кошелек', href: '/admin/wallet' },
       ]
     : [
@@ -119,4 +117,18 @@ function loadWalletBalance() {
     })
 }
 
+function enforceAdminRoutes() {
+  const email = localStorage.getItem('auth_email') || ''
+  const isAdmin = email === 'romant997@gmail.com' || email === 'kolyadov.denis@gmail.com'
+  const path = location.pathname
+  const blocked = ['/admin/accounts', '/admin/topups']
+  if (!blocked.includes(path)) return
+  if (isAdmin) {
+    window.location.href = '/admin/clients'
+    return
+  }
+  window.location.href = '/login'
+}
+
 enforceAuth()
+enforceAdminRoutes()
