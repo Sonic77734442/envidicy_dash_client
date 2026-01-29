@@ -260,10 +260,15 @@ body {
   padding: 8px;
   display: none;
   z-index: 4000;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 160ms ease, transform 160ms ease;
 }
 
 .dropdown-menu.show {
   display: block;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .dropdown-head {
@@ -342,10 +347,15 @@ body {
   width: 260px;
   display: none;
   z-index: 4000;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 160ms ease, transform 160ms ease;
 }
 
 .help-popover.show {
   display: block;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .help-title {
