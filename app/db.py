@@ -123,6 +123,7 @@ def apply_schema():
             for stmt in ddl.split(";"):
                 if stmt.strip():
                     conn.execute(stmt)
+            conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_client INTEGER DEFAULT 0")
             conn.execute("ALTER TABLE account_requests ADD COLUMN IF NOT EXISTS account_code TEXT")
             conn.execute("ALTER TABLE account_requests ADD COLUMN IF NOT EXISTS comment TEXT")
             conn.execute("ALTER TABLE ad_accounts ADD COLUMN IF NOT EXISTS budget_total DOUBLE PRECISION")
