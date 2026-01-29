@@ -8,7 +8,7 @@ import logging
 import traceback
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse, HTMLResponse, FileResponse
+from fastapi.responses import StreamingResponse, JSONResponse, HTMLResponse, FileResponse, RedirectResponse
 from openpyxl import Workbook
 from openpyxl.styles import Border, Side
 from openpyxl.utils import get_column_letter
@@ -20,6 +20,8 @@ import json
 import os
 import shutil
 import httpx
+import boto3
+from botocore.config import Config as BotoConfig
 from google.ads.googleads.client import GoogleAdsClient
 from google.api_core import exceptions as google_api_exceptions
 from dotenv import load_dotenv
@@ -27,6 +29,80 @@ from dotenv import load_dotenv
 from app.db import get_conn
 
 load_dotenv()
+
+_R2_CLIENT = None
+
+
+def _r2_enabled() -> bool:
+    return bool(
+        os.getenv("R2_ACCESS_KEY_ID")
+        and os.getenv("R2_SECRET_ACCESS_KEY")
+        and os.getenv("R2_BUCKET")
+        and os.getenv("R2_ACCOUNT_ID")
+    )
+
+
+def _r2_client():
+    global _R2_CLIENT
+    if _R2_CLIENT:
+        return _R2_CLIENT
+    if not _r2_enabled():
+        return None
+    account_id = os.getenv("R2_ACCOUNT_ID")
+    endpoint = os.getenv("R2_ENDPOINT") or f"https://{account_id}.r2.cloudflarestorage.com"
+    _R2_CLIENT = boto3.client(
+        "s3",
+        endpoint_url=endpoint,
+        aws_access_key_id=os.getenv("R2_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("R2_SECRET_ACCESS_KEY"),
+        region_name="auto",
+        config=BotoConfig(signature_version="s3v4"),
+    )
+    return _R2_CLIENT
+
+
+def _r2_bucket() -> str:
+    return os.getenv("R2_BUCKET", "")
+
+
+def _r2_parse_path(path: str) -> Optional[Tuple[str, str]]:
+    if not path or not path.startswith("r2://"):
+        return None
+    raw = path[5:]
+    if "/" not in raw:
+        return None
+    bucket, key = raw.split("/", 1)
+    return bucket, key
+
+
+def _r2_presigned_url(key: str, bucket: Optional[str] = None, expires: int = 3600) -> Optional[str]:
+    client = _r2_client()
+    if not client:
+        return None
+    bucket_name = bucket or _r2_bucket()
+    return client.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": bucket_name, "Key": key},
+        ExpiresIn=expires,
+    )
+
+
+def _r2_upload_bytes(key: str, data: bytes, content_type: str = "application/pdf") -> str:
+    client = _r2_client()
+    bucket_name = _r2_bucket()
+    client.put_object(Bucket=bucket_name, Key=key, Body=data, ContentType=content_type)
+    return f"r2://{bucket_name}/{key}"
+
+
+def _r2_upload_fileobj(key: str, fileobj, content_type: str = "application/pdf") -> str:
+    client = _r2_client()
+    bucket_name = _r2_bucket()
+    try:
+        fileobj.seek(0)
+    except Exception:
+        pass
+    client.upload_fileobj(fileobj, bucket_name, key, ExtraArgs={"ContentType": content_type})
+    return f"r2://{bucket_name}/{key}"
 Goal = Literal["reach", "traffic", "leads", "conversions"]
 PlatformKey = Literal[
     "meta",
@@ -2555,6 +2631,9 @@ def _save_invoice_pdf(pdf: UploadFile) -> str:
     if pdf.filename and pdf.filename.lower().endswith(".pdf"):
         suffix = ".pdf"
     filename = f"invoice_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{secrets.token_hex(6)}{suffix}"
+    if _r2_enabled():
+        key = f"invoices/{filename}"
+        return _r2_upload_fileobj(key, pdf.file, "application/pdf")
     path = os.path.join(_invoice_storage_dir(), filename)
     with open(path, "wb") as f:
         shutil.copyfileobj(pdf.file, f)
@@ -3674,7 +3753,15 @@ def wallet_topup_invoice_pdf(
         ).fetchone()
         if not invoice_row or not invoice_row["pdf_path"]:
             raise HTTPException(status_code=404, detail="Invoice PDF not found")
-        return FileResponse(invoice_row["pdf_path"], media_type="application/pdf")
+        pdf_path = invoice_row["pdf_path"]
+        r2_ref = _r2_parse_path(pdf_path)
+        if r2_ref:
+            bucket, key = r2_ref
+            url = _r2_presigned_url(key, bucket=bucket)
+            if not url:
+                raise HTTPException(status_code=500, detail="R2 not configured")
+            return RedirectResponse(url)
+        return FileResponse(pdf_path, media_type="application/pdf")
 
 
 @app.get("/wallet/topup-requests/{request_id}/pdf-generated")
@@ -3746,11 +3833,20 @@ def wallet_topup_invoice_generated_pdf(
             "amount_words": amount_words,
         }
         html = _invoice_1c_html(payload)
-        pdf_path = _wallet_invoice_pdf_path(request_id)
         try:
             from weasyprint import HTML
         except Exception:
             raise HTTPException(status_code=500, detail="PDF renderer is not available")
+        if _r2_enabled():
+            buffer = BytesIO()
+            HTML(string=html, base_url=os.path.dirname(__file__)).write_pdf(buffer)
+            key = f"wallet_invoices/wallet_invoice_{request_id}.pdf"
+            _r2_upload_bytes(key, buffer.getvalue(), "application/pdf")
+            url = _r2_presigned_url(key)
+            if not url:
+                raise HTTPException(status_code=500, detail="R2 not configured")
+            return RedirectResponse(url)
+        pdf_path = _wallet_invoice_pdf_path(request_id)
         HTML(string=html, base_url=os.path.dirname(__file__)).write_pdf(pdf_path)
         return FileResponse(pdf_path, media_type="application/pdf")
 

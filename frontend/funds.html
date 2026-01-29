@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Envidicy · Движение средств</title>
+    <title>Envidicy · Финансы</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -57,6 +57,7 @@
           <div class="tab-buttons">
             <button class="tab-button active" data-tab="invoices">Счета</button>
             <button class="tab-button" data-tab="transactions">Транзакции</button>
+            <button class="tab-button" data-tab="docs">Закрывающие документы</button>
           </div>
           <div class="tab-panels">
             <div class="tab-panel active" data-tab-panel="invoices">
@@ -99,6 +100,17 @@
                   </thead>
                   <tbody id="funds-body"></tbody>
                 </table>
+              </div>
+            </div>
+            <div class="tab-panel" data-tab-panel="docs">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Документы</p>
+                  <h2>Закрывающие документы</h2>
+                </div>
+              </div>
+              <div class="empty-state">
+                <p class="muted">Пока нет закрывающих документов. Они появятся после подтверждения оплат.</p>
               </div>
             </div>
           </div>

@@ -4,7 +4,7 @@ renderHeader({
   subtitle: 'Сводка по подключенным рекламным кабинетам.',
   buttons: [
     { label: 'Пополнить аккаунты', href: '/topup', kind: 'ghost' },
-    { label: 'Движение средств', href: '/funds', kind: 'ghost' },
+    { label: 'Финансы', href: '/funds', kind: 'ghost' },
     { label: 'Медиаплан', href: '/plan', kind: 'ghost' },
     { label: 'Вход', href: '/login', kind: 'ghost' },
   ],

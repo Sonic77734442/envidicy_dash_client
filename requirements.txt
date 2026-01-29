@@ -10,3 +10,4 @@ google-ads==28.4.1
 weasyprint==60.2
 pydyf==0.8.0
 psycopg[binary]==3.2.5
+boto3==1.34.149

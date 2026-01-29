@@ -15,7 +15,7 @@ renderHeader({
   subtitle: 'Выберите аккаунт Meta, Google или TikTok, оставьте e-mail и данные компании для выставления счёта.',
   buttons: [
     { label: 'Дашборд', href: '/dashboard', kind: 'ghost' },
-    { label: 'Движение средств', href: '/funds', kind: 'ghost' },
+    { label: 'Финансы', href: '/funds', kind: 'ghost' },
     { label: 'Медиаплан', href: '/plan', kind: 'ghost' },
     { label: 'Вход', href: '/login', kind: 'ghost' },
   ],

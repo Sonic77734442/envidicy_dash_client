@@ -16,7 +16,7 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
       ]
     : [
         { label: 'Пополнение аккаунтов', href: '/topup' },
-        { label: 'Движение средств', href: '/funds' },
+        { label: 'Финансы', href: '/funds' },
         { label: 'Медиапланирование', href: '/plan' },
         { label: 'Дашборд', href: '/dashboard' },
         { label: 'Инструменты', href: '/tools' },

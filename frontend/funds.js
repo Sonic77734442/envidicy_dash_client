@@ -5,7 +5,7 @@ let invoices = []
 
 renderHeader({
   eyebrow: 'Envidicy · Billing Desk',
-  title: 'Движение средств',
+  title: 'Финансы',
   subtitle: 'Отслеживайте пополнения и возвраты по аккаунтам, с суммами и курсом.',
   buttons: [],
 })

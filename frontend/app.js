@@ -29,7 +29,7 @@ renderHeader({
     { label: 'Скачать Excel', id: 'btn-excel', kind: 'ghost' },
     { label: 'Дашборд', href: '/dashboard', kind: 'ghost' },
     { label: 'Пополнить аккаунты', href: '/topup', kind: 'ghost' },
-    { label: 'Движение средств', href: '/funds', kind: 'ghost' },
+    { label: 'Финансы', href: '/funds', kind: 'ghost' },
     { label: 'Вход', href: '/login', kind: 'ghost' },
   ],
 })
