@@ -1229,7 +1229,7 @@ h1 {
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 10;
+  z-index: 5000;
 }
 
 .modal.show {

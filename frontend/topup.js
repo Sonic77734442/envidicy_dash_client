@@ -329,7 +329,7 @@ function setCreateStep(step) {
 
 function updateCreatePlatformUI(platformKey) {
   const isMeta = platformKey === 'meta'
-  const isGoogle = platformKey === 'google' || platformKey === 'telegram' || platformKey === 'monochrome'
+  const isGoogle = platformKey === 'google'
   const isTiktok = platformKey === 'tiktok'
   const isYandex = platformKey === 'yandex'
   const isTelegram = platformKey === 'telegram'
@@ -338,6 +338,8 @@ function updateCreatePlatformUI(platformKey) {
   createModal.tiktokFields.hidden = !isTiktok
   createModal.yandexFields.hidden = !isYandex
   createModal.telegramFields.hidden = !isTelegram
+  createModal.stepMcc.hidden = !isGoogle && createState.step !== 'mcc'
+  createModal.stepTiktokInfo.hidden = !isTiktok && createState.step !== 'tiktok-info'
   createModal.nameLabel.textContent = isMeta ? 'Название кабинета' : 'Введите название аккаунта'
   if (!isMeta) {
     createState.metaStage = 'primary'
