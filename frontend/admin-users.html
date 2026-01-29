@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy · Admin · Пользователи</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="bg-blur"></div>
+      <div id="header-root"></div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Пользователи</p>
+            <h2>Зарегистрированные (ещё не клиенты)</h2>
+          </div>
+          <span class="chip chip-ghost">users</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Дата регистрации</th>
+              </tr>
+            </thead>
+            <tbody id="admin-users"></tbody>
+          </table>
+        </div>
+        <p id="admin-users-status" class="muted"></p>
+      </section>
+    </div>
+    <script src="/config.js"></script>
+    <script src="/shared.js"></script>
+    <script src="/admin-users.js"></script>
+  </body>
+</html>

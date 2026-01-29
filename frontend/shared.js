@@ -8,6 +8,7 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
   const navItems = isAdmin
     ? [
         { label: 'Админ · Заявки', href: '/admin/requests' },
+        { label: 'Админ · Пользователи', href: '/admin/users' },
         { label: 'Админ · Клиенты', href: '/admin/clients' },
         { label: 'Админ · Аккаунты', href: '/admin/accounts' },
         { label: 'Админ · Контрагенты', href: '/admin/legal-entities' },

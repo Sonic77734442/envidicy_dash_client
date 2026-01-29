@@ -355,6 +355,7 @@ def apply_schema():
         _ensure_column(conn, "account_requests", "comment", "TEXT")
         _ensure_column(conn, "users", "password_hash", "TEXT")
         _ensure_column(conn, "users", "salt", "TEXT")
+        _ensure_column(conn, "users", "is_client", "INTEGER")
         _ensure_column(conn, "ad_accounts", "user_id", "INTEGER")
         _ensure_column(conn, "ad_accounts", "account_code", "TEXT")
         _ensure_column(conn, "ad_accounts", "budget_total", "DOUBLE PRECISION")

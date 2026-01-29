@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT NOT NULL UNIQUE,
   password_hash TEXT,
   salt TEXT,
+  is_client INTEGER DEFAULT 0,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 

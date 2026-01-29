@@ -3867,12 +3867,37 @@ def admin_list_clients(admin_user=Depends(get_admin_user)):
               COALESCE(SUM(CASE WHEN t.seen_by_admin=0 THEN 1 ELSE 0 END), 0) as unread_topups,
               COALESCE(SUM(CASE WHEN t.status!='completed' THEN 1 ELSE 0 END), 0) as pending_requests,
               COALESCE(SUM(CASE WHEN t.status='completed' THEN t.amount_net ELSE 0 END), 0) as completed_total,
+              COALESCE(SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END), 0) as completed_count,
               MAX(t.created_at) as last_activity
             FROM users u
             LEFT JOIN topups t ON t.user_id = u.id
             GROUP BY u.id, u.email
+            HAVING COALESCE(SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END), 0) > 0
+               OR COALESCE(u.is_client, 0) = 1
             ORDER BY unread_topups DESC, u.email ASC
             """
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+@app.get("/admin/users")
+def admin_list_users(admin_user=Depends(get_admin_user)):
+    if not get_conn:
+        return []
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT u.id, u.email, u.created_at,
+              COALESCE(SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END), 0) as completed_count
+            FROM users u
+            LEFT JOIN topups t ON t.user_id = u.id
+            WHERE u.email NOT IN (?, ?)
+            GROUP BY u.id, u.email, u.created_at
+            HAVING COALESCE(SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END), 0) = 0
+               AND COALESCE(u.is_client, 0) = 0
+            ORDER BY u.created_at DESC
+            """,
+            (ADMIN_EMAILS[0], ADMIN_EMAILS[1]),
         ).fetchall()
         return [dict(row) for row in rows]
 
@@ -4121,7 +4146,7 @@ def admin_update_topup_status(topup_id: int, status: TopUpStatus, admin_user=Dep
         raise HTTPException(status_code=500, detail="DB not initialized")
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT id, status, account_id, amount_input, amount_net FROM topups WHERE id=?",
+            "SELECT id, status, account_id, amount_input, amount_net, user_id FROM topups WHERE id=?",
             (topup_id,),
         ).fetchone()
         if not row:
@@ -4135,6 +4160,7 @@ def admin_update_topup_status(topup_id: int, status: TopUpStatus, admin_user=Dep
                 "UPDATE ad_accounts SET budget_total=? WHERE id=?",
                 (new_total, row["account_id"]),
             )
+            conn.execute("UPDATE users SET is_client=1 WHERE id=?", (row["user_id"],))
         conn.commit()
         return {"id": topup_id, "status": status.value}
 

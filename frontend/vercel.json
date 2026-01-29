@@ -10,6 +10,7 @@
     { "source": "/landing", "destination": "/landing.html" },
     { "source": "/admin/login", "destination": "/admin-login.html" },
     { "source": "/admin/requests", "destination": "/admin-requests.html" },
+    { "source": "/admin/users", "destination": "/admin-users.html" },
     { "source": "/admin/clients", "destination": "/admin-clients.html" },
     { "source": "/admin/accounts", "destination": "/admin-accounts.html" },
     { "source": "/admin/legal-entities", "destination": "/admin-legal-entities.html" },
