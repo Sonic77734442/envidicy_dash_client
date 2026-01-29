@@ -1,5 +1,3 @@
-const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
-
 function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
   const root = document.getElementById('header-root')
   if (!root) return
@@ -171,7 +169,7 @@ function loadWalletBalance() {
     el.textContent = 'Баланс: —'
     return
   }
-  fetch(`${apiBase}/wallet`, { headers: authHeaders() })
+  fetch(`${window.API_BASE || 'https://envidicy-dash-client.onrender.com'}/wallet`, { headers: authHeaders() })
     .then((res) => (res.ok ? res.json() : null))
     .then((data) => {
       if (!data) return
@@ -208,7 +206,7 @@ async function loadHeaderProfile() {
   const menuName = document.getElementById('profile-menu-name')
   const menuEmail = document.getElementById('profile-menu-email')
   try {
-    const res = await fetch(`${apiBase}/profile`, { headers: authHeaders() })
+    const res = await fetch(`${window.API_BASE || 'https://envidicy-dash-client.onrender.com'}/profile`, { headers: authHeaders() })
     if (!res.ok) return
     const data = await res.json()
     const displayName = data.name || data.company || 'Профиль'
@@ -217,7 +215,7 @@ async function loadHeaderProfile() {
     if (menuName) menuName.textContent = displayName
     if (menuEmail) menuEmail.textContent = data.email || ''
     if (avatarEl && data.avatar_url) {
-      avatarEl.innerHTML = `<img src="${apiBase}${data.avatar_url}" alt="avatar" />`
+      avatarEl.innerHTML = `<img src="${window.API_BASE || 'https://envidicy-dash-client.onrender.com'}${data.avatar_url}" alt="avatar" />`
     } else if (avatarEl) {
       const letter = (data.email || 'U').trim().charAt(0).toUpperCase()
       avatarEl.textContent = letter || '?'
@@ -234,8 +232,8 @@ async function loadNotifications(isAdmin) {
   if (!listEl) return
   try {
     const url = isAdmin
-      ? `${apiBase}/admin/notifications`
-      : `${apiBase}/notifications`
+      ? `${window.API_BASE || 'https://envidicy-dash-client.onrender.com'}/admin/notifications`
+      : `${window.API_BASE || 'https://envidicy-dash-client.onrender.com'}/notifications`
     const res = await fetch(url, { headers: authHeaders() })
     if (!res.ok) throw new Error('notifications failed')
     const items = await res.json()
