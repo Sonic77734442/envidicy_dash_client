@@ -19,6 +19,7 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
         { label: 'Движение средств', href: '/funds' },
         { label: 'Медиапланирование', href: '/plan' },
         { label: 'Дашборд', href: '/dashboard' },
+        { label: 'Инструменты', href: '/tools' },
         { label: 'Настройки', href: '/settings' },
       ]
   const current = location.pathname.split('/').pop()

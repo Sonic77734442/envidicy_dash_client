@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy · Инструменты</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="bg-blur"></div>
+      <div id="header-root"></div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Инструменты</p>
+            <h2>UTM генератор</h2>
+          </div>
+          <span class="chip chip-ghost">utm</span>
+        </div>
+
+        <div class="form-grid">
+          <label class="field">
+            <span>Базовая ссылка</span>
+            <input id="utm-url" type="url" placeholder="https://example.com/landing" />
+          </label>
+          <label class="field">
+            <span>Источник (utm_source)</span>
+            <input id="utm-source" type="text" placeholder="google" />
+          </label>
+          <label class="field">
+            <span>Канал (utm_medium)</span>
+            <input id="utm-medium" type="text" placeholder="cpc" />
+          </label>
+          <label class="field">
+            <span>Кампания (utm_campaign)</span>
+            <input id="utm-campaign" type="text" placeholder="brand_launch" />
+          </label>
+          <label class="field">
+            <span>Контент (utm_content)</span>
+            <input id="utm-content" type="text" placeholder="banner_a" />
+          </label>
+          <label class="field">
+            <span>Ключевое слово (utm_term)</span>
+            <input id="utm-term" type="text" placeholder="buy_now" />
+          </label>
+        </div>
+
+        <div class="panel-actions">
+          <button class="btn primary" id="utm-generate">Сгенерировать</button>
+          <button class="btn ghost" id="utm-copy">Скопировать</button>
+          <button class="btn ghost" id="utm-reset">Очистить</button>
+        </div>
+
+        <div class="field">
+          <span>Результат</span>
+          <textarea id="utm-result" class="field-input small textarea" readonly></textarea>
+        </div>
+
+        <p class="muted small">Скоро тут появится сокращатель ссылок.</p>
+      </section>
+    </div>
+    <script src="/config.js"></script>
+    <script src="/shared.js"></script>
+    <script src="/tools.js"></script>
+  </body>
+</html>
