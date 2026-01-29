@@ -4057,19 +4057,26 @@ def admin_list_users(admin_user=Depends(get_admin_user)):
     if not get_conn:
         return []
     with get_conn() as conn:
+        admin_emails = sorted(ADMIN_EMAILS)
+        email_filter = ""
+        params: List[object] = []
+        if admin_emails:
+            placeholders = ", ".join(["?"] * len(admin_emails))
+            email_filter = f"WHERE u.email NOT IN ({placeholders})"
+            params.extend(admin_emails)
         rows = conn.execute(
             """
             SELECT u.id, u.email, u.created_at,
               COALESCE(SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END), 0) as completed_count
             FROM users u
             LEFT JOIN topups t ON t.user_id = u.id
-            WHERE u.email NOT IN (?, ?)
+            {email_filter}
             GROUP BY u.id, u.email, u.created_at
             HAVING COALESCE(SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END), 0) = 0
                AND COALESCE(u.is_client, 0) = 0
             ORDER BY u.created_at DESC
-            """,
-            (ADMIN_EMAILS[0], ADMIN_EMAILS[1]),
+            """.format(email_filter=email_filter),
+            params,
         ).fetchall()
         return [dict(row) for row in rows]
 
