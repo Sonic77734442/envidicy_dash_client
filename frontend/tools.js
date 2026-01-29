@@ -260,31 +260,33 @@ function exportBulk() {
 function renderParamList(containerId, items) {
   const container = document.getElementById(containerId)
   if (!container) return
-  container.innerHTML = items
-    .map(
-      (p) => `
-      <div class="param-item">
-        <div>
-          <div><code>${p.key}</code></div>
-          <div class="param-desc">${p.desc}</div>
-        </div>
-        <button class="btn ghost small" data-insert="${p.key}">Вставить</button>
-      </div>
-    `
-    )
+  const options = items
+    .map((p) => `<option value="${p.key}">${p.key} — ${p.desc}</option>`)
     .join('')
+  container.innerHTML = `
+    ${items
+      .map(
+        (p) => `<span class="param-tag" data-insert="${p.key}">${p.key}<small>${p.desc}</small></span>`
+      )
+      .join('')}
+    <select class="param-select" data-select>
+      <option value="">Выберите параметр</option>
+      ${options}
+    </select>
+  `
   container.addEventListener('click', (event) => {
-    const btn = event.target.closest('button[data-insert]')
-    if (!btn) return
-    const token = btn.dataset.insert
-    if (!lastFocused) {
-      alert('Сначала выберите поле для вставки.')
-      return
-    }
-    const value = lastFocused.value || ''
-    lastFocused.value = value ? `${value}${token}` : token
-    lastFocused.focus()
+    const tag = event.target.closest('.param-tag')
+    if (!tag) return
+    insertToken(tag.dataset.insert)
   })
+  const select = container.querySelector('select[data-select]')
+  if (select) {
+    select.addEventListener('change', (event) => {
+      const val = event.target.value
+      if (val) insertToken(val)
+      event.target.value = ''
+    })
+  }
 }
 
 if (single.generate) single.generate.addEventListener('click', buildSingle)
@@ -314,3 +316,13 @@ renderParamList('google-params-single', googleParams)
 renderParamList('google-params-bulk', googleParams)
 renderParamList('yandex-params-single', yandexParams)
 renderParamList('yandex-params-bulk', yandexParams)
+
+function insertToken(token) {
+  if (!lastFocused) {
+    alert('Сначала выберите поле для вставки.')
+    return
+  }
+  const value = lastFocused.value || ''
+  lastFocused.value = value ? `${value}${token}` : token
+  lastFocused.focus()
+}
