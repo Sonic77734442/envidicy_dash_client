@@ -1586,13 +1586,15 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
         margin: 15mm;
       }}
       body {{
-        font-family: "Helvetica", "Arial", sans-serif;
+        font-family: "Arial", sans-serif;
         color: #111;
         margin: 0;
+        background: #fff;
       }}
       .wrap {{
         max-width: 900px;
         margin: 0 auto;
+        padding: 8px 16px 24px;
       }}
       h1 {{
         font-size: 16px;
@@ -1606,6 +1608,12 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
       .note {{
         font-size: 11px;
         margin: 6px 0 8px;
+      }}
+      .alert-line {{
+        color: #d9251d;
+        font-weight: 700;
+        font-size: 11px;
+        margin: 6px 0 4px;
       }}
       table {{
         width: 100%;
@@ -1629,10 +1637,9 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
       }}
       .warning {{
         border: 2px solid #d9251d;
-        color: #d9251d;
         padding: 6px 8px;
         font-size: 11px;
-        margin: 8px 0 10px;
+        margin: 6px 0 6px;
       }}
       .right {{
         text-align: right;
@@ -1643,47 +1650,10 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
       .center {{
         text-align: center;
       }}
-      .signature {{
-        margin-top: 18px;
-        display: flex;
-        align-items: center;
-        gap: 24px;
-      }}
-      .stamp {{
-        width: 120px;
-        height: 120px;
-        border: 2px solid #1b4aa5;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #1b4aa5;
-        font-size: 10px;
-      }}
-      .print-btn {{
-        margin: 6px 0 12px;
-        display: inline-block;
-        padding: 8px 12px;
-        border: 1px solid #333;
-        border-radius: 8px;
-        text-decoration: none;
-        color: #111;
-        font-size: 11px;
-      }}
-      @media print {{
-        .print-btn {{
-          display: none;
-        }}
-        body {{
-          margin: 0;
-        }}
-      }}
     </style>
   </head>
   <body>
     <div class="wrap">
-      <a class="print-btn" href="#" onclick="window.print(); return false;">Скачать PDF</a>
-
       <table class="bank-table">
         <tr>
           <td>
@@ -1713,7 +1683,7 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
         </tr>
       </table>
 
-      <p class="note">Счет действителен в течение 5 рабочих дней.</p>
+      <p class="note">Счет действителен в течение 5 рабочих дней</p>
 
       <h1>Счет на оплату № {number} от {date}</h1>
       <div class="title-line"></div>
@@ -1736,10 +1706,10 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
         </tr>
       </table>
 
-      <div class="warning">
-        Внимание! В назначении платежа скопируйте данные, указанные ниже:<br />
-        {description}<br />
-        Если назначение платежа будет указано некорректно, платеж может быть возвращен как ошибочный либо время поступления денег на счет может занять до 3-х рабочих дней!
+      <div class="alert-line">Внимание! В назначение платежа скопируйте данные, указанные ниже.</div>
+      <div class="warning">{description}</div>
+      <div class="alert-line">
+        Если назначение платежа будет указано некорректно, платеж может быть возвращен как ошибочный либо время поступления денег на счет может занять до 3-х рабочих дней
       </div>
 
       <table>
@@ -1773,16 +1743,7 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
       </table>
 
       <p class="small">Всего наименований 1, на сумму {amount} {currency}</p>
-      <p class="small"><strong>Всего к оплате:</strong> {amount} {currency}</p>
-      <p class="small"><strong>Всего к оплате:</strong> {amount_words}</p>
-
-      <div class="signature">
-        <div class="stamp">ПЕЧАТЬ</div>
-        <div class="small">
-          <div>Исполнитель _______________________</div>
-          <div>(подпись)</div>
-        </div>
-      </div>
+      <p class="small"><strong>Всего к оплате:</strong> {amount_words}. Услуги Исполнителя НДС не облагаются (п.п. 46 ст.394 Налогового кодекса Казахстана).</p>
     </div>
   </body>
 </html>
@@ -2574,18 +2535,59 @@ def _save_invoice_pdf(pdf: UploadFile) -> str:
     return path
 
 
-def _wallet_invoice_page_html(request_row: Dict[str, object], invoice_row: Optional[Dict[str, object]], token: Optional[str]) -> str:
-    request_id = request_row["id"]
-    amount = _format_amount(request_row["amount"])
+def _format_ru_date(date_str: str) -> str:
+    try:
+        dt = datetime.fromisoformat(date_str)
+    except Exception:
+        return date_str
+    months = [
+        "января",
+        "февраля",
+        "марта",
+        "апреля",
+        "мая",
+        "июня",
+        "июля",
+        "августа",
+        "сентября",
+        "октября",
+        "ноября",
+        "декабря",
+    ]
+    return f"{dt.day} {months[dt.month - 1]} {dt.year} г."
+
+
+def _wallet_invoice_page_html(
+    request_row: Dict[str, object],
+    invoice_number: str,
+    invoice_date: str,
+    company: Dict[str, object],
+    customer: Dict[str, object],
+) -> str:
+    amount_val = float(request_row["amount"])
+    amount = _format_amount(amount_val)
     currency = request_row.get("currency") or "KZT"
-    status = request_row.get("status") or "requested"
-    if invoice_row:
-        pdf_url = f"/wallet/topup-requests/{request_id}/pdf"
-        if token:
-            pdf_url = f"{pdf_url}?token={token}"
-        invoice_number = invoice_row.get("invoice_number") or "—"
-        invoice_date = invoice_row.get("invoice_date") or "—"
-        return f"""
+    amount_words = _amount_to_words_ru(amount_val)
+    date_ru = _format_ru_date(invoice_date)
+    company_name = company.get("name") or "—"
+    company_bin = company.get("bin") or "—"
+    company_iin = company.get("iin") or ""
+    company_address = company.get("legal_address") or company.get("factual_address") or ""
+    company_bank = company.get("bank") or "—"
+    company_iban = company.get("iban") or "—"
+    company_bic = company.get("bic") or "—"
+    company_kbe = company.get("kbe") or "—"
+
+    customer_name = customer.get("name") or "—"
+    customer_bin = customer.get("bin") or "—"
+    customer_address = customer.get("address") or "—"
+
+    purpose = (
+        f"За услуги по использованию Программного обеспечения Исполнителя \"{company_name}\" "
+        f"по счету {invoice_number} от {date_ru}, согласно Публичному договору возмездного оказания услуг от 25.07.2023 г."
+    )
+
+    return f"""
 <!doctype html>
 <html lang="ru">
   <head>
@@ -2594,94 +2596,153 @@ def _wallet_invoice_page_html(request_row: Dict[str, object], invoice_row: Optio
     <title>Счет на оплату</title>
     <style>
       body {{
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: #0c0f1c;
-        color: #e7ecf6;
+        font-family: "Arial", sans-serif;
+        background: #ffffff;
+        color: #111;
         margin: 0;
         padding: 24px;
       }}
-      .card {{
-        background: #131726;
-        border: 1px solid #1f2433;
-        border-radius: 16px;
-        padding: 16px;
+      .page {{
         max-width: 900px;
-        margin: 0 auto 16px;
-      }}
-      .meta {{
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 8px;
-      }}
-      .meta div {{
-        background: #0f1322;
-        border: 1px solid #1f2433;
-        border-radius: 12px;
-        padding: 10px;
-      }}
-      iframe {{
-        width: 100%;
-        height: 70vh;
-        border: none;
-        border-radius: 12px;
-      }}
-      a {{
-        color: #7dd3fc;
-      }}
-    </style>
-  </head>
-  <body>
-    <div class="card">
-      <h2>Счет на оплату</h2>
-      <div class="meta">
-        <div><strong>Номер:</strong> {invoice_number}</div>
-        <div><strong>Дата:</strong> {invoice_date}</div>
-        <div><strong>Сумма:</strong> {amount} {currency}</div>
-        <div><strong>Статус:</strong> {status}</div>
-      </div>
-      <p>Если PDF не отображается, откройте <a href="{pdf_url}">счет по ссылке</a>.</p>
-    </div>
-    <div class="card">
-      <iframe src="{pdf_url}"></iframe>
-    </div>
-  </body>
-</html>
-"""
-    return f"""
-<!doctype html>
-<html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Счет формируется</title>
-    <style>
-      body {{
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: #0c0f1c;
-        color: #e7ecf6;
-        margin: 0;
-        padding: 24px;
-      }}
-      .card {{
-        background: #131726;
-        border: 1px solid #1f2433;
-        border-radius: 16px;
-        padding: 16px;
-        max-width: 700px;
         margin: 0 auto;
+        background: #fff;
+        border: 1px solid #ddd;
+        padding: 18px 20px 28px;
       }}
-      .muted {{
-        color: #93a1b8;
+      .header {{
+        text-align: center;
+        font-weight: 700;
+        font-size: 12px;
+        margin-bottom: 6px;
+      }}
+      .bank-table {{
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }}
+      .bank-table td {{
+        border: 1px solid #333;
+        padding: 6px 8px;
+        vertical-align: top;
+      }}
+      .section-title {{
+        font-weight: 700;
+        font-size: 16px;
+        margin: 12px 0 8px;
+      }}
+      .subline {{
+        font-size: 12px;
+        margin: 4px 0;
+      }}
+      .alert {{
+        color: #d32f2f;
+        font-weight: 700;
+        margin: 10px 0 6px;
+        font-size: 12px;
+      }}
+      .purpose {{
+        border: 1px solid #d32f2f;
+        padding: 6px 8px;
+        font-size: 12px;
+        margin-bottom: 10px;
+      }}
+      .items {{
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }}
+      .items th, .items td {{
+        border: 1px solid #333;
+        padding: 6px;
+      }}
+      .items th {{
+        background: #f3f3f3;
+      }}
+      .total {{
+        text-align: right;
+        font-weight: 700;
+        margin-top: 6px;
+        font-size: 12px;
+      }}
+      .footnote {{
+        font-size: 12px;
+        margin-top: 10px;
+      }}
+      .sign {{
+        margin-top: 24px;
+        border-top: 1px solid #111;
+        height: 40px;
       }}
     </style>
   </head>
   <body>
-    <div class="card">
-      <h2>Счет формируется</h2>
-      <p class="muted">
-        Мы получили заявку на сумму {amount} {currency}. Как только 1С пришлет PDF, он появится на этой странице.
-      </p>
-      <p class="muted">Статус заявки: {status}</p>
+    <div class="page">
+      <div class="header">Образец платежного поручения</div>
+      <table class="bank-table">
+        <tr>
+          <td rowspan="2">
+            Бенефициар:<br />
+            {company_name}<br />
+            БИН: {company_bin}
+          </td>
+          <td>ИИК<br />{company_iban}</td>
+          <td>Кбе<br />{company_kbe}</td>
+        </tr>
+        <tr>
+          <td>БИК<br />{company_bic}</td>
+          <td>Код назначения платежа<br />853</td>
+        </tr>
+        <tr>
+          <td colspan="3">Банк бенефициара: {company_bank}</td>
+        </tr>
+      </table>
+
+      <div class="subline">Счет действителен в течение 5 рабочих дней</div>
+
+      <div class="section-title">Счет на оплату № {invoice_number} от {date_ru}</div>
+
+      <div class="subline">
+        Исполнитель: БИН / ИИН {company_bin}{f", {company_iin}" if company_iin else ""}, {company_name}, {company_address}
+      </div>
+      <div class="subline">
+        Заказчик: БИН / ИИН {customer_bin}, {customer_name}, {customer_address}
+      </div>
+      <div class="subline">Договор: Публичный договор возмездного оказания услуг от 25.07.2023 г.</div>
+
+      <div class="alert">Внимание! В назначение платежа скопируйте данные, указанные ниже.</div>
+      <div class="purpose">{purpose}</div>
+
+      <table class="items">
+        <thead>
+          <tr>
+            <th>№</th>
+            <th>Наименование</th>
+            <th>Ед.</th>
+            <th>Кол-во</th>
+            <th>Цена</th>
+            <th>Сумма</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>За услуги по использованию Программного обеспечения Исполнителя "{company_name}"</td>
+            <td>услуга</td>
+            <td>1</td>
+            <td>{amount}</td>
+            <td>{amount}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="total">Итого: {amount} {currency}</div>
+
+      <div class="footnote">
+        Всего наименований 1, на сумму {amount} {currency}<br />
+        Всего к оплате: {amount_words} {currency}. Услуги Исполнителя НДС не облагаются (п.п. 46 ст. 394 Налогового кодекса Казахстана).
+      </div>
+
+      <div class="sign"></div>
     </div>
   </body>
 </html>
@@ -3530,11 +3591,12 @@ def wallet_topup_invoice_page(
         currency = req.get("currency") or "KZT"
         amount_words = _amount_to_words_ru(req.get("amount") or 0)
         date_str = f"{date_str} г."
+        company = _get_company_profile(conn)
+        company_name = company.get("name") or BENEFICIARY["name"]
         description = (
             f"За услуги по использованию Программного обеспечения Исполнителя "
-            f"\"Adverton\" по счету {number} от {dt.strftime('%d.%m.%Y')} г."
+            f"\"{company_name}\" по счету {number} от {dt.strftime('%d.%m.%Y')} г."
         )
-        company = _get_company_profile(conn)
         beneficiary_bin = company.get("bin") or company.get("iin") or BENEFICIARY["bin"]
         payload = {
             "number": number,
