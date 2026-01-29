@@ -1616,6 +1616,21 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
         font-size: 11px;
         margin: 6px 0 4px;
       }}
+      .print-btn {{
+        display: inline-block;
+        margin: 4px 0 10px;
+        padding: 8px 12px;
+        border: 1px solid #333;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #111;
+        font-size: 11px;
+      }}
+      @media print {{
+        .print-btn {{
+          display: none;
+        }}
+      }}
       table {{
         width: 100%;
         border-collapse: collapse;
@@ -1655,6 +1670,7 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
   </head>
   <body>
     <div class="wrap">
+      <a class="print-btn" href="#" onclick="window.print(); return false;">Скачать PDF</a>
       <table class="bank-table">
         <tr>
           <td>
