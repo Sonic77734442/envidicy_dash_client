@@ -48,6 +48,31 @@ const presets = {
 let singlePreset = null
 let bulkPreset = null
 
+const googleParams = [
+  { key: '{adgroupid}', desc: 'Идентификатор группы объявлений' },
+  { key: '{adposition}', desc: 'Позиция объявления на странице' },
+  { key: '{campaignid}', desc: 'Идентификатор кампании' },
+  { key: '{creative}', desc: 'Уникальный идентификатор объявления' },
+  { key: '{device}', desc: 'Тип устройства' },
+  { key: '{feeditemid}', desc: 'Идентификатор расширения' },
+  { key: '{keyword}', desc: 'Ключевое слово' },
+  { key: '{loc_interest_ms}', desc: 'Локация из запроса' },
+  { key: '{loc_physical_ms}', desc: 'Физическая локация клика' },
+  { key: '{lpurl}', desc: 'Конечный URL' },
+  { key: '{matchtype}', desc: 'Тип соответствия ключевого слова' },
+  { key: '{merchant_id}', desc: 'ID Merchant Center' },
+  { key: '{placement}', desc: 'Сайт/место размещения' },
+  { key: '{product_channel}', desc: 'Канал продаж товара' },
+  { key: '{product_country}', desc: 'Страна продажи товара' },
+  { key: '{product_id}', desc: 'ID товара' },
+  { key: '{product_language}', desc: 'Язык товара' },
+  { key: '{product_partition_id}', desc: 'ID группы товаров' },
+  { key: '{store_code}', desc: 'Код магазина' },
+  { key: '{targetid}', desc: 'ID цели/аудитории' },
+]
+
+let lastFocused = null
+
 function activateTab(name) {
   tabs.forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.tab === name)
@@ -59,6 +84,14 @@ function activateTab(name) {
 
 tabs.forEach((btn) => {
   btn.addEventListener('click', () => activateTab(btn.dataset.tab))
+})
+
+document.addEventListener('focusin', (event) => {
+  const el = event.target
+  if (!el) return
+  if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+    lastFocused = el
+  }
 })
 
 function applyPreset(target, key) {
@@ -199,6 +232,36 @@ function exportBulk() {
   URL.revokeObjectURL(link.href)
 }
 
+function renderGoogleParams(containerId) {
+  const container = document.getElementById(containerId)
+  if (!container) return
+  container.innerHTML = googleParams
+    .map(
+      (p) => `
+      <div class="param-item">
+        <div>
+          <div><code>${p.key}</code></div>
+          <div class="param-desc">${p.desc}</div>
+        </div>
+        <button class="btn ghost small" data-insert="${p.key}">Вставить</button>
+      </div>
+    `
+    )
+    .join('')
+  container.addEventListener('click', (event) => {
+    const btn = event.target.closest('button[data-insert]')
+    if (!btn) return
+    const token = btn.dataset.insert
+    if (!lastFocused) {
+      alert('Сначала выберите поле для вставки.')
+      return
+    }
+    const value = lastFocused.value || ''
+    lastFocused.value = value ? `${value}${token}` : token
+    lastFocused.focus()
+  })
+}
+
 if (single.generate) single.generate.addEventListener('click', buildSingle)
 if (single.copy) single.copy.addEventListener('click', copySingle)
 if (single.reset) single.reset.addEventListener('click', resetSingle)
@@ -221,3 +284,6 @@ if (bulk.presets) {
     applyPreset(bulk, btn.dataset.preset)
   })
 }
+
+renderGoogleParams('google-params-single')
+renderGoogleParams('google-params-bulk')
