@@ -722,6 +722,11 @@ h1 {
   resize: vertical;
 }
 
+.utm-result {
+  width: 100%;
+  min-height: 110px;
+}
+
 .payload-box {
   margin: 0;
   background: #0f1322;
