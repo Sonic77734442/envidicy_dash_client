@@ -27,6 +27,24 @@ const googleStatus = document.getElementById('google-status')
 const googleCards = document.getElementById('google-cards')
 const googleBody = document.getElementById('google-body')
 
+const tiktokDateFrom = document.getElementById('tiktok-date-from')
+const tiktokDateTo = document.getElementById('tiktok-date-to')
+const tiktokAccount = document.getElementById('tiktok-account')
+const tiktokLoad = document.getElementById('tiktok-load')
+const tiktokStatus = document.getElementById('tiktok-status')
+const tiktokCards = document.getElementById('tiktok-cards')
+const tiktokCampaigns = document.getElementById('tiktok-campaigns')
+const tiktokAdgroups = document.getElementById('tiktok-adgroups')
+const tiktokAds = document.getElementById('tiktok-ads')
+
+const reportLoad = document.getElementById('report-load')
+const reportExport = document.getElementById('report-export')
+const reportStatus = document.getElementById('report-status')
+const ringGrid = document.getElementById('kpi-rings')
+const donutEl = document.getElementById('spend-donut')
+const legendEl = document.getElementById('spend-legend')
+const lineEl = document.getElementById('line-chart')
+
 function authHeaders() {
   const token = localStorage.getItem('auth_token')
   return token ? { Authorization: `Bearer ${token}` } : {}
@@ -42,6 +60,10 @@ function initMetaDates() {
   if (googleDateFrom && googleDateTo) {
     googleDateFrom.value = metaDateFrom.value
     googleDateTo.value = metaDateTo.value
+  }
+  if (tiktokDateFrom && tiktokDateTo) {
+    tiktokDateFrom.value = metaDateFrom.value
+    tiktokDateTo.value = metaDateTo.value
   }
 }
 
@@ -64,6 +86,12 @@ async function loadMetaAccounts() {
       googleAccount.innerHTML =
         '<option value="">Все</option>' +
         google.map((acc) => `<option value="${acc.id}">${acc.name || acc.external_id || acc.id}</option>`).join('')
+    }
+    if (tiktokAccount) {
+      const tiktok = data.filter((acc) => String(acc.platform || '').toLowerCase().trim() === 'tiktok')
+      tiktokAccount.innerHTML =
+        '<option value="">Все</option>' +
+        tiktok.map((acc) => `<option value="${acc.id}">${acc.name || acc.external_id || acc.id}</option>`).join('')
     }
   } catch (e) {
     if (metaStatus) metaStatus.textContent = 'Не удалось загрузить Meta аккаунты.'
@@ -215,10 +243,302 @@ async function loadGoogleInsights() {
   }
 }
 
+function renderTiktokCards(summary) {
+  if (!tiktokCards) return
+  const currency = summary.currency || 'USD'
+  const cards = [
+    { label: 'Spend', value: `${formatMoney(summary.spend || 0)} ${currency}` },
+    { label: 'Impr', value: formatInt(summary.impressions || 0) },
+    { label: 'Clicks', value: formatInt(summary.clicks || 0) },
+    { label: 'CTR', value: formatPct(summary.ctr || 0) },
+    { label: 'CPC', value: summary.cpc ? `${formatMoney(summary.cpc)} ${currency}` : '—' },
+    { label: 'CPM', value: summary.cpm ? `${formatMoney(summary.cpm)} ${currency}` : '—' },
+  ]
+  tiktokCards.innerHTML = cards
+    .map(
+      (card) => `
+      <div class="stat">
+        <h3>${card.label}</h3>
+        <div class="stat-value">${card.value}</div>
+      </div>
+    `
+    )
+    .join('')
+}
+
+function renderTiktokTable(rows, tbody, columns) {
+  if (!tbody) return
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="' + columns + '">Нет данных</td></tr>'
+    return
+  }
+  tbody.innerHTML = rows
+    .map((row) => {
+      if (tbody === tiktokCampaigns) {
+        return `
+      <tr>
+        <td>${row.campaign_name || row.campaign_id || '—'}</td>
+        <td>${formatMoney(row.spend || 0)}</td>
+        <td>${formatPct(row.ctr || 0)}</td>
+        <td>${row.cpc ? formatMoney(row.cpc) : '—'}</td>
+        <td>${row.cpm ? formatMoney(row.cpm) : '—'}</td>
+        <td>${formatInt(row.impressions || 0)}</td>
+        <td>${formatInt(row.clicks || 0)}</td>
+      </tr>
+      `
+      }
+      if (tbody === tiktokAdgroups) {
+        return `
+      <tr>
+        <td>${row.adgroup_name || row.adgroup_id || '—'}</td>
+        <td>${row.campaign_name || row.campaign_id || '—'}</td>
+        <td>${formatMoney(row.spend || 0)}</td>
+        <td>${formatPct(row.ctr || 0)}</td>
+        <td>${row.cpc ? formatMoney(row.cpc) : '—'}</td>
+        <td>${row.cpm ? formatMoney(row.cpm) : '—'}</td>
+        <td>${formatInt(row.impressions || 0)}</td>
+        <td>${formatInt(row.clicks || 0)}</td>
+      </tr>
+      `
+      }
+      return `
+      <tr>
+        <td>${row.ad_name || row.ad_id || '—'}</td>
+        <td>${row.adgroup_name || row.adgroup_id || '—'}</td>
+        <td>${row.campaign_name || row.campaign_id || '—'}</td>
+        <td>${formatMoney(row.spend || 0)}</td>
+        <td>${formatPct(row.ctr || 0)}</td>
+        <td>${row.cpc ? formatMoney(row.cpc) : '—'}</td>
+        <td>${row.cpm ? formatMoney(row.cpm) : '—'}</td>
+        <td>${formatInt(row.impressions || 0)}</td>
+        <td>${formatInt(row.clicks || 0)}</td>
+      </tr>
+      `
+    })
+    .join('')
+}
+
+async function loadTiktokInsights() {
+  if (!tiktokDateFrom || !tiktokDateTo) return
+  if (tiktokStatus) tiktokStatus.textContent = 'Загрузка...'
+  const params = new URLSearchParams()
+  params.set('date_from', tiktokDateFrom.value)
+  params.set('date_to', tiktokDateTo.value)
+  if (tiktokAccount && tiktokAccount.value) params.set('account_id', tiktokAccount.value)
+  try {
+    const res = await fetch(`${apiBase}/tiktok/insights?${params.toString()}`, { headers: authHeaders() })
+    if (res.status === 401) {
+      window.location.href = '/login'
+      return
+    }
+    if (!res.ok) throw new Error('Failed to load tiktok insights')
+    const data = await res.json()
+    renderTiktokCards(data.summary || {})
+    renderTiktokTable(data.campaigns || [], tiktokCampaigns, 7)
+    renderTiktokTable(data.adgroups || [], tiktokAdgroups, 8)
+    renderTiktokTable(data.ads || [], tiktokAds, 9)
+    if (tiktokStatus) tiktokStatus.textContent = 'Данные обновлены.'
+  } catch (e) {
+    if (tiktokStatus) tiktokStatus.textContent = 'Ошибка загрузки TikTok Ads.'
+    renderTiktokCards({ spend: 0, ctr: 0, cpc: 0, cpm: 0, impressions: 0, clicks: 0, currency: 'USD' })
+    renderTiktokTable([], tiktokCampaigns, 7)
+    renderTiktokTable([], tiktokAdgroups, 8)
+    renderTiktokTable([], tiktokAds, 9)
+  }
+}
+
+const platformPalette = [
+  { key: 'meta', label: 'Meta', color: '#3b82f6' },
+  { key: 'google', label: 'Google', color: '#f59e0b' },
+  { key: 'tiktok', label: 'TikTok', color: '#14b8a6' },
+]
+
+function formatShort(value) {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`
+  return String(Math.round(value))
+}
+
+function buildRing({ label, value, percent, color }) {
+  const radius = 15.915
+  const dash = Math.max(0, Math.min(100, percent * 100))
+  return `
+    <div class="ring">
+      <svg viewBox="0 0 36 36">
+        <circle cx="18" cy="18" r="${radius}" fill="none" stroke="var(--line)" stroke-width="4"></circle>
+        <circle
+          cx="18"
+          cy="18"
+          r="${radius}"
+          fill="none"
+          stroke="${color}"
+          stroke-width="4"
+          stroke-linecap="round"
+          stroke-dasharray="${dash} ${100 - dash}"
+          transform="rotate(-90 18 18)"
+        ></circle>
+      </svg>
+      <div class="ring-label">${label}</div>
+      <div class="ring-value">${(percent * 100).toFixed(1)}% · ${formatShort(value)}</div>
+    </div>
+  `
+}
+
+function renderRings(totals) {
+  if (!ringGrid) return
+  const totalSpend = platformPalette.reduce((sum, p) => sum + (totals[p.key]?.spend || 0), 0)
+  if (!totalSpend) {
+    ringGrid.innerHTML = '<div class="muted">Нет данных</div>'
+    return
+  }
+  ringGrid.innerHTML = platformPalette
+    .map((p) =>
+      buildRing({
+        label: p.label,
+        value: totals[p.key]?.spend || 0,
+        percent: (totals[p.key]?.spend || 0) / totalSpend,
+        color: p.color,
+      })
+    )
+    .join('')
+}
+
+function renderDonut(totals) {
+  if (!donutEl || !legendEl) return
+  const totalSpend = platformPalette.reduce((sum, p) => sum + (totals[p.key]?.spend || 0), 0)
+  if (!totalSpend) {
+    donutEl.innerHTML = '<div class="muted">Нет данных</div>'
+    legendEl.innerHTML = ''
+    return
+  }
+  let offset = 0
+  const segments = platformPalette
+    .map((p) => {
+      const value = totals[p.key]?.spend || 0
+      const share = value / totalSpend
+      const dash = share * 100
+      const segment = `
+        <circle
+          cx="18"
+          cy="18"
+          r="15.915"
+          fill="none"
+          stroke="${p.color}"
+          stroke-width="8"
+          stroke-dasharray="${dash} ${100 - dash}"
+          stroke-dashoffset="${-offset}"
+          transform="rotate(-90 18 18)"
+        ></circle>
+      `
+      offset += dash
+      return segment
+    })
+    .join('')
+  donutEl.innerHTML = `
+    <svg viewBox="0 0 36 36">
+      <circle cx="18" cy="18" r="15.915" fill="none" stroke="var(--line)" stroke-width="8"></circle>
+      ${segments}
+    </svg>
+  `
+  legendEl.innerHTML = platformPalette
+    .map((p) => {
+      const value = totals[p.key]?.spend || 0
+      const share = value / totalSpend
+      return `
+        <div class="legend-item">
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px;"></span>${p.label}</span>
+          <span>${formatMoney(value)} · ${(share * 100).toFixed(1)}%</span>
+        </div>
+      `
+    })
+    .join('')
+}
+
+function buildDateRange(startStr, endStr) {
+  const result = []
+  const start = new Date(startStr)
+  const end = new Date(endStr)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return result
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    result.push(d.toISOString().slice(0, 10))
+  }
+  return result
+}
+
+function renderLineChart(series) {
+  if (!lineEl) return
+  if (!series.length) {
+    lineEl.innerHTML = '<div class="muted">Нет данных</div>'
+    return
+  }
+  const width = 720
+  const height = 220
+  const pad = 24
+  const maxValue = Math.max(1, ...series.map((d) => Math.max(d.spend, d.clicks)))
+  const scaleX = (idx) => pad + (idx / (series.length - 1 || 1)) * (width - pad * 2)
+  const scaleY = (value) => height - pad - (value / maxValue) * (height - pad * 2)
+  const spendPath = series
+    .map((d, i) => `${i === 0 ? 'M' : 'L'} ${scaleX(i)} ${scaleY(d.spend)}`)
+    .join(' ')
+  const clickPath = series
+    .map((d, i) => `${i === 0 ? 'M' : 'L'} ${scaleX(i)} ${scaleY(d.clicks)}`)
+    .join(' ')
+  lineEl.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}">
+      <rect x="0" y="0" width="${width}" height="${height}" fill="none"></rect>
+      <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" stroke="var(--line)" stroke-width="1"></line>
+      <path d="${spendPath}" fill="none" stroke="#3b82f6" stroke-width="2"></path>
+      <path d="${clickPath}" fill="none" stroke="#f59e0b" stroke-width="2"></path>
+    </svg>
+    <div class="legend">
+      <div class="legend-item"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:6px;"></span>Spend</span><span>${formatMoney(series[series.length - 1].spend)}</span></div>
+      <div class="legend-item"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f59e0b;margin-right:6px;"></span>Clicks</span><span>${formatInt(series[series.length - 1].clicks)}</span></div>
+      <div class="legend-item"><span class="muted">Общая шкала</span></div>
+    </div>
+  `
+}
+
+async function loadOverview() {
+  if (!metaDateFrom || !metaDateTo) return
+  if (reportStatus) reportStatus.textContent = 'Загрузка отчета...'
+  const params = new URLSearchParams()
+  params.set('date_from', metaDateFrom.value)
+  params.set('date_to', metaDateTo.value)
+  try {
+    const res = await fetch(`${apiBase}/insights/overview?${params.toString()}`, { headers: authHeaders() })
+    if (res.status === 401) {
+      window.location.href = '/login'
+      return
+    }
+    if (!res.ok) throw new Error('Failed to load overview')
+    const data = await res.json()
+    const totals = data.totals || {}
+    renderRings(totals)
+    renderDonut(totals)
+    const range = buildDateRange(metaDateFrom.value, metaDateTo.value)
+    const series = range.map((date) => {
+      const meta = (data.daily?.meta || []).find((row) => row.date === date) || {}
+      const google = (data.daily?.google || []).find((row) => row.date === date) || {}
+      const tiktok = (data.daily?.tiktok || []).find((row) => row.date === date) || {}
+      const spend = (meta.spend || 0) + (google.spend || 0) + (tiktok.spend || 0)
+      const clicks = (meta.clicks || 0) + (google.clicks || 0) + (tiktok.clicks || 0)
+      return { date, spend, clicks }
+    })
+    renderLineChart(series)
+    if (reportStatus) reportStatus.textContent = 'Отчет обновлен.'
+  } catch (e) {
+    if (reportStatus) reportStatus.textContent = 'Ошибка загрузки отчета.'
+  }
+}
+
 if (metaLoad) metaLoad.addEventListener('click', loadMetaInsights)
 if (googleLoad) googleLoad.addEventListener('click', loadGoogleInsights)
+if (tiktokLoad) tiktokLoad.addEventListener('click', loadTiktokInsights)
+if (reportLoad) reportLoad.addEventListener('click', loadOverview)
+if (reportExport) reportExport.addEventListener('click', () => window.print())
 initMetaDates()
 loadMetaAccounts()
+loadOverview()
 
 function formatInt(value) {
   return Math.round(value).toLocaleString('ru-RU')

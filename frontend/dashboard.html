@@ -106,6 +106,86 @@
       <section class="panel">
         <div class="panel-head">
           <div>
+            <p class="eyebrow">TikTok Ads</p>
+            <h2>Insights по кампаниям</h2>
+          </div>
+          <span class="chip chip-ghost">Campaign</span>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>Период с</span>
+            <input id="tiktok-date-from" type="date" />
+          </label>
+          <label class="field">
+            <span>Период по</span>
+            <input id="tiktok-date-to" type="date" />
+          </label>
+          <label class="field">
+            <span>Аккаунт</span>
+            <select id="tiktok-account"></select>
+          </label>
+          <div class="panel-actions">
+            <button class="btn primary" id="tiktok-load">Загрузить</button>
+          </div>
+        </div>
+        <p id="tiktok-status" class="muted small"></p>
+        <div id="tiktok-cards" class="grid-3"></div>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Campaign</th>
+                <th>Spend</th>
+                <th>CTR</th>
+                <th>CPC</th>
+                <th>CPM</th>
+                <th>Impr</th>
+                <th>Clicks</th>
+              </tr>
+            </thead>
+            <tbody id="tiktok-campaigns"></tbody>
+          </table>
+        </div>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Ad Group</th>
+                <th>Campaign</th>
+                <th>Spend</th>
+                <th>CTR</th>
+                <th>CPC</th>
+                <th>CPM</th>
+                <th>Impr</th>
+                <th>Clicks</th>
+              </tr>
+            </thead>
+            <tbody id="tiktok-adgroups"></tbody>
+          </table>
+        </div>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Ad</th>
+                <th>Ad Group</th>
+                <th>Campaign</th>
+                <th>Spend</th>
+                <th>CTR</th>
+                <th>CPC</th>
+                <th>CPM</th>
+                <th>Impr</th>
+                <th>Clicks</th>
+              </tr>
+            </thead>
+            <tbody id="tiktok-ads"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
             <p class="eyebrow">Визуализация</p>
             <h2>Доли и динамика</h2>
           </div>
@@ -113,7 +193,13 @@
         </div>
         <div class="chart-grid">
           <div class="chart-card">
-            <p class="eyebrow">KPI кольца</p>
+            <div class="chart-head">
+              <p class="eyebrow">KPI кольца</p>
+              <div class="panel-actions">
+                <button class="btn ghost small" id="report-load" type="button">Обновить</button>
+                <button class="btn ghost small" id="report-export" type="button">Экспорт PDF</button>
+              </div>
+            </div>
             <div id="kpi-rings" class="ring-grid"></div>
           </div>
           <div class="chart-card">
@@ -122,6 +208,7 @@
             <div id="spend-legend" class="legend"></div>
           </div>
         </div>
+        <p id="report-status" class="muted small"></p>
         <div class="chart-card">
           <div class="chart-head">
             <p class="eyebrow">Динамика по дням</p>

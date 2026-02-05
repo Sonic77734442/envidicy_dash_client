@@ -738,6 +738,35 @@ h1 {
   white-space: pre-wrap;
 }
 
+@media print {
+  body {
+    background: #ffffff;
+    color: #111111;
+  }
+
+  .bg-blur,
+  .sidebar,
+  .topbar,
+  .btn,
+  .chip,
+  .dropdown,
+  .help-popover,
+  .panel-actions {
+    display: none !important;
+  }
+
+  .app {
+    padding: 0;
+  }
+
+  .panel,
+  .chart-card {
+    border: none;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+}
+
 .payload-row td {
   padding: 0 12px 12px;
 }

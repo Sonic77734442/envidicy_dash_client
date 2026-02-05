@@ -2214,6 +2214,13 @@ class GoogleInsightsResponse(BaseModel):
     campaigns: List[Dict[str, object]]
 
 
+class TikTokInsightsResponse(BaseModel):
+    summary: Dict[str, object]
+    campaigns: List[Dict[str, object]]
+    adgroups: List[Dict[str, object]]
+    ads: List[Dict[str, object]]
+
+
 class ProfilePayload(BaseModel):
     name: Optional[str] = None
     company: Optional[str] = None
@@ -2552,6 +2559,24 @@ def _meta_fetch_insights(account_external_id: str, date_from: str, date_to: str)
     data = resp.json()
     return data.get("data", [])
 
+def _meta_fetch_daily(account_external_id: str, date_from: str, date_to: str) -> List[Dict[str, object]]:
+    token = os.getenv("META_ACCESS_TOKEN")
+    if not token:
+        raise HTTPException(status_code=500, detail="META_ACCESS_TOKEN is not set")
+    url = f"https://graph.facebook.com/v20.0/act_{account_external_id}/insights"
+    params = {
+        "access_token": token,
+        "level": "account",
+        "fields": "spend,impressions,clicks",
+        "time_increment": 1,
+        "time_range": json.dumps({"since": date_from, "until": date_to}),
+    }
+    resp = httpx.get(url, params=params, timeout=20)
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"Meta API error: {resp.text}")
+    data = resp.json()
+    return data.get("data", [])
+
 
 def _google_ads_client() -> GoogleAdsClient:
     developer_token = os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN")
@@ -2614,6 +2639,108 @@ def _google_fetch_insights(customer_id: str, date_from: str, date_to: str) -> Tu
             }
         )
     return campaigns, currency
+
+
+def _google_fetch_daily(customer_id: str, date_from: str, date_to: str) -> List[Dict[str, object]]:
+    client = _google_ads_client()
+    ga_service = client.get_service("GoogleAdsService")
+    query = f"""
+        SELECT
+          segments.date,
+          metrics.impressions,
+          metrics.clicks,
+          metrics.ctr,
+          metrics.average_cpc,
+          metrics.average_cpm,
+          metrics.cost_micros
+        FROM customer
+        WHERE segments.date BETWEEN '{date_from}' AND '{date_to}'
+    """
+    rows = ga_service.search(customer_id=customer_id, query=query)
+    daily: List[Dict[str, object]] = []
+    for row in rows:
+        metrics = row.metrics
+        daily.append(
+            {
+                "date": str(row.segments.date),
+                "impressions": int(metrics.impressions or 0),
+                "clicks": int(metrics.clicks or 0),
+                "ctr": float(metrics.ctr or 0),
+                "cpc": float(metrics.average_cpc or 0) / 1_000_000 if metrics.average_cpc else 0,
+                "cpm": float(metrics.average_cpm or 0) / 1_000_000 if metrics.average_cpm else 0,
+                "spend": float(metrics.cost_micros or 0) / 1_000_000,
+            }
+        )
+    return daily
+
+
+def _tiktok_access_token() -> str:
+    token = os.getenv("TIKTOK_ACCESS_TOKEN")
+    if not token:
+        raise HTTPException(status_code=500, detail="TIKTOK_ACCESS_TOKEN is not set")
+    return token
+
+
+def _tiktok_fetch_report(
+    advertiser_id: str,
+    date_from: str,
+    date_to: str,
+    data_level: str,
+    dimensions: List[str],
+    metrics: List[str],
+) -> List[Dict[str, object]]:
+    url = "https://business-api.tiktok.com/open_api/v1.3/report/integrated/get/"
+    params = {
+        "advertiser_id": advertiser_id,
+        "report_type": "BASIC",
+        "data_level": data_level,
+        "dimensions": json.dumps(dimensions),
+        "metrics": json.dumps(metrics),
+        "start_date": date_from,
+        "end_date": date_to,
+        "page_size": 1000,
+    }
+    headers = {"Access-Token": _tiktok_access_token()}
+    resp = httpx.get(url, params=params, headers=headers, timeout=30)
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"TikTok API error: {resp.text}")
+    payload = resp.json()
+    if payload.get("code") not in (0, None):
+        raise HTTPException(status_code=502, detail=f"TikTok API error: {payload}")
+    data = payload.get("data") or {}
+    rows = data.get("list") or []
+    results: List[Dict[str, object]] = []
+    for row in rows:
+        merged = {}
+        merged.update(row.get("dimensions") or {})
+        merged.update(row.get("metrics") or {})
+        results.append(merged)
+    return results
+
+
+def _tiktok_fetch_daily(advertiser_id: str, date_from: str, date_to: str) -> List[Dict[str, object]]:
+    rows = _tiktok_fetch_report(
+        advertiser_id,
+        date_from,
+        date_to,
+        "AUCTION_ADVERTISER",
+        ["stat_time_day"],
+        ["spend", "impressions", "clicks", "ctr", "cpc", "cpm"],
+    )
+    daily: List[Dict[str, object]] = []
+    for row in rows:
+        daily.append(
+            {
+                "date": row.get("stat_time_day"),
+                "spend": row.get("spend"),
+                "impressions": row.get("impressions"),
+                "clicks": row.get("clicks"),
+                "ctr": row.get("ctr"),
+                "cpc": row.get("cpc"),
+                "cpm": row.get("cpm"),
+            }
+        )
+    return daily
 
 def _invoice_storage_dir() -> str:
     base_dir = os.path.join(os.path.dirname(__file__), "..", "storage", "invoices")
@@ -3351,6 +3478,243 @@ def google_insights(
         "currency": currency or "USD",
     }
     return {"summary": summary, "campaigns": campaigns}
+
+
+@app.get("/tiktok/insights", response_model=TikTokInsightsResponse)
+def tiktok_insights(
+    date_from: str,
+    date_to: str,
+    account_id: Optional[int] = None,
+    current_user=Depends(get_current_user),
+):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    if not date_from or not date_to:
+        raise HTTPException(status_code=400, detail="date_from and date_to are required")
+    with get_conn() as conn:
+        if account_id:
+            row = conn.execute(
+                "SELECT * FROM ad_accounts WHERE id=? AND user_id=? AND platform='tiktok'",
+                (account_id, current_user["id"]),
+            ).fetchone()
+            accounts = [dict(row)] if row else []
+        else:
+            rows = conn.execute(
+                "SELECT * FROM ad_accounts WHERE user_id=? AND platform='tiktok'",
+                (current_user["id"],),
+            ).fetchall()
+            accounts = [dict(r) for r in rows]
+    if not accounts:
+        return {"summary": {"spend": 0, "ctr": 0, "cpc": 0, "cpm": 0, "impressions": 0, "clicks": 0}, "campaigns": [], "adgroups": [], "ads": []}
+
+    def _to_float(value: object) -> float:
+        try:
+            return float(value)
+        except Exception:
+            return 0.0
+
+    total_spend = 0.0
+    total_impressions = 0.0
+    total_clicks = 0.0
+
+    campaigns: List[Dict[str, object]] = []
+    adgroups: List[Dict[str, object]] = []
+    ads: List[Dict[str, object]] = []
+
+    metrics = ["spend", "impressions", "clicks", "ctr", "cpc", "cpm"]
+
+    for acc in accounts:
+        advertiser_id = acc.get("external_id") or acc.get("account_code") or os.getenv("TIKTOK_ADVERTISER_ID")
+        if not advertiser_id:
+            continue
+        campaign_rows = _tiktok_fetch_report(
+            str(advertiser_id),
+            date_from,
+            date_to,
+            "AUCTION_CAMPAIGN",
+            ["campaign_id", "campaign_name"],
+            metrics,
+        )
+        adgroup_rows = _tiktok_fetch_report(
+            str(advertiser_id),
+            date_from,
+            date_to,
+            "AUCTION_ADGROUP",
+            ["adgroup_id", "adgroup_name", "campaign_id", "campaign_name"],
+            metrics,
+        )
+        ad_rows = _tiktok_fetch_report(
+            str(advertiser_id),
+            date_from,
+            date_to,
+            "AUCTION_AD",
+            ["ad_id", "ad_name", "adgroup_id", "adgroup_name", "campaign_id", "campaign_name"],
+            metrics,
+        )
+        for row in campaign_rows:
+            spend = _to_float(row.get("spend"))
+            impressions = _to_float(row.get("impressions"))
+            clicks = _to_float(row.get("clicks"))
+            total_spend += spend
+            total_impressions += impressions
+            total_clicks += clicks
+            campaigns.append(
+                {
+                    "campaign_id": row.get("campaign_id"),
+                    "campaign_name": row.get("campaign_name"),
+                    "spend": spend,
+                    "impressions": impressions,
+                    "clicks": clicks,
+                    "ctr": _to_float(row.get("ctr")),
+                    "cpc": _to_float(row.get("cpc")),
+                    "cpm": _to_float(row.get("cpm")),
+                }
+            )
+        for row in adgroup_rows:
+            adgroups.append(
+                {
+                    "adgroup_id": row.get("adgroup_id"),
+                    "adgroup_name": row.get("adgroup_name"),
+                    "campaign_id": row.get("campaign_id"),
+                    "campaign_name": row.get("campaign_name"),
+                    "spend": _to_float(row.get("spend")),
+                    "impressions": _to_float(row.get("impressions")),
+                    "clicks": _to_float(row.get("clicks")),
+                    "ctr": _to_float(row.get("ctr")),
+                    "cpc": _to_float(row.get("cpc")),
+                    "cpm": _to_float(row.get("cpm")),
+                }
+            )
+        for row in ad_rows:
+            ads.append(
+                {
+                    "ad_id": row.get("ad_id"),
+                    "ad_name": row.get("ad_name"),
+                    "adgroup_id": row.get("adgroup_id"),
+                    "adgroup_name": row.get("adgroup_name"),
+                    "campaign_id": row.get("campaign_id"),
+                    "campaign_name": row.get("campaign_name"),
+                    "spend": _to_float(row.get("spend")),
+                    "impressions": _to_float(row.get("impressions")),
+                    "clicks": _to_float(row.get("clicks")),
+                    "ctr": _to_float(row.get("ctr")),
+                    "cpc": _to_float(row.get("cpc")),
+                    "cpm": _to_float(row.get("cpm")),
+                }
+            )
+
+    ctr = (total_clicks / total_impressions) if total_impressions else 0.0
+    cpc = (total_spend / total_clicks) if total_clicks else 0.0
+    cpm = (total_spend / total_impressions * 1000) if total_impressions else 0.0
+
+    summary = {
+        "spend": total_spend,
+        "ctr": ctr,
+        "cpc": cpc,
+        "cpm": cpm,
+        "impressions": total_impressions,
+        "clicks": total_clicks,
+        "currency": "USD",
+    }
+    return {"summary": summary, "campaigns": campaigns, "adgroups": adgroups, "ads": ads}
+
+
+@app.get("/insights/overview")
+def insights_overview(
+    date_from: str,
+    date_to: str,
+    current_user=Depends(get_current_user),
+):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    if not date_from or not date_to:
+        raise HTTPException(status_code=400, detail="date_from and date_to are required")
+
+    def _to_float(value: object) -> float:
+        try:
+            return float(value)
+        except Exception:
+            return 0.0
+
+    def _merge_daily(target: Dict[str, Dict[str, object]], date_key: str, row: Dict[str, object]) -> None:
+        date_val = row.get(date_key)
+        if not date_val:
+            return
+        if date_val not in target:
+            target[date_val] = {"date": date_val, "spend": 0.0, "impressions": 0.0, "clicks": 0.0}
+        target[date_val]["spend"] += _to_float(row.get("spend"))
+        target[date_val]["impressions"] += _to_float(row.get("impressions"))
+        target[date_val]["clicks"] += _to_float(row.get("clicks"))
+
+    with get_conn() as conn:
+        meta_rows = conn.execute(
+            "SELECT * FROM ad_accounts WHERE user_id=? AND platform='meta'",
+            (current_user["id"],),
+        ).fetchall()
+        google_rows = conn.execute(
+            "SELECT * FROM ad_accounts WHERE user_id=? AND platform='google'",
+            (current_user["id"],),
+        ).fetchall()
+        tiktok_rows = conn.execute(
+            "SELECT * FROM ad_accounts WHERE user_id=? AND platform='tiktok'",
+            (current_user["id"],),
+        ).fetchall()
+        meta_accounts = [dict(r) for r in meta_rows]
+        google_accounts = [dict(r) for r in google_rows]
+        tiktok_accounts = [dict(r) for r in tiktok_rows]
+
+    totals = {"meta": {"spend": 0.0, "impressions": 0.0, "clicks": 0.0},
+              "google": {"spend": 0.0, "impressions": 0.0, "clicks": 0.0},
+              "tiktok": {"spend": 0.0, "impressions": 0.0, "clicks": 0.0}}
+
+    daily_meta: Dict[str, Dict[str, object]] = {}
+    daily_google: Dict[str, Dict[str, object]] = {}
+    daily_tiktok: Dict[str, Dict[str, object]] = {}
+
+    for acc in meta_accounts:
+        external_id = acc.get("external_id") or acc.get("account_code")
+        if not external_id:
+            continue
+        rows = _meta_fetch_daily(str(external_id), date_from, date_to)
+        for row in rows:
+            _merge_daily(daily_meta, "date_start", row)
+
+    for acc in google_accounts:
+        external_id = acc.get("external_id") or acc.get("account_code")
+        if not external_id:
+            continue
+        rows = _google_fetch_daily(str(external_id), date_from, date_to)
+        for row in rows:
+            _merge_daily(daily_google, "date", row)
+
+    advertiser_ids: List[str] = []
+    for acc in tiktok_accounts:
+        adv_id = acc.get("external_id") or acc.get("account_code")
+        if adv_id:
+            advertiser_ids.append(str(adv_id))
+    if not advertiser_ids:
+        env_adv = os.getenv("TIKTOK_ADVERTISER_ID")
+        if env_adv:
+            advertiser_ids.append(str(env_adv))
+    for adv_id in sorted(set(advertiser_ids)):
+        rows = _tiktok_fetch_daily(adv_id, date_from, date_to)
+        for row in rows:
+            _merge_daily(daily_tiktok, "date", row)
+
+    def _finalize(daily_map: Dict[str, Dict[str, object]], platform: str) -> List[Dict[str, object]]:
+        rows = [daily_map[k] for k in sorted(daily_map.keys())]
+        totals[platform]["spend"] = sum(_to_float(r.get("spend")) for r in rows)
+        totals[platform]["impressions"] = sum(_to_float(r.get("impressions")) for r in rows)
+        totals[platform]["clicks"] = sum(_to_float(r.get("clicks")) for r in rows)
+        return rows
+
+    daily = {
+        "meta": _finalize(daily_meta, "meta"),
+        "google": _finalize(daily_google, "google"),
+        "tiktok": _finalize(daily_tiktok, "tiktok"),
+    }
+
+    return {"totals": totals, "daily": daily}
 
 
 @app.post("/admin/documents/upload")
