@@ -379,7 +379,7 @@ function buildRing({ label, value, percent, color }) {
         ></circle>
       </svg>
       <div class="ring-label">${label}</div>
-      <div class="ring-value">${(percent * 100).toFixed(1)}% · ${formatShort(value)}</div>
+      <div class="ring-value">${(percent * 100).toFixed(1)}% · ${formatMoney(value)}</div>
     </div>
   `
 }
@@ -465,6 +465,39 @@ function buildDateRange(startStr, endStr) {
   return result
 }
 
+function buildXAxisTicks(series) {
+  if (!series.length) return []
+  const start = new Date(series[0].date)
+  const end = new Date(series[series.length - 1].date)
+  const rangeDays = Math.round((end - start) / 86400000) + 1
+  if (rangeDays > 365) {
+    const ticks = []
+    series.forEach((row, idx) => {
+      const d = new Date(row.date)
+      if (d.getMonth() === 0 && d.getDate() === 1) {
+        ticks.push({ idx, label: String(d.getFullYear()) })
+      }
+    })
+    if (!ticks.length) ticks.push({ idx: 0, label: String(start.getFullYear()) })
+    return ticks
+  }
+  if (rangeDays > 60) {
+    const ticks = []
+    series.forEach((row, idx) => {
+      const d = new Date(row.date)
+      if (d.getDate() === 1) {
+        ticks.push({ idx, label: d.toLocaleString('ru-RU', { month: 'short' }) })
+      }
+    })
+    if (!ticks.length) ticks.push({ idx: 0, label: start.toLocaleString('ru-RU', { month: 'short' }) })
+    return ticks
+  }
+  const step = rangeDays <= 14 ? 1 : 5
+  return series
+    .map((row, idx) => ({ idx, label: row.date.slice(5) }))
+    .filter((row, i) => i % step === 0)
+}
+
 function renderLineChart(series) {
   if (!lineEl) return
   if (!series.length) {
@@ -483,6 +516,18 @@ function renderLineChart(series) {
   const clickPath = series
     .map((d, i) => `${i === 0 ? 'M' : 'L'} ${scaleX(i)} ${scaleY(d.clicks)}`)
     .join(' ')
+  const ticks = buildXAxisTicks(series)
+  const xLabels = ticks
+    .map(
+      (t) => `
+      <text x="${scaleX(t.idx)}" y="${height - 6}" text-anchor="middle" fill="var(--muted)" font-size="10">
+        ${t.label}
+      </text>
+    `
+    )
+    .join('')
+  const totalSpend = series.reduce((sum, row) => sum + row.spend, 0)
+  const totalClicks = series.reduce((sum, row) => sum + row.clicks, 0)
   lineEl.innerHTML = `
     <svg viewBox="0 0 ${width} ${height}">
       <rect x="0" y="0" width="${width}" height="${height}" fill="none"></rect>
@@ -490,11 +535,12 @@ function renderLineChart(series) {
       <path d="${spendPath}" fill="none" stroke="#3b82f6" stroke-width="2"></path>
       <path d="${clickPath}" fill="none" stroke="#f59e0b" stroke-width="2"></path>
       <circle id="line-marker" cx="${scaleX(series.length - 1)}" cy="${scaleY(series[series.length - 1].spend)}" r="4" fill="#3b82f6"></circle>
+      ${xLabels}
     </svg>
     <div class="chart-tooltip" id="line-tooltip"></div>
     <div class="legend">
-      <div class="legend-item"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:6px;"></span>Spend</span><span>${formatMoney(series[series.length - 1].spend)}</span></div>
-      <div class="legend-item"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f59e0b;margin-right:6px;"></span>Clicks</span><span>${formatInt(series[series.length - 1].clicks)}</span></div>
+      <div class="legend-item"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:6px;"></span>Spend (итого)</span><span>${formatMoney(totalSpend)}</span></div>
+      <div class="legend-item"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f59e0b;margin-right:6px;"></span>Clicks (итого)</span><span>${formatInt(totalClicks)}</span></div>
       <div class="legend-item"><span class="muted">Общая шкала</span></div>
     </div>
   `

@@ -686,10 +686,11 @@ h1 {
   place-items: center;
   margin-top: 6px;
   width: 100%;
+  overflow: hidden;
 }
 
 .chart-donut svg {
-  width: min(180px, 100%);
+  width: min(150px, 90%);
   height: auto;
 }
 
@@ -724,6 +725,34 @@ h1 {
   transform: translate(-50%, -100%);
   opacity: 0;
   transition: opacity 0.1s ease;
+}
+
+@media (max-width: 900px) {
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ring-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chart-line svg {
+    height: 200px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ring-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-donut svg {
+    width: min(130px, 85%);
+  }
+
+  .chart-line svg {
+    height: 180px;
+  }
 }
 
 .field-input.small {
