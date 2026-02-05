@@ -25,6 +25,7 @@ const state = {
   openAccounts: [],
   accountRequests: [],
   topups: [],
+  accountsFull: [],
 }
 
 let accounts = { meta: [], google: [], tiktok: [], yandex: [], telegram: [], monochrome: [] }
@@ -217,6 +218,14 @@ function renderOpenAccounts() {
   }
 }
 
+function normalizeAccountStatus(status) {
+  if (!status) return 'Активен'
+  if (status === 'active') return 'Активен'
+  if (status === 'paused') return 'Приостановлен'
+  if (status === 'archived') return 'Закрыт'
+  return status
+}
+
 function statusClass(status) {
   if (status === 'Новая') return 'status-paused'
   if (status === 'В работе') return 'status-warn'
@@ -227,6 +236,43 @@ function statusClass(status) {
   if (status === 'Заблокирован') return 'status-blocked'
   if (status === 'Закрыт') return 'status-closed'
   return ''
+}
+
+function syncOpenAccounts() {
+  const accountIndex = new Map()
+  const accountRows = (state.accountsFull || []).map((acc) => {
+    const key = `${acc.platform}:${acc.name}`
+    accountIndex.set(key, acc.id)
+    return {
+      platform: acc.platform,
+      account_id: acc.name || acc.external_id || `Аккаунт #${acc.id}`,
+      account_db_id: acc.id,
+      company: '',
+      email: '—',
+      budget: acc.budget_total ?? null,
+      currency: acc.currency || (acc.platform === 'telegram' ? 'EUR' : 'USD'),
+      status: normalizeAccountStatus(acc.status),
+    }
+  })
+
+  const requestRows = (state.accountRequests || [])
+    .map((req) => {
+      const accountDbId = accountIndex.get(`${req.platform}:${req.name}`) || null
+      return {
+        platform: req.platform,
+        account_id: req.name || `Заявка #${req.id}`,
+        account_db_id: accountDbId,
+        company: '',
+        email: req.email || '—',
+        budget: req.budget_total,
+        currency: req.account_currency || (req.platform === 'telegram' ? 'EUR' : 'USD'),
+        status: req.status,
+      }
+    })
+    .filter((row) => !row.account_db_id)
+
+  state.openAccounts = [...accountRows, ...requestRows]
+  renderOpenAccounts()
 }
 
 function openCreateModal(platformKey) {
@@ -630,6 +676,7 @@ async function fetchAccounts() {
     if (handleAuthFailure(res)) return
     if (!res.ok) throw new Error('Failed to load accounts')
     const data = await res.json()
+    state.accountsFull = data
     accounts = { meta: [], google: [], tiktok: [], yandex: [], telegram: [], monochrome: [] }
     data.forEach((acc) => {
       if (acc.platform === 'meta') accounts.meta.push({ id: acc.id, name: acc.name })
@@ -640,6 +687,7 @@ async function fetchAccounts() {
       if (acc.platform === 'monochrome') accounts.monochrome.push({ id: acc.id, name: acc.name })
     })
     await fetchAccountRequests()
+    syncOpenAccounts()
   } catch (e) {
     console.error(e)
   }
@@ -663,12 +711,6 @@ async function fetchAccountRequests() {
     if (handleAuthFailure(res)) return
     if (!res.ok) throw new Error('Failed to load account requests')
     const data = await res.json()
-    const accountIndex = new Map()
-    Object.entries(accounts).forEach(([platform, list]) => {
-      list.forEach((acc) => {
-        accountIndex.set(`${platform}:${acc.name}`, acc.id)
-      })
-    })
     state.accountRequests = data.map((row) => {
       let payload = row.payload
       if (typeof payload === 'string') {
@@ -695,17 +737,7 @@ async function fetchAccountRequests() {
         account_currency: row.account_currency || (row.platform === 'telegram' ? 'EUR' : 'USD'),
       }
     })
-    state.openAccounts = state.accountRequests.map((req) => ({
-      platform: req.platform,
-      account_id: req.name || `Заявка #${req.id}`,
-      account_db_id: accountIndex.get(`${req.platform}:${req.name}`) || null,
-      company: '',
-      email: req.email || '—',
-      budget: req.budget_total,
-      currency: req.account_currency,
-      status: req.status,
-    }))
-    renderOpenAccounts()
+    syncOpenAccounts()
   } catch (e) {
     console.error(e)
   }
