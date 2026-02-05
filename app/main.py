@@ -1455,6 +1455,7 @@ _default_origins = [
     "http://localhost:8000",
     "https://envidicydashclientv20.vercel.app",
     "https://app.envidicy.kz",
+    "https://www.envidicy.kz",
 ]
 _extra_origins = [o.strip() for o in (os.getenv("FRONTEND_ORIGINS") or "").split(",") if o.strip()]
 app.add_middleware(
@@ -3675,17 +3676,23 @@ def insights_overview(
         external_id = acc.get("external_id") or acc.get("account_code")
         if not external_id:
             continue
-        rows = _meta_fetch_daily(str(external_id), date_from, date_to)
-        for row in rows:
-            _merge_daily(daily_meta, "date_start", row)
+        try:
+            rows = _meta_fetch_daily(str(external_id), date_from, date_to)
+            for row in rows:
+                _merge_daily(daily_meta, "date_start", row)
+        except Exception:
+            continue
 
     for acc in google_accounts:
         external_id = acc.get("external_id") or acc.get("account_code")
         if not external_id:
             continue
-        rows = _google_fetch_daily(str(external_id), date_from, date_to)
-        for row in rows:
-            _merge_daily(daily_google, "date", row)
+        try:
+            rows = _google_fetch_daily(str(external_id), date_from, date_to)
+            for row in rows:
+                _merge_daily(daily_google, "date", row)
+        except Exception:
+            continue
 
     advertiser_ids: List[str] = []
     for acc in tiktok_accounts:
@@ -3697,9 +3704,12 @@ def insights_overview(
         if env_adv:
             advertiser_ids.append(str(env_adv))
     for adv_id in sorted(set(advertiser_ids)):
-        rows = _tiktok_fetch_daily(adv_id, date_from, date_to)
-        for row in rows:
-            _merge_daily(daily_tiktok, "date", row)
+        try:
+            rows = _tiktok_fetch_daily(adv_id, date_from, date_to)
+            for row in rows:
+                _merge_daily(daily_tiktok, "date", row)
+        except Exception:
+            continue
 
     def _finalize(daily_map: Dict[str, Dict[str, object]], platform: str) -> List[Dict[str, object]]:
         rows = [daily_map[k] for k in sorted(daily_map.keys())]
