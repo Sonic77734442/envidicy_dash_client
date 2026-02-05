@@ -2560,6 +2560,29 @@ def _meta_fetch_insights(account_external_id: str, date_from: str, date_to: str)
     data = resp.json()
     return data.get("data", [])
 
+def _meta_fetch_breakdowns(
+    account_external_id: str,
+    date_from: str,
+    date_to: str,
+    breakdowns: List[str],
+    level: str = "account",
+) -> List[Dict[str, object]]:
+    token = os.getenv("META_ACCESS_TOKEN")
+    if not token:
+        raise HTTPException(status_code=500, detail="META_ACCESS_TOKEN is not set")
+    url = f"https://graph.facebook.com/v20.0/act_{account_external_id}/insights"
+    params = {
+        "access_token": token,
+        "level": level,
+        "fields": "impressions,clicks,spend,reach",
+        "time_range": json.dumps({"since": date_from, "until": date_to}),
+        "breakdowns": ",".join(breakdowns),
+    }
+    resp = httpx.get(url, params=params, timeout=30)
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"Meta API error: {resp.text}")
+    data = resp.json()
+    return data.get("data", [])
 def _meta_fetch_daily(account_external_id: str, date_from: str, date_to: str) -> List[Dict[str, object]]:
     token = os.getenv("META_ACCESS_TOKEN")
     if not token:
@@ -2640,6 +2663,94 @@ def _google_fetch_insights(customer_id: str, date_from: str, date_to: str) -> Tu
             }
         )
     return campaigns, currency
+
+
+def _google_fetch_audience_age_gender(customer_id: str, date_from: str, date_to: str) -> Tuple[List[Dict[str, object]], Optional[str]]:
+    client = _google_ads_client()
+    ga_service = client.get_service("GoogleAdsService")
+    query = f"""
+        SELECT
+          segments.adjusted_age_range,
+          segments.adjusted_gender,
+          metrics.impressions,
+          metrics.clicks,
+          metrics.cost_micros
+        FROM customer
+        WHERE segments.date BETWEEN '{date_from}' AND '{date_to}'
+    """
+    rows = ga_service.search(customer_id=customer_id, query=query)
+    data: List[Dict[str, object]] = []
+    for row in rows:
+        data.append(
+            {
+                "age_range": str(row.segments.adjusted_age_range),
+                "gender": str(row.segments.adjusted_gender),
+                "impressions": int(row.metrics.impressions or 0),
+                "clicks": int(row.metrics.clicks or 0),
+                "spend": float(row.metrics.cost_micros or 0) / 1_000_000,
+            }
+        )
+    return data, None
+
+
+def _google_fetch_audience_device(customer_id: str, date_from: str, date_to: str) -> List[Dict[str, object]]:
+    client = _google_ads_client()
+    ga_service = client.get_service("GoogleAdsService")
+    query = f"""
+        SELECT
+          segments.device,
+          metrics.impressions,
+          metrics.clicks,
+          metrics.cost_micros
+        FROM customer
+        WHERE segments.date BETWEEN '{date_from}' AND '{date_to}'
+    """
+    rows = ga_service.search(customer_id=customer_id, query=query)
+    data: List[Dict[str, object]] = []
+    for row in rows:
+        data.append(
+            {
+                "device": str(row.segments.device),
+                "impressions": int(row.metrics.impressions or 0),
+                "clicks": int(row.metrics.clicks or 0),
+                "spend": float(row.metrics.cost_micros or 0) / 1_000_000,
+            }
+        )
+    return data
+
+
+def _google_fetch_audience_geo(customer_id: str, date_from: str, date_to: str, level: str) -> List[Dict[str, object]]:
+    client = _google_ads_client()
+    ga_service = client.get_service("GoogleAdsService")
+    segment = {
+        "country": "segments.geo_target_country",
+        "region": "segments.geo_target_region",
+        "city": "segments.geo_target_city",
+    }.get(level)
+    if not segment:
+        return []
+    query = f"""
+        SELECT
+          {segment},
+          metrics.impressions,
+          metrics.clicks,
+          metrics.cost_micros
+        FROM customer
+        WHERE segments.date BETWEEN '{date_from}' AND '{date_to}'
+    """
+    rows = ga_service.search(customer_id=customer_id, query=query)
+    data: List[Dict[str, object]] = []
+    for row in rows:
+        geo_value = getattr(row.segments, segment.split(".")[1])
+        data.append(
+            {
+                "geo": str(geo_value),
+                "impressions": int(row.metrics.impressions or 0),
+                "clicks": int(row.metrics.clicks or 0),
+                "spend": float(row.metrics.cost_micros or 0) / 1_000_000,
+            }
+        )
+    return data
 
 
 def _google_fetch_daily(customer_id: str, date_from: str, date_to: str) -> List[Dict[str, object]]:
@@ -3619,6 +3730,111 @@ def tiktok_insights(
     }
     return {"summary": summary, "campaigns": campaigns, "adgroups": adgroups, "ads": ads}
 
+
+@app.get("/meta/audience")
+def meta_audience(
+    date_from: str,
+    date_to: str,
+    group: str,
+    account_id: Optional[int] = None,
+    current_user=Depends(get_current_user),
+):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    if not date_from or not date_to:
+        raise HTTPException(status_code=400, detail="date_from and date_to are required")
+    if group not in {"age_gender", "geo", "placement_device", "device"}:
+        raise HTTPException(status_code=400, detail="Unsupported group")
+    with get_conn() as conn:
+        if account_id:
+            row = conn.execute(
+                "SELECT * FROM ad_accounts WHERE id=? AND user_id=? AND platform='meta'",
+                (account_id, current_user["id"]),
+            ).fetchone()
+            accounts = [dict(row)] if row else []
+        else:
+            rows = conn.execute(
+                "SELECT * FROM ad_accounts WHERE user_id=? AND platform='meta'",
+                (current_user["id"],),
+            ).fetchall()
+            accounts = [dict(r) for r in rows]
+    results = []
+    for acc in accounts:
+        external_id = acc.get("external_id") or acc.get("account_code")
+        if not external_id:
+            continue
+        payload: Dict[str, object] = {"account_id": acc.get("id"), "name": acc.get("name") or external_id}
+        if group == "age_gender":
+            payload["age_gender"] = _meta_fetch_breakdowns(str(external_id), date_from, date_to, ["age", "gender"])
+        elif group == "geo":
+            payload["country"] = _meta_fetch_breakdowns(str(external_id), date_from, date_to, ["country"])
+            payload["region"] = _meta_fetch_breakdowns(str(external_id), date_from, date_to, ["region"])
+        else:
+            payload["publisher_platform"] = _meta_fetch_breakdowns(
+                str(external_id), date_from, date_to, ["publisher_platform"]
+            )
+            payload["platform_position"] = _meta_fetch_breakdowns(
+                str(external_id), date_from, date_to, ["platform_position"]
+            )
+            payload["impression_device"] = _meta_fetch_breakdowns(
+                str(external_id), date_from, date_to, ["impression_device"]
+            )
+            payload["device_platform"] = _meta_fetch_breakdowns(
+                str(external_id), date_from, date_to, ["device_platform"]
+            )
+        results.append(payload)
+    return {"accounts": results}
+
+
+@app.get("/google/audience")
+def google_audience(
+    date_from: str,
+    date_to: str,
+    group: str,
+    account_id: Optional[int] = None,
+    current_user=Depends(get_current_user),
+):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    if not date_from or not date_to:
+        raise HTTPException(status_code=400, detail="date_from and date_to are required")
+    if group not in {"age_gender", "geo", "device"}:
+        raise HTTPException(status_code=400, detail="Unsupported group")
+    with get_conn() as conn:
+        if account_id:
+            row = conn.execute(
+                "SELECT * FROM ad_accounts WHERE id=? AND user_id=? AND platform='google'",
+                (account_id, current_user["id"]),
+            ).fetchone()
+            accounts = [dict(row)] if row else []
+        else:
+            rows = conn.execute(
+                "SELECT * FROM ad_accounts WHERE user_id=? AND platform='google'",
+                (current_user["id"],),
+            ).fetchall()
+            accounts = [dict(r) for r in rows]
+
+    results = []
+    for acc in accounts:
+        customer_id = acc.get("external_id") or acc.get("account_code")
+        if not customer_id:
+            continue
+        payload: Dict[str, object] = {"account_id": acc.get("id"), "name": acc.get("name") or customer_id}
+        try:
+            if group == "age_gender":
+                rows, _ = _google_fetch_audience_age_gender(str(customer_id), date_from, date_to)
+                payload["age_gender"] = rows
+            elif group == "device":
+                rows = _google_fetch_audience_device(str(customer_id), date_from, date_to)
+                payload["device"] = rows
+            else:
+                payload["country"] = _google_fetch_audience_geo(str(customer_id), date_from, date_to, "country")
+                payload["region"] = _google_fetch_audience_geo(str(customer_id), date_from, date_to, "region")
+                payload["city"] = _google_fetch_audience_geo(str(customer_id), date_from, date_to, "city")
+        except Exception as exc:
+            payload["error"] = str(exc)
+        results.append(payload)
+    return {"accounts": results}
 
 @app.get("/insights/overview")
 def insights_overview(

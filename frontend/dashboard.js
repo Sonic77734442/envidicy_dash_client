@@ -45,6 +45,14 @@ const donutEl = document.getElementById('spend-donut')
 const legendEl = document.getElementById('spend-legend')
 const lineEl = document.getElementById('line-chart')
 
+const audienceAgeLoad = document.getElementById('audience-age-load')
+const audienceGeoLoad = document.getElementById('audience-geo-load')
+const audienceDeviceLoad = document.getElementById('audience-device-load')
+const audienceAgeBody = document.getElementById('audience-age-body')
+const audienceGeoBody = document.getElementById('audience-geo-body')
+const audienceDeviceBody = document.getElementById('audience-device-body')
+const audienceStatus = document.getElementById('audience-status')
+
 function authHeaders() {
   const token = localStorage.getItem('auth_token')
   return token ? { Authorization: `Bearer ${token}` } : {}
@@ -610,14 +618,199 @@ async function loadOverview() {
   }
 }
 
+function renderAudienceRows(target, rows) {
+  if (!target) return
+  if (!rows.length) {
+    target.innerHTML = '<tr><td colspan="5">Нет данных</td></tr>'
+    return
+  }
+  target.innerHTML = rows
+    .map(
+      (row) => `
+      <tr>
+        <td>${row.platform}</td>
+        <td>${row.segment}</td>
+        <td>${formatInt(row.impressions || 0)}</td>
+        <td>${formatInt(row.clicks || 0)}</td>
+        <td>${formatMoney(row.spend || 0)}</td>
+      </tr>
+    `
+    )
+    .join('')
+}
+
+async function loadAudience(group) {
+  if (!metaDateFrom || !metaDateTo) return
+  const params = new URLSearchParams()
+  params.set('date_from', metaDateFrom.value)
+  params.set('date_to', metaDateTo.value)
+
+  const tasks = []
+  tasks.push(
+    fetch(`${apiBase}/meta/audience?${params.toString()}&group=${group}${metaAccount?.value ? `&account_id=${metaAccount.value}` : ''}`, {
+      headers: authHeaders(),
+    })
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('meta failed'))))
+      .then((data) => ({ platform: 'Meta', data }))
+      .catch(() => ({ platform: 'Meta', data: { accounts: [] } }))
+  )
+
+  tasks.push(
+    fetch(`${apiBase}/google/audience?${params.toString()}&group=${group}${googleAccount?.value ? `&account_id=${googleAccount.value}` : ''}`, {
+      headers: authHeaders(),
+    })
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('google failed'))))
+      .then((data) => ({ platform: 'Google', data }))
+      .catch(() => ({ platform: 'Google', data: { accounts: [] } }))
+  )
+
+  const results = await Promise.all(tasks)
+  const rows = []
+
+  results.forEach((result) => {
+    result.data.accounts?.forEach((acc) => {
+      if (group === 'age_gender') {
+        const list = acc.age_gender || []
+        list.forEach((row) => {
+          rows.push({
+            platform: `${result.platform} · ${acc.name || acc.account_id}`,
+            segment: result.platform === 'Meta' ? `${row.age} / ${row.gender}` : `${row.age_range} / ${row.gender}`,
+            impressions: row.impressions,
+            clicks: row.clicks,
+            spend: row.spend,
+          })
+        })
+        return
+      }
+      if (group === 'geo') {
+        if (result.platform === 'Meta') {
+          const country = acc.country || []
+          country.forEach((row) =>
+            rows.push({
+              platform: `Meta · ${acc.name || acc.account_id}`,
+              segment: `Country: ${row.country}`,
+              impressions: row.impressions,
+              clicks: row.clicks,
+              spend: row.spend,
+            })
+          )
+          const region = acc.region || []
+          region.forEach((row) =>
+            rows.push({
+              platform: `Meta · ${acc.name || acc.account_id}`,
+              segment: `Region: ${row.region}`,
+              impressions: row.impressions,
+              clicks: row.clicks,
+              spend: row.spend,
+            })
+          )
+        } else {
+          const country = acc.country || []
+          country.forEach((row) =>
+            rows.push({
+              platform: `Google · ${acc.name || acc.account_id}`,
+              segment: `Country: ${row.geo}`,
+              impressions: row.impressions,
+              clicks: row.clicks,
+              spend: row.spend,
+            })
+          )
+          const region = acc.region || []
+          region.forEach((row) =>
+            rows.push({
+              platform: `Google · ${acc.name || acc.account_id}`,
+              segment: `Region: ${row.geo}`,
+              impressions: row.impressions,
+              clicks: row.clicks,
+              spend: row.spend,
+            })
+          )
+          const city = acc.city || []
+          city.forEach((row) =>
+            rows.push({
+              platform: `Google · ${acc.name || acc.account_id}`,
+              segment: `City: ${row.geo}`,
+              impressions: row.impressions,
+              clicks: row.clicks,
+              spend: row.spend,
+            })
+          )
+        }
+        return
+      }
+      if (group === 'device') {
+        if (result.platform === 'Meta') {
+          ;(acc.publisher_platform || []).forEach((row) =>
+            rows.push({
+              platform: `Meta · ${acc.name || acc.account_id}`,
+              segment: `Platform: ${row.publisher_platform}`,
+              impressions: row.impressions,
+              clicks: row.clicks,
+              spend: row.spend,
+            })
+          )
+          ;(acc.platform_position || []).forEach((row) =>
+            rows.push({
+              platform: `Meta · ${acc.name || acc.account_id}`,
+              segment: `Position: ${row.platform_position}`,
+              impressions: row.impressions,
+              clicks: row.clicks,
+              spend: row.spend,
+            })
+          )
+          ;(acc.impression_device || []).forEach((row) =>
+            rows.push({
+              platform: `Meta · ${acc.name || acc.account_id}`,
+              segment: `Device: ${row.impression_device}`,
+              impressions: row.impressions,
+              clicks: row.clicks,
+              spend: row.spend,
+            })
+          )
+          ;(acc.device_platform || []).forEach((row) =>
+            rows.push({
+              platform: `Meta · ${acc.name || acc.account_id}`,
+              segment: `Device platform: ${row.device_platform}`,
+              impressions: row.impressions,
+              clicks: row.clicks,
+              spend: row.spend,
+            })
+          )
+        } else {
+          ;(acc.device || []).forEach((row) =>
+            rows.push({
+              platform: `Google · ${acc.name || acc.account_id}`,
+              segment: `Device: ${row.device}`,
+              impressions: row.impressions,
+              clicks: row.clicks,
+              spend: row.spend,
+            })
+          )
+        }
+      }
+    })
+  })
+
+  return rows
+}
+
 if (metaLoad) metaLoad.addEventListener('click', loadMetaInsights)
 if (googleLoad) googleLoad.addEventListener('click', loadGoogleInsights)
 if (tiktokLoad) tiktokLoad.addEventListener('click', loadTiktokInsights)
 if (reportLoad) reportLoad.addEventListener('click', loadOverview)
 if (reportExport) reportExport.addEventListener('click', () => window.print())
+if (audienceAgeLoad)
+  audienceAgeLoad.addEventListener('click', async () => renderAudienceRows(audienceAgeBody, await loadAudience('age_gender')))
+if (audienceGeoLoad)
+  audienceGeoLoad.addEventListener('click', async () => renderAudienceRows(audienceGeoBody, await loadAudience('geo')))
+if (audienceDeviceLoad)
+  audienceDeviceLoad.addEventListener('click', async () => renderAudienceRows(audienceDeviceBody, await loadAudience('device')))
 initMetaDates()
 loadMetaAccounts()
 loadOverview()
+if (audienceAgeBody) loadAudience('age_gender').then((rows) => renderAudienceRows(audienceAgeBody, rows))
+if (audienceGeoBody) loadAudience('geo').then((rows) => renderAudienceRows(audienceGeoBody, rows))
+if (audienceDeviceBody) loadAudience('device').then((rows) => renderAudienceRows(audienceDeviceBody, rows))
 
 function formatInt(value) {
   return Math.round(value).toLocaleString('ru-RU')
