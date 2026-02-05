@@ -219,7 +219,8 @@ function renderOpenAccounts() {
 }
 
 function normalizeAccountStatus(status) {
-  if (!status) return 'Активен'
+  if (!status) return 'На модерации'
+  if (status === 'pending') return 'На модерации'
   if (status === 'active') return 'Активен'
   if (status === 'paused') return 'Приостановлен'
   if (status === 'archived') return 'Закрыт'
@@ -231,6 +232,7 @@ function statusClass(status) {
   if (status === 'В работе') return 'status-warn'
   if (status === 'Открыт') return 'status-active'
   if (status === 'Отклонен') return 'status-blocked'
+  if (status === 'На модерации') return 'status-warn'
   if (status === 'Активен') return 'status-active'
   if (status === 'Приостановлен') return 'status-paused'
   if (status === 'Заблокирован') return 'status-blocked'

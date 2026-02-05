@@ -4216,7 +4216,7 @@ def admin_create_account(payload: AdminAccountCreate, admin_user=Depends(get_adm
                 payload.external_id,
                 payload.account_code,
                 payload.currency,
-                payload.status or "active",
+                payload.status or "pending",
             ),
         )
         conn.commit()
@@ -4228,7 +4228,7 @@ def admin_create_account(payload: AdminAccountCreate, admin_user=Depends(get_adm
             "external_id": payload.external_id,
             "account_code": payload.account_code,
             "currency": payload.currency,
-            "status": payload.status or "active",
+            "status": payload.status or "pending",
         }
 
 

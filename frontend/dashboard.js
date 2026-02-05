@@ -55,12 +55,12 @@ async function loadMetaAccounts() {
     }
     if (!res.ok) throw new Error('Failed to load accounts')
     const data = await res.json()
-    const meta = data.filter((acc) => acc.platform === 'meta')
+    const meta = data.filter((acc) => String(acc.platform || '').toLowerCase().trim() === 'meta')
     metaAccount.innerHTML =
       '<option value="">Все</option>' +
       meta.map((acc) => `<option value="${acc.id}">${acc.name || acc.external_id || acc.id}</option>`).join('')
     if (googleAccount) {
-      const google = data.filter((acc) => acc.platform === 'google')
+      const google = data.filter((acc) => String(acc.platform || '').toLowerCase().trim() === 'google')
       googleAccount.innerHTML =
         '<option value="">Все</option>' +
         google.map((acc) => `<option value="${acc.id}">${acc.name || acc.external_id || acc.id}</option>`).join('')
