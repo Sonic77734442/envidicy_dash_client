@@ -379,7 +379,7 @@ function buildRing({ label, value, percent, color }) {
         ></circle>
       </svg>
       <div class="ring-label">${label}</div>
-      <div class="ring-value">${(percent * 100).toFixed(1)}% · ${formatMoney(value)}</div>
+      <div class="ring-value">${(percent * 100).toFixed(1)}% · $${formatMoney(value)}</div>
     </div>
   `
 }
@@ -566,8 +566,8 @@ function renderLineChart(series) {
 
   svg.addEventListener('mousemove', (event) => {
     const rect = svg.getBoundingClientRect()
-    const x = event.clientX - rect.left
-    const raw = Math.round(((x - pad) / (width - pad * 2)) * (series.length - 1))
+    const xView = ((event.clientX - rect.left) / rect.width) * width
+    const raw = Math.round(((xView - pad) / (width - pad * 2)) * (series.length - 1))
     const idx = clampIndex(raw)
     updateTooltip(idx, event.clientX, event.clientY)
   })
