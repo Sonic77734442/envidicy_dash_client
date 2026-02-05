@@ -412,6 +412,8 @@ function renderDonut(totals) {
     return
   }
   let offset = 0
+  const donutRadius = 13
+  const donutStroke = 6
   const segments = platformPalette
     .map((p) => {
       const value = totals[p.key]?.spend || 0
@@ -421,10 +423,10 @@ function renderDonut(totals) {
         <circle
           cx="18"
           cy="18"
-          r="15.915"
+          r="${donutRadius}"
           fill="none"
           stroke="${p.color}"
-          stroke-width="8"
+          stroke-width="${donutStroke}"
           stroke-dasharray="${dash} ${100 - dash}"
           stroke-dashoffset="${-offset}"
           transform="rotate(-90 18 18)"
@@ -436,7 +438,7 @@ function renderDonut(totals) {
     .join('')
   donutEl.innerHTML = `
     <svg viewBox="0 0 36 36">
-      <circle cx="18" cy="18" r="15.915" fill="none" stroke="var(--line)" stroke-width="8"></circle>
+      <circle cx="18" cy="18" r="${donutRadius}" fill="none" stroke="var(--line)" stroke-width="${donutStroke}"></circle>
       ${segments}
     </svg>
   `
