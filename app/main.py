@@ -4346,6 +4346,19 @@ def admin_list_users(admin_user=Depends(get_admin_user)):
         return [dict(row) for row in rows]
 
 
+@app.post("/admin/users/{user_id}/make-client")
+def admin_make_user_client(user_id: int, admin_user=Depends(get_admin_user)):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    with get_conn() as conn:
+        row = conn.execute("SELECT id FROM users WHERE id=?", (user_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="User not found")
+        conn.execute("UPDATE users SET is_client=1 WHERE id=?", (user_id,))
+        conn.commit()
+        return {"id": user_id, "status": "client"}
+
+
 @app.get("/admin/clients/{user_id}/allocations")
 def admin_client_allocations(user_id: int, admin_user=Depends(get_admin_user)):
     if not get_conn:

@@ -45,7 +45,7 @@ async function fetchUsers() {
 function renderUsers(rows) {
   if (!usersBody) return
   if (!rows || rows.length === 0) {
-    usersBody.innerHTML = `<tr><td colspan="2" class="muted">Нет пользователей.</td></tr>`
+    usersBody.innerHTML = `<tr><td colspan="3" class="muted">Нет пользователей.</td></tr>`
     return
   }
   usersBody.innerHTML = rows
@@ -54,10 +54,38 @@ function renderUsers(rows) {
       <tr>
         <td>${row.email || '—'}</td>
         <td>${formatDate(row.created_at)}</td>
+        <td style="text-align:right;">
+          <button class="btn primary small" data-make-client="${row.id}" data-email="${row.email || ''}">
+            Сделать клиентом
+          </button>
+        </td>
       </tr>
     `
     )
     .join('')
+}
+
+if (usersBody) {
+  usersBody.addEventListener('click', async (event) => {
+    const btn = event.target.closest('button[data-make-client]')
+    if (!btn) return
+    const userId = btn.dataset.makeClient
+    const email = btn.dataset.email || 'пользователя'
+    if (!userId) return
+    if (!confirm(`Перевести ${email} в клиента?`)) return
+    try {
+      const res = await fetch(`${apiBase}/admin/users/${userId}/make-client`, {
+        method: 'POST',
+        headers: authHeadersSafe(),
+      })
+      if (handleAuthFailure(res)) return
+      if (!res.ok) throw new Error('Failed to update user')
+      if (usersStatus) usersStatus.textContent = 'Пользователь переведён в клиента.'
+      await fetchUsers()
+    } catch (e) {
+      if (usersStatus) usersStatus.textContent = 'Ошибка перевода в клиента.'
+    }
+  })
 }
 
 fetchUsers()
