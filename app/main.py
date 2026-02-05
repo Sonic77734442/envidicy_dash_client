@@ -2740,17 +2740,46 @@ def _google_fetch_audience_geo(customer_id: str, date_from: str, date_to: str, l
     """
     rows = ga_service.search(customer_id=customer_id, query=query)
     data: List[Dict[str, object]] = []
+    resource_names: List[str] = []
     for row in rows:
         geo_value = getattr(row.segments, segment.split(".")[1])
+        resource_name = str(geo_value)
+        resource_names.append(resource_name)
         data.append(
             {
-                "geo": str(geo_value),
+                "geo": resource_name,
                 "impressions": int(row.metrics.impressions or 0),
                 "clicks": int(row.metrics.clicks or 0),
                 "spend": float(row.metrics.cost_micros or 0) / 1_000_000,
             }
         )
+    if not resource_names:
+        return data
+    name_map = _google_resolve_geo_names(client, resource_names)
+    for row in data:
+        row["geo"] = name_map.get(row["geo"], row["geo"])
     return data
+
+
+def _google_resolve_geo_names(client: GoogleAdsClient, resource_names: List[str]) -> Dict[str, str]:
+    ga_service = client.get_service("GoogleAdsService")
+    unique = sorted(set(resource_names))
+    if not unique:
+        return {}
+    placeholders = ", ".join([f"'{name}'" for name in unique])
+    query = f"""
+        SELECT
+          geo_target_constant.resource_name,
+          geo_target_constant.name,
+          geo_target_constant.target_type
+        FROM geo_target_constant
+        WHERE geo_target_constant.resource_name IN ({placeholders})
+    """
+    rows = ga_service.search(customer_id="0", query=query)
+    mapping: Dict[str, str] = {}
+    for row in rows:
+        mapping[row.geo_target_constant.resource_name] = row.geo_target_constant.name
+    return mapping
 
 
 def _google_fetch_daily(customer_id: str, date_from: str, date_to: str) -> List[Dict[str, object]]:
@@ -3772,9 +3801,6 @@ def meta_audience(
         else:
             payload["publisher_platform"] = _meta_fetch_breakdowns(
                 str(external_id), date_from, date_to, ["publisher_platform"]
-            )
-            payload["platform_position"] = _meta_fetch_breakdowns(
-                str(external_id), date_from, date_to, ["platform_position"]
             )
             payload["impression_device"] = _meta_fetch_breakdowns(
                 str(external_id), date_from, date_to, ["impression_device"]

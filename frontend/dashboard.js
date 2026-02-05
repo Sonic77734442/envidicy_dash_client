@@ -669,6 +669,16 @@ async function loadAudience(group) {
 
   results.forEach((result) => {
     result.data.accounts?.forEach((acc) => {
+      if (acc.error) {
+        rows.push({
+          platform: `${result.platform} · ${acc.name || acc.account_id}`,
+          segment: `Ошибка: ${acc.error.split('\\n')[0] || acc.error}`,
+          impressions: 0,
+          clicks: 0,
+          spend: 0,
+        })
+        return
+      }
       if (group === 'age_gender') {
         const list = acc.age_gender || []
         list.forEach((row) => {
@@ -780,7 +790,7 @@ async function loadAudience(group) {
           ;(acc.device || []).forEach((row) =>
             rows.push({
               platform: `Google · ${acc.name || acc.account_id}`,
-              segment: `Device: ${row.device}`,
+              segment: `Device: ${normalizeGoogleDevice(row.device)}`,
               impressions: row.impressions,
               clicks: row.clicks,
               spend: row.spend,
@@ -792,6 +802,22 @@ async function loadAudience(group) {
   })
 
   return rows
+}
+
+function normalizeGoogleDevice(value) {
+  if (value == null) return 'Unknown'
+  const str = String(value).trim().toUpperCase()
+  const map = {
+    '0': 'UNSPECIFIED',
+    '1': 'UNKNOWN',
+    '2': 'MOBILE',
+    '3': 'TABLET',
+    '4': 'DESKTOP',
+    '5': 'OTHER',
+    '6': 'CONNECTED_TV',
+  }
+  if (map[str]) return map[str]
+  return str
 }
 
 if (metaLoad) metaLoad.addEventListener('click', loadMetaInsights)
