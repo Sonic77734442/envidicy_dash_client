@@ -89,17 +89,20 @@ async function loadMetaAccounts() {
     metaAccount.innerHTML =
       '<option value="">Все</option>' +
       meta.map((acc) => `<option value="${acc.id}">${acc.name || acc.external_id || acc.id}</option>`).join('')
+    metaAccount.value = ''
     if (googleAccount) {
       const google = data.filter((acc) => String(acc.platform || '').toLowerCase().trim() === 'google')
       googleAccount.innerHTML =
         '<option value="">Все</option>' +
         google.map((acc) => `<option value="${acc.id}">${acc.name || acc.external_id || acc.id}</option>`).join('')
+      googleAccount.value = ''
     }
     if (tiktokAccount) {
       const tiktok = data.filter((acc) => String(acc.platform || '').toLowerCase().trim() === 'tiktok')
       tiktokAccount.innerHTML =
         '<option value="">Все</option>' +
         tiktok.map((acc) => `<option value="${acc.id}">${acc.name || acc.external_id || acc.id}</option>`).join('')
+      tiktokAccount.value = ''
     }
   } catch (e) {
     if (metaStatus) metaStatus.textContent = 'Не удалось загрузить Meta аккаунты.'
@@ -836,10 +839,6 @@ if (audienceDeviceLoad)
   audienceDeviceLoad.addEventListener('click', async () => renderAudienceRows(audienceDeviceBody, await loadAudience('device')))
 initMetaDates()
 loadMetaAccounts()
-loadOverview()
-if (audienceAgeBody) loadAudience('age_gender').then((rows) => renderAudienceRows(audienceAgeBody, rows))
-if (audienceGeoBody) loadAudience('geo').then((rows) => renderAudienceRows(audienceGeoBody, rows))
-if (audienceDeviceBody) loadAudience('device').then((rows) => renderAudienceRows(audienceDeviceBody, rows))
 
 function formatInt(value) {
   return Math.round(value).toLocaleString('ru-RU')
