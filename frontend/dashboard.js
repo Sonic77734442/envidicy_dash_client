@@ -489,13 +489,44 @@ function renderLineChart(series) {
       <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" stroke="var(--line)" stroke-width="1"></line>
       <path d="${spendPath}" fill="none" stroke="#3b82f6" stroke-width="2"></path>
       <path d="${clickPath}" fill="none" stroke="#f59e0b" stroke-width="2"></path>
+      <circle id="line-marker" cx="${scaleX(series.length - 1)}" cy="${scaleY(series[series.length - 1].spend)}" r="4" fill="#3b82f6"></circle>
     </svg>
+    <div class="chart-tooltip" id="line-tooltip"></div>
     <div class="legend">
       <div class="legend-item"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:6px;"></span>Spend</span><span>${formatMoney(series[series.length - 1].spend)}</span></div>
       <div class="legend-item"><span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f59e0b;margin-right:6px;"></span>Clicks</span><span>${formatInt(series[series.length - 1].clicks)}</span></div>
       <div class="legend-item"><span class="muted">Общая шкала</span></div>
     </div>
   `
+
+  const svg = lineEl.querySelector('svg')
+  const marker = lineEl.querySelector('#line-marker')
+  const tooltip = lineEl.querySelector('#line-tooltip')
+  if (!svg || !marker || !tooltip) return
+
+  const clampIndex = (idx) => Math.max(0, Math.min(series.length - 1, idx))
+  const updateTooltip = (idx, clientX, clientY) => {
+    const point = series[idx]
+    marker.setAttribute('cx', scaleX(idx))
+    marker.setAttribute('cy', scaleY(point.spend))
+    tooltip.textContent = `${point.date} · Spend ${formatMoney(point.spend)} · Clicks ${formatInt(point.clicks)}`
+    const rect = lineEl.getBoundingClientRect()
+    tooltip.style.left = `${clientX - rect.left}px`
+    tooltip.style.top = `${clientY - rect.top - 8}px`
+    tooltip.style.opacity = '1'
+  }
+
+  svg.addEventListener('mousemove', (event) => {
+    const rect = svg.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const raw = Math.round(((x - pad) / (width - pad * 2)) * (series.length - 1))
+    const idx = clampIndex(raw)
+    updateTooltip(idx, event.clientX, event.clientY)
+  })
+
+  svg.addEventListener('mouseleave', () => {
+    tooltip.style.opacity = '0'
+  })
 }
 
 async function loadOverview() {

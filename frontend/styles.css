@@ -685,11 +685,12 @@ h1 {
   display: grid;
   place-items: center;
   margin-top: 6px;
+  width: 100%;
 }
 
 .chart-donut svg {
-  width: 180px;
-  height: 180px;
+  width: min(180px, 100%);
+  height: auto;
 }
 
 .legend {
@@ -704,6 +705,25 @@ h1 {
   justify-content: space-between;
   align-items: center;
   gap: 6px;
+}
+
+.chart-line {
+  position: relative;
+}
+
+.chart-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(15, 19, 34, 0.95);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  transform: translate(-50%, -100%);
+  opacity: 0;
+  transition: opacity 0.1s ease;
 }
 
 .field-input.small {
