@@ -1,4 +1,4 @@
-﻿const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
+const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 
 const platformOrder = ['meta', 'google', 'tiktok', 'telegram', 'yandex', 'monochrome']
 
@@ -765,4 +765,3 @@ function platformLabel(key) {
 }
 
 init()
-

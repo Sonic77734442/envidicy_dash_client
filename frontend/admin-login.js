@@ -1,4 +1,4 @@
-﻿const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
+const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 const params = new URLSearchParams(window.location.search)
 const adminKey = params.get('key')
 if (!adminKey) {
@@ -39,4 +39,3 @@ if (resetForm && resetStatus) {
     }
   })
 }
-

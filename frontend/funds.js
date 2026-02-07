@@ -4,9 +4,9 @@ let legalEntities = []
 let invoices = []
 
 renderHeader({
-  eyebrow: 'Envidicy � Billing Desk',
-  title: '�������',
-  subtitle: '������������ ���������� � �������� �� ���������, � ������� � ������.',
+  eyebrow: 'Envidicy · Billing Desk',
+  title: 'Финансы',
+  subtitle: 'Отслеживайте пополнения и возвраты по аккаунтам, с суммами и курсом.',
   buttons: [],
 })
 
@@ -54,7 +54,7 @@ function closeWalletTopupModal() {
 async function submitWalletTopupRequest() {
   const amountValue = Number(walletTopup.amount?.value || 0)
   if (!amountValue || amountValue <= 0) {
-    alert('������� ����� ����������.')
+    alert('Введите сумму пополнения.')
     return
   }
   const payload = {
@@ -81,19 +81,19 @@ async function submitWalletTopupRequest() {
       window.location.href = `${apiBase}${withToken}`
       return
     }
-    alert('������ �������.')
+    alert('Заявка создана.')
     closeWalletTopupModal()
   } catch (e) {
-    alert('������ ��������. ���������� �����.')
+    alert('Ошибка отправки. Попробуйте снова.')
   }
 }
 
 function renderLegalEntities() {
   if (!walletTopup.entitySelect) return
   const options = legalEntities
-    .map((e) => `<option value="${e.id}">${e.name}${e.bin ? ` � ${e.bin}` : ''}</option>`)
+    .map((e) => `<option value="${e.id}">${e.name}${e.bin ? ` · ${e.bin}` : ''}</option>`)
     .join('')
-  walletTopup.entitySelect.innerHTML = `<option value="">�� ������</option>${options}`
+  walletTopup.entitySelect.innerHTML = `<option value="">Не выбран</option>${options}`
   if (!walletTopup.entitySelect.value && legalEntities.length > 0) {
     walletTopup.entitySelect.value = String(legalEntities[0].id)
   }
@@ -115,7 +115,7 @@ async function fetchLegalEntities() {
 async function createLegalEntity() {
   const name = walletTopup.entityName?.value?.trim()
   if (!name) {
-    showEntityNotice('������� ������������ �����������.')
+    showEntityNotice('Укажите наименование контрагента.')
     return
   }
   const payload = {
@@ -137,9 +137,9 @@ async function createLegalEntity() {
     renderLegalEntities()
     if (walletTopup.entitySelect) walletTopup.entitySelect.value = String(data.id)
     if (walletTopup.entityForm) walletTopup.entityForm.hidden = true
-    showEntityNotice('���������� ��������.', true)
+    showEntityNotice('Контрагент добавлен.', true)
   } catch (e) {
-    showEntityNotice('������ �������� �����������.')
+    showEntityNotice('Ошибка создания контрагента.')
   }
 }
 
@@ -181,7 +181,7 @@ function renderInvoices(rows) {
       <td>${r.date}</td>
       <td>${r.counterparty}</td>
       <td>${fmtAmt(r.amount, r.currency)}</td>
-      <td>${r.number || '�'}</td>
+      <td>${r.number || '—'}</td>
       <td style="text-align:right;">
         <a class="btn ghost small" href="${pdfUrl}" target="_blank" rel="noopener">PDF</a>
       </td>
@@ -210,7 +210,7 @@ function platformLabel(key) {
   if (key === 'meta') return 'Meta'
   if (key === 'google') return 'Google'
   if (key === 'tiktok') return 'TikTok'
-  if (key === 'yandex') return '������'
+  if (key === 'yandex') return 'Яндекс'
   if (key === 'telegram') return 'Telegram'
   if (key === 'monochrome') return 'Monochrome'
   return key
@@ -242,8 +242,8 @@ function renderSummary(rows) {
     .filter((r) => r.currency === 'KZT')
     .reduce((acc, r) => acc + r.amount, 0)
   const chips = [
-    { label: 'USD �����', value: fmtAmt(totalUsd, 'USD') },
-    { label: 'KZT �����', value: fmtAmt(totalKzt, 'KZT') },
+    { label: 'USD итого', value: fmtAmt(totalUsd, 'USD') },
+    { label: 'KZT итого', value: fmtAmt(totalKzt, 'KZT') },
   ]
   chips.forEach((c) => {
     const span = document.createElement('span')
@@ -290,8 +290,8 @@ async function fetchFunds() {
   funds = data.map((row) => ({
     date: formatDate(row.created_at),
     platform: row.account_platform || '',
-    account: row.account_name || '�',
-    type: row.type === 'topup' ? '��������' : '����������',
+    account: row.account_name || '—',
+    type: row.type === 'topup' ? 'Списание' : 'Пополнение',
     amount: row.amount,
     currency: row.currency || 'KZT',
     fx: row.fx_rate ?? '-',
@@ -314,7 +314,7 @@ async function fetchInvoices() {
   invoices = data.map((row) => ({
     id: row.id,
     date: formatDate(row.created_at),
-    counterparty: row.legal_entity_name || row.client_name || '�',
+    counterparty: row.legal_entity_name || row.client_name || '—',
     amount: row.invoice_amount ?? row.amount ?? 0,
     currency: row.invoice_currency || row.currency || 'KZT',
     number: row.invoice_number || row.invoice_number_text || '',
@@ -362,5 +362,4 @@ function init() {
 }
 
 init()
-
 

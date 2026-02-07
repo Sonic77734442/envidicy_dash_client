@@ -2,9 +2,8 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    
-    <link rel="icon" href="/favicon.ico" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Envidicy � ���������</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy · Настройки</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -15,17 +14,17 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">�������</p>
-            <h2>��������� ��������</h2>
+            <p class="eyebrow">Профиль</p>
+            <h2>Настройки аккаунта</h2>
           </div>
           <span class="chip chip-ghost">Private</span>
         </div>
         <div class="tabs">
           <div class="tab-buttons">
-            <button class="tab-button active" data-tab="profile">������</button>
-            <button class="tab-button" data-tab="security">������������</button>
-            <button class="tab-button" data-tab="fees">��������</button>
-            <button class="tab-button" data-tab="docs">���������</button>
+            <button class="tab-button active" data-tab="profile">Данные</button>
+            <button class="tab-button" data-tab="security">Безопасность</button>
+            <button class="tab-button" data-tab="fees">Комиссии</button>
+            <button class="tab-button" data-tab="docs">Документы</button>
           </div>
           <div class="tab-panels">
             <div class="tab-panel active" data-tab-panel="profile">
@@ -33,17 +32,17 @@
                 <div class="avatar-large" id="profile-avatar-preview">?</div>
                 <div class="avatar-actions">
                   <input id="profile-avatar-file" type="file" accept="image/*" />
-                  <button class="btn ghost small" id="profile-avatar-upload" type="button">��������� ����</button>
+                  <button class="btn ghost small" id="profile-avatar-upload" type="button">Загрузить фото</button>
                   <p id="profile-avatar-status" class="muted small"></p>
                 </div>
               </div>
               <div class="form-grid">
                 <label class="field">
-                  <span>���</span>
-                  <input id="profile-name" type="text" placeholder="���� ����������" />
+                  <span>Имя</span>
+                  <input id="profile-name" type="text" placeholder="Анна Маркетолог" />
                 </label>
                 <label class="field">
-                  <span>��������</span>
+                  <span>Компания</span>
                   <input id="profile-company" type="text" placeholder="ACME Corp" />
                 </label>
                 <label class="field">
@@ -51,9 +50,9 @@
                   <input id="profile-email" type="email" disabled />
                 </label>
                 <label class="field">
-                  <span>����</span>
+                  <span>Язык</span>
                   <select id="profile-language">
-                    <option value="ru">�������</option>
+                    <option value="ru">Русский</option>
                     <option value="en">English</option>
                   </select>
                 </label>
@@ -67,7 +66,7 @@
                 </label>
               </div>
               <div class="panel-actions">
-                <button class="btn primary" id="profile-save">���������</button>
+                <button class="btn primary" id="profile-save">Сохранить</button>
               </div>
               <p id="profile-status" class="muted small"></p>
             </div>
@@ -75,20 +74,20 @@
             <div class="tab-panel" data-tab-panel="security">
               <div class="form-grid">
                 <label class="field">
-                  <span>������� ������</span>
-                  <input id="password-current" type="password" placeholder="��������" />
+                  <span>Текущий пароль</span>
+                  <input id="password-current" type="password" placeholder="••••••••" />
                 </label>
                 <label class="field">
-                  <span>����� ������</span>
-                  <input id="password-new" type="password" placeholder="��������" />
+                  <span>Новый пароль</span>
+                  <input id="password-new" type="password" placeholder="••••••••" />
                 </label>
                 <label class="field">
-                  <span>��������� ������</span>
-                  <input id="password-confirm" type="password" placeholder="��������" />
+                  <span>Повторите пароль</span>
+                  <input id="password-confirm" type="password" placeholder="••••••••" />
                 </label>
               </div>
               <div class="panel-actions">
-                <button class="btn primary" id="password-save">�������� ������</button>
+                <button class="btn primary" id="password-save">Обновить пароль</button>
               </div>
               <p id="password-status" class="muted small"></p>
             </div>
@@ -98,26 +97,26 @@
                 <table class="table">
                   <thead>
                     <tr>
-                      <th>���������</th>
-                      <th>��������</th>
-                      <th>�����������</th>
+                      <th>Платформа</th>
+                      <th>Комиссия</th>
+                      <th>Комментарий</th>
                     </tr>
                   </thead>
                   <tbody id="fees-body"></tbody>
                 </table>
               </div>
-              <p class="muted small">�������� ����������� ��� ���������� ��������� ���������.</p>
+              <p class="muted small">Комиссия применяется при пополнении рекламных аккаунтов.</p>
             </div>
 
             <div class="tab-panel" data-tab-panel="docs">
-              <div id="docs-empty" class="notice" hidden>��������� ���� �� ���������.</div>
+              <div id="docs-empty" class="notice" hidden>Документы пока не загружены.</div>
               <div class="table-wrapper">
                 <table class="table">
                   <thead>
                     <tr>
-                      <th>��������</th>
-                      <th>����</th>
-                      <th style="text-align:right;">��������</th>
+                      <th>Документ</th>
+                      <th>Дата</th>
+                      <th style="text-align:right;">Действие</th>
                     </tr>
                   </thead>
                   <tbody id="docs-body"></tbody>
@@ -133,6 +132,4 @@
     <script src="/settings.js"></script>
   </body>
 </html>
-
-
 

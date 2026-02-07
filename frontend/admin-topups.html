@@ -1,10 +1,9 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    
-    <link rel="icon" href="/favicon.ico" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Envidicy � Admin � ����������</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy · Admin · Пополнения</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -15,27 +14,27 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">����������</p>
-            <h2>������ �� �������</h2>
+            <p class="eyebrow">Пополнения</p>
+            <h2>Сводка по оплатам</h2>
           </div>
           <div class="panel-actions">
-            <button class="btn ghost small" id="export-topups">������� Excel</button>
+            <button class="btn ghost small" id="export-topups">Экспорт Excel</button>
             <span class="chip chip-ghost">topups</span>
           </div>
         </div>
         <div class="form-grid">
           <label class="field">
-            <span>������</span>
+            <span>Статус</span>
             <select id="topup-filter-status">
-              <option value="">���</option>
-              <option value="pending">�������</option>
-              <option value="completed">�������</option>
-              <option value="failed">������</option>
-              <option value="completed">��������</option>
+              <option value="">Все</option>
+              <option value="pending">Ожидает</option>
+              <option value="completed">Оплачен</option>
+              <option value="failed">Ошибка</option>
+              <option value="completed">Завершен</option>
             </select>
           </label>
           <label class="field">
-            <span>������ (email)</span>
+            <span>Клиент (email)</span>
             <input id="topup-filter-email" type="text" placeholder="client@email.com" />
           </label>
         </div>
@@ -43,15 +42,15 @@
           <table class="table">
             <thead>
               <tr>
-                <th>����</th>
-                <th>������</th>
-                <th>���������</th>
-                <th>�������</th>
-                <th>�����</th>
-                <th>��������</th>
-                <th>� ������</th>
-                <th>������</th>
-                <th style="text-align:right;">��������</th>
+                <th>Дата</th>
+                <th>Клиент</th>
+                <th>Платформа</th>
+                <th>Аккаунт</th>
+                <th>Сумма</th>
+                <th>Комиссия</th>
+                <th>К оплате</th>
+                <th>Статус</th>
+                <th style="text-align:right;">Действие</th>
               </tr>
             </thead>
             <tbody id="admin-topups"></tbody>
@@ -65,6 +64,3 @@
     <script src="/admin-topups.js"></script>
   </body>
 </html>
-
-
-

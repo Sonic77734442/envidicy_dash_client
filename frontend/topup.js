@@ -10,14 +10,14 @@ const authHeadersSafe =
       }
 
 renderHeader({
-  eyebrow: 'Envidicy � Billing Desk',
-  title: '���������� ��������� ���������',
-  subtitle: '�������� ������� Meta, Google ��� TikTok, �������� e-mail � ������ �������� ��� ����������� �����.',
+  eyebrow: 'Envidicy · Billing Desk',
+  title: 'Пополнение рекламных аккаунтов',
+  subtitle: 'Выберите аккаунт Meta, Google или TikTok, оставьте e-mail и данные компании для выставления счёта.',
   buttons: [
-    { label: '�������', href: '/dashboard', kind: 'ghost' },
-    { label: '�������', href: '/funds', kind: 'ghost' },
-    { label: '���������', href: '/plan', kind: 'ghost' },
-    { label: '����', href: '/login', kind: 'ghost' },
+    { label: 'Дашборд', href: '/dashboard', kind: 'ghost' },
+    { label: 'Финансы', href: '/funds', kind: 'ghost' },
+    { label: 'Медиаплан', href: '/plan', kind: 'ghost' },
+    { label: 'Вход', href: '/login', kind: 'ghost' },
   ],
 })
 
@@ -52,8 +52,8 @@ const platforms = [
   },
   {
     key: 'yandex',
-    title: '������ ������',
-    subtitle: '����� / ��� / �������',
+    title: 'Яндекс Директ',
+    subtitle: 'Поиск / РСЯ / Медийка',
     badge: 'ADS',
   },
   {
@@ -139,7 +139,7 @@ const createState = {
 
 function handleAuthFailure(res) {
   if (res.status === 401) {
-    alert('��� ������� � �������� ����� �����.')
+    alert('Для доступа к кабинету нужно войти.')
     window.location.href = '/login'
     return true
   }
@@ -157,7 +157,7 @@ function renderCards() {
         <p class="eyebrow">${p.badge}</p>
         <h3>${p.title}</h3>
       </div>
-      <button class="btn primary" data-platform="${p.key}">������� �������</button>
+      <button class="btn primary" data-platform="${p.key}">Открыть аккаунт</button>
     `
     container.appendChild(div)
   })
@@ -176,7 +176,7 @@ function renderOpenAccounts() {
     const tr = document.createElement('tr')
     const budgetLabel =
       row.budget == null
-        ? '�'
+        ? '—'
         : `${Number(row.budget).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${row.currency || 'USD'}`
     tr.innerHTML = `
       <td>${platformLabel(row.platform)}</td>
@@ -189,11 +189,11 @@ function renderOpenAccounts() {
         ${
           hasAccount
             ? `
-        <button class="icon-btn" title="���������" data-topup="${row.account_db_id}" data-platform="${row.platform}">$</button>
-        <button class="icon-btn stat" title="����������" data-stat="${row.account_db_id}" data-platform="${row.platform}">??</button>
-        <button class="icon-btn refresh" title="��������" data-refresh="${row.account_db_id}" data-platform="${row.platform}">?</button>
+        <button class="icon-btn" title="Пополнить" data-topup="${row.account_db_id}" data-platform="${row.platform}">$</button>
+        <button class="icon-btn stat" title="Статистика" data-stat="${row.account_db_id}" data-platform="${row.platform}">📊</button>
+        <button class="icon-btn refresh" title="Обновить" data-refresh="${row.account_db_id}" data-platform="${row.platform}">⟳</button>
         `
-            : `<span class="muted small">������� ��������</span>`
+            : `<span class="muted small">Ожидает открытия</span>`
         }
       </td>
     `
@@ -209,11 +209,11 @@ function renderOpenAccounts() {
       }
       const stat = e.target.closest('button[data-stat]')
       if (stat) {
-        alert('���������� ����� ������������� �����.')
+        alert('Статистика будет подтягиваться позже.')
       }
       const refresh = e.target.closest('button[data-refresh]')
       if (refresh) {
-        alert('���������� ������� ����� ��������� �����.')
+        alert('Обновление бюджета будет добавлено позже.')
       }
     })
     tbody.dataset.bound = '1'
@@ -221,24 +221,24 @@ function renderOpenAccounts() {
 }
 
 function normalizeAccountStatus(status) {
-  if (!status) return '�� ���������'
-  if (status === 'pending') return '�� ���������'
-  if (status === 'active') return '�������'
-  if (status === 'paused') return '�������������'
-  if (status === 'archived') return '������'
+  if (!status) return 'На модерации'
+  if (status === 'pending') return 'На модерации'
+  if (status === 'active') return 'Активен'
+  if (status === 'paused') return 'Приостановлен'
+  if (status === 'archived') return 'Закрыт'
   return status
 }
 
 function statusClass(status) {
-  if (status === '�����') return 'status-paused'
-  if (status === '� ������') return 'status-warn'
-  if (status === '������') return 'status-active'
-  if (status === '��������') return 'status-blocked'
-  if (status === '�� ���������') return 'status-warn'
-  if (status === '�������') return 'status-active'
-  if (status === '�������������') return 'status-paused'
-  if (status === '������������') return 'status-blocked'
-  if (status === '������') return 'status-closed'
+  if (status === 'Новая') return 'status-paused'
+  if (status === 'В работе') return 'status-warn'
+  if (status === 'Открыт') return 'status-active'
+  if (status === 'Отклонен') return 'status-blocked'
+  if (status === 'На модерации') return 'status-warn'
+  if (status === 'Активен') return 'status-active'
+  if (status === 'Приостановлен') return 'status-paused'
+  if (status === 'Заблокирован') return 'status-blocked'
+  if (status === 'Закрыт') return 'status-closed'
   return ''
 }
 
@@ -249,10 +249,10 @@ function syncOpenAccounts() {
     accountIndex.set(key, acc.id)
     return {
       platform: acc.platform,
-      account_id: acc.name || acc.external_id || `������� #${acc.id}`,
+      account_id: acc.name || acc.external_id || `Аккаунт #${acc.id}`,
       account_db_id: acc.id,
       company: '',
-      email: '�',
+      email: '—',
       budget: acc.budget_total ?? null,
       currency: acc.currency || (acc.platform === 'telegram' ? 'EUR' : 'USD'),
       status: normalizeAccountStatus(acc.status),
@@ -264,10 +264,10 @@ function syncOpenAccounts() {
       const accountDbId = accountIndex.get(`${req.platform}:${req.name}`) || null
       return {
         platform: req.platform,
-        account_id: req.name || `������ #${req.id}`,
+        account_id: req.name || `Заявка #${req.id}`,
         account_db_id: accountDbId,
         company: '',
-        email: req.email || '�',
+        email: req.email || '—',
         budget: req.budget_total,
         currency: req.account_currency || (req.platform === 'telegram' ? 'EUR' : 'USD'),
         status: req.status,
@@ -281,7 +281,7 @@ function syncOpenAccounts() {
 
 function openCreateModal(platformKey) {
   createModal.platform.value = platformLabel(platformKey)
-  createModal.title.textContent = `������� � ${platformLabel(platformKey)}`
+  createModal.title.textContent = `Открыть · ${platformLabel(platformKey)}`
   createState.mccSent = false
   createState.metaStage = 'primary'
   createModal.notice.hidden = true
@@ -331,7 +331,7 @@ function closeCreateModal() {
 
 function openTopupModal(platformKey, accountId) {
   if (!accounts[platformKey] || accounts[platformKey].length === 0) {
-    alert('��� ��������� ��������� ��� ����������. ��������� �������� ��������.')
+    alert('Нет доступных аккаунтов для пополнения. Дождитесь открытия аккаунта.')
     return
   }
   const feeVal = state.fees ? state.fees[platformKey] : null
@@ -356,7 +356,7 @@ function platformLabel(key) {
   if (key === 'meta') return 'Meta'
   if (key === 'google') return 'Google Ads'
   if (key === 'tiktok') return 'TikTok Ads'
-  if (key === 'yandex') return '������ ������'
+  if (key === 'yandex') return 'Яндекс Директ'
   if (key === 'telegram') return 'Telegram Ads'
   if (key === 'monochrome') return 'Monochrome'
   return key
@@ -371,11 +371,11 @@ function setCreateStep(step) {
   const platformKey = createModal.el.dataset.platform || 'google'
   updateCreatePlatformUI(platformKey)
   if (step === 'mcc') {
-    createModal.title.textContent = '������� MCC'
+    createModal.title.textContent = 'Открыть MCC'
   } else if (step === 'tiktok-info') {
     createModal.title.textContent = 'TikTok Business Center'
   } else {
-    createModal.title.textContent = `������� � ${platformLabel(platformKey)}`
+    createModal.title.textContent = `Открыть · ${platformLabel(platformKey)}`
   }
 }
 
@@ -392,7 +392,7 @@ function updateCreatePlatformUI(platformKey) {
   createModal.telegramFields.hidden = !isTelegram
   createModal.stepMcc.hidden = !isGoogle && createState.step !== 'mcc'
   createModal.stepTiktokInfo.hidden = !isTiktok && createState.step !== 'tiktok-info'
-  createModal.nameLabel.textContent = isMeta ? '�������� ��������' : '������� �������� ��������'
+  createModal.nameLabel.textContent = isMeta ? 'Название кабинета' : 'Введите название аккаунта'
   if (!isMeta) {
     createState.metaStage = 'primary'
   }
@@ -413,9 +413,9 @@ function renderAccessList() {
         <div class="access-item">
           <div>
             <div class="access-email">${item.email}</div>
-            <div class="muted small">${item.role === 'read' ? '������ ������' : '����������� ������'}</div>
+            <div class="muted small">${item.role === 'read' ? 'Только чтение' : 'Стандартный доступ'}</div>
           </div>
-          <button class="btn ghost small" type="button" data-remove="${index}">������</button>
+          <button class="btn ghost small" type="button" data-remove="${index}">Убрать</button>
         </div>
       `
     )
@@ -428,7 +428,7 @@ function renderTiktokIds() {
       (id, index) => `
         <div class="access-item">
           <div class="access-email">${id}</div>
-          <button class="btn ghost small" type="button" data-remove-id="${index}">������</button>
+          <button class="btn ghost small" type="button" data-remove-id="${index}">Убрать</button>
         </div>
       `
     )
@@ -442,11 +442,11 @@ function bindModal() {
   createModal.mccSend.onclick = () => {
     const email = createModal.mccEmail.value.trim()
     if (!email) {
-      alert('������� e-mail ��� ������� � MCC.')
+      alert('Введите e-mail для доступа в MCC.')
       return
     }
     createState.mccSent = true
-    createModal.notice.textContent = `������ � MCC ��������� �� ${email}.`
+    createModal.notice.textContent = `Доступ в MCC отправлен на ${email}.`
     createModal.notice.hidden = false
     setCreateStep('account')
   }
@@ -454,7 +454,7 @@ function bindModal() {
     const email = createModal.accessEmail.value.trim()
     const role = createModal.accessRole.value
     if (!email) {
-      alert('������� e-mail ��� �������.')
+      alert('Введите e-mail для доступа.')
       return
     }
     createState.access.push({ email, role })
@@ -472,11 +472,11 @@ function bindModal() {
   createModal.tiktokIdAdd.onclick = () => {
     const value = createModal.tiktokIdInput.value.trim()
     if (!value) {
-      alert('������� TikTok Business ID.')
+      alert('Введите TikTok Business ID.')
       return
     }
     if (createState.tiktokIds.length >= 10) {
-      alert('����� �������� �� 10 Business ID.')
+      alert('Можно добавить до 10 Business ID.')
       return
     }
     createState.tiktokIds.push(value)
@@ -496,20 +496,20 @@ function bindModal() {
     const name = createModal.name.value.trim()
     const website = createModal.website.value.trim()
     if (!name) {
-      alert('������� �������� ��������.')
+      alert('Введите название аккаунта.')
       return
     }
     if (platform === 'meta') {
       const required = [
         { value: createModal.bmId.value.trim(), label: 'ID Business Manager Facebook' },
-        { value: createModal.geo.value.trim(), label: '��� ������� �������' },
-        { value: createModal.facebookPage.value.trim(), label: '�������� �������' },
-        { value: createModal.instagramPage.value.trim(), label: '�������� ���������' },
+        { value: createModal.geo.value.trim(), label: 'ГЕО запуска рекламы' },
+        { value: createModal.facebookPage.value.trim(), label: 'Страница Фейсбук' },
+        { value: createModal.instagramPage.value.trim(), label: 'Страница Инстаграм' },
       ]
       if (createModal.finalAdvertiser.value === 'no' && createState.metaStage !== 'final') {
         const missingPrimary = required.find((item) => !item.value)
         if (missingPrimary) {
-          alert(`��������� ����: ${missingPrimary.label}.`)
+          alert(`Заполните поле: ${missingPrimary.label}.`)
           return
         }
         createState.metaStage = 'final'
@@ -518,51 +518,51 @@ function bindModal() {
       }
       if (createModal.finalAdvertiser.value === 'no') {
         required.push(
-          { value: createModal.finalName.value.trim(), label: '������������ ��������� �������������' },
-          { value: createModal.finalCountry.value.trim(), label: '������ ��������� �������������' },
-          { value: createModal.finalTaxId.value.trim(), label: '����� ����������������� ��������� �������������' },
-          { value: createModal.finalAddress.value.trim(), label: '����� ��������� �������������' },
-          { value: createModal.finalOwnership.value.trim(), label: '����� ������������� ��������� �������������' }
+          { value: createModal.finalName.value.trim(), label: 'Наименование конечного рекламодателя' },
+          { value: createModal.finalCountry.value.trim(), label: 'Страна конечного рекламодателя' },
+          { value: createModal.finalTaxId.value.trim(), label: 'Номер налогоплательщика конечного рекламодателя' },
+          { value: createModal.finalAddress.value.trim(), label: 'Адрес конечного рекламодателя' },
+          { value: createModal.finalOwnership.value.trim(), label: 'Форма собственности конечного рекламодателя' }
         )
       }
       const missing = required.find((item) => !item.value)
       if (missing) {
-        alert(`��������� ����: ${missing.label}.`)
+        alert(`Заполните поле: ${missing.label}.`)
         return
       }
     }
     if (platform === 'tiktok') {
       if (!createState.tiktokIds.length) {
-        alert('�������� ���� �� ���� TikTok Business ID.')
+        alert('Добавьте хотя бы один TikTok Business ID.')
         return
       }
       if (!createModal.tiktokTimezone.value.trim()) {
-        alert('������� ������� ����.')
+        alert('Укажите часовой пояс.')
         return
       }
       if (!createModal.tiktokGeo.value.trim()) {
-        alert('������� ���������.')
+        alert('Укажите географию.')
         return
       }
     }
     if (platform === 'yandex') {
       if (!createModal.yandexEmail.value.trim()) {
-        alert('������� mail ��������� ������� ������.')
+        alert('Укажите mail почтового клиента Яндекс.')
         return
       }
     }
     if (platform === 'telegram') {
       if (!createModal.telegramChannel.value.trim()) {
-        alert('������� ������ �� Telegram-�����.')
+        alert('Укажите ссылку на Telegram-канал.')
         return
       }
     }
     if (!website) {
-      alert('������� ������ �� ����.')
+      alert('Укажите ссылку на сайт.')
       return
     }
     if ((platform === 'google' || platform === 'telegram' || platform === 'monochrome') && !createState.access.length) {
-      alert('�������� ���� �� ���� e-mail ��� �������.')
+      alert('Добавьте хотя бы один e-mail для доступа.')
       return
     }
     const payload = {
@@ -599,10 +599,10 @@ function bindModal() {
       if (handleAuthFailure(res)) return
       if (!res.ok) throw new Error('create account failed')
       await fetchAccountRequests()
-      alert('������ ����������. �� �������� � ���� ����� ���������.')
+      alert('Заявка отправлена. Мы свяжемся с вами после обработки.')
       closeCreateModal()
     } catch (e) {
-      alert('������ ��������. ���������� �����.')
+      alert('Ошибка отправки. Попробуйте снова.')
     }
   }
 
@@ -610,11 +610,11 @@ function bindModal() {
   document.getElementById('topup-cancel').onclick = closeTopupModal
   document.getElementById('topup-submit').onclick = async () => {
     if (!topupModal.account.value) {
-      alert('�������� ������� ��� ����������.')
+      alert('Выберите аккаунт для пополнения.')
       return
     }
     if (topupModal.feePercent == null) {
-      alert('�������� ��� ���� ��������� �� ������. ���������� � ��������������.')
+      alert('Комиссия для этой платформы не задана. Обратитесь к администратору.')
       return
     }
     const payload = {
@@ -632,7 +632,7 @@ function bindModal() {
       })
       if (handleAuthFailure(res)) return
       if (!res.ok) {
-        let message = '������ ��������. ���������� �����.'
+        let message = 'Ошибка отправки. Попробуйте снова.'
         try {
           const data = await res.json()
           if (data?.detail) message = data.detail
@@ -644,10 +644,10 @@ function bindModal() {
       }
       const data = await res.json()
       await fetchTopups()
-      alert('���������� ���������� �� ���������.')
+      alert('Пополнение отправлено на обработку.')
       closeTopupModal()
     } catch (e) {
-      alert('������ ��������. ���������� �����.')
+      alert('Ошибка отправки. Попробуйте снова.')
     }
   }
 
@@ -661,11 +661,11 @@ function updateFee() {
   const vat = amt * (topupModal.vatPercent / 100)
   const gross = amt + fee + vat
   if (topupModal.feeLabel) {
-    topupModal.feeLabel.textContent = topupModal.feePercent == null ? '?' : String(feePct)
+    topupModal.feeLabel.textContent = topupModal.feePercent == null ? '�' : String(feePct)
   }
-  topupModal.fee.textContent = `?${fee.toFixed(2)}`
-  topupModal.net.textContent = `?${gross.toFixed(2)}`
-  topupModal.accountAmount.textContent = `?${amt.toFixed(2)}`
+  topupModal.fee.textContent = `₸${fee.toFixed(2)}`
+  topupModal.net.textContent = `₸${gross.toFixed(2)}`
+  topupModal.accountAmount.textContent = `₸${amt.toFixed(2)}`
 }
 
 function init() {
@@ -765,11 +765,10 @@ async function fetchFees() {
 }
 
 function normalizeRequestStatus(status) {
-  if (status === 'processing') return '� ������'
-  if (status === 'approved') return '������'
-  if (status === 'rejected') return '��������'
-  return '�����'
+  if (status === 'processing') return 'В работе'
+  if (status === 'approved') return 'Открыт'
+  if (status === 'rejected') return 'Отклонен'
+  return 'Новая'
 }
-
 
 

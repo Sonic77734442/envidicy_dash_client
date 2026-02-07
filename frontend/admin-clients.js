@@ -1,9 +1,9 @@
 ﻿const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 
 renderHeader({
-  eyebrow: 'Envidicy � Admin',
-  title: '�������',
-  subtitle: '������, ������������� ���������� � �������� ��������.',
+  eyebrow: 'Envidicy · Admin',
+  title: 'Клиенты',
+  subtitle: 'Заявки, подтверждённые пополнения и аккаунты клиентов.',
   buttons: [],
 })
 
@@ -36,7 +36,7 @@ function authHeadersSafe() {
 
 function handleAuthFailure(res) {
   if (res.status === 401 || res.status === 403) {
-    if (clientsStatus) clientsStatus.textContent = '��� ������� � �������.'
+    if (clientsStatus) clientsStatus.textContent = 'Нет доступа к админке.'
     return true
   }
   return false
@@ -51,7 +51,7 @@ async function fetchClients() {
     cachedClients = data
     renderClients(data)
   } catch (e) {
-    if (clientsStatus) clientsStatus.textContent = '������ �������� ��������.'
+    if (clientsStatus) clientsStatus.textContent = 'Ошибка загрузки клиентов.'
   }
 }
 
@@ -63,11 +63,11 @@ function renderClients(rows) {
       const completedTotal = Number(row.completed_total || 0)
       return `
         <tr>
-          <td>${row.email || '�'}</td>
-          <td>${pending ? `<span class="dot">${pending}</span>` : '�'}</td>
-          <td>${completedTotal ? formatMoney(completedTotal) : '�'}</td>
+          <td>${row.email || '—'}</td>
+          <td>${pending ? `<span class="dot">${pending}</span>` : '—'}</td>
+          <td>${completedTotal ? formatMoney(completedTotal) : '—'}</td>
           <td style="text-align:right;">
-            <button class="btn ghost small" data-client="${row.id}" data-email="${row.email}">�������</button>
+            <button class="btn ghost small" data-client="${row.id}" data-email="${row.email}">Открыть</button>
           </td>
         </tr>
       `
@@ -99,7 +99,7 @@ if (clientModal) {
 
 async function openClientModal(userId, email) {
   if (!clientModal || !clientTitle) return
-  clientTitle.textContent = email || '������'
+  clientTitle.textContent = email || 'Клиент'
   const [requests, topups, accounts, profile, fees] = await Promise.all([
     fetchClientRequests(userId),
     fetchClientTopups(userId),
@@ -161,27 +161,27 @@ function renderClientSummary(userId, email, requests, topups, accounts, profile)
     ? topups.reduce((sum, row) => sum + Number(row.amount_net || 0), 0)
     : 0
   const accountsCount = Array.isArray(accounts) ? accounts.length : 0
-  const company = profile?.company || '�'
+  const company = profile?.company || '—'
   clientSummary.innerHTML = `
     <div class="stat">
-      <p class="muted">������</p>
-      <h3>${email || '�'}</h3>
+      <p class="muted">Клиент</p>
+      <h3>${email || '—'}</h3>
       <p class="muted small">${company}</p>
     </div>
     <div class="stat">
-      <p class="muted">������</p>
+      <p class="muted">Заявки</p>
       <h3>${pendingCount}</h3>
-      <p class="muted small">������� �������������</p>
+      <p class="muted small">Ожидают подтверждения</p>
     </div>
     <div class="stat">
-      <p class="muted">���������</p>
-      <h3>${completedTotal ? formatMoney(completedTotal) : '�'}</h3>
-      <p class="muted small">�� ������������� ���������</p>
+      <p class="muted">Пополнено</p>
+      <h3>${completedTotal ? formatMoney(completedTotal) : '—'}</h3>
+      <p class="muted small">По подтверждённым операциям</p>
     </div>
     <div class="stat">
-      <p class="muted">��������</p>
+      <p class="muted">Аккаунты</p>
       <h3>${accountsCount}</h3>
-      <p class="muted small">��������� ��������</p>
+      <p class="muted small">Доступные кабинеты</p>
     </div>
   `
   clientSummary.dataset.userId = String(userId)
@@ -190,7 +190,7 @@ function renderClientSummary(userId, email, requests, topups, accounts, profile)
 function renderClientRequests(rows) {
   if (!clientRequests) return
   if (!rows || rows.length === 0) {
-    clientRequests.innerHTML = `<tr><td colspan="8" class="muted">��� ������.</td></tr>`
+    clientRequests.innerHTML = `<tr><td colspan="8" class="muted">Нет заявок.</td></tr>`
     return
   }
   clientRequests.innerHTML = rows
@@ -201,8 +201,8 @@ function renderClientRequests(rows) {
       return `
         <tr>
           <td>${formatDate(row.created_at)}</td>
-          <td>${row.account_platform || '�'}</td>
-          <td>${row.account_name || '�'}</td>
+          <td>${row.account_platform || '—'}</td>
+          <td>${row.account_name || '—'}</td>
           <td>${formatMoney(row.amount_input)} ${row.currency || ''}</td>
           <td>
             <input class="field-input small" type="number" step="0.0001" data-fx="${row.id}" value="${fxRate}">
@@ -210,10 +210,10 @@ function renderClientRequests(rows) {
           <td>
             <input class="field-input small" type="number" step="0.01" data-net="${row.id}" value="${amountNet}"> ${accountCurrency}
           </td>
-          <td>${row.status || '�'}</td>
+          <td>${row.status || '—'}</td>
           <td style="text-align:right;">
-            <button class="btn ghost small" data-action="save" data-topup="${row.id}">���������</button>
-            <button class="btn primary small" data-action="complete" data-topup="${row.id}">�����������</button>
+            <button class="btn ghost small" data-action="save" data-topup="${row.id}">Сохранить</button>
+            <button class="btn primary small" data-action="complete" data-topup="${row.id}">Подтвердить</button>
           </td>
         </tr>
       `
@@ -224,7 +224,7 @@ function renderClientRequests(rows) {
 function renderClientTopups(rows) {
   if (!clientTopups) return
   if (!rows || rows.length === 0) {
-    clientTopups.innerHTML = `<tr><td colspan="7" class="muted">��� ������������� ����������.</td></tr>`
+    clientTopups.innerHTML = `<tr><td colspan="7" class="muted">Нет подтверждённых пополнений.</td></tr>`
     return
   }
   clientTopups.innerHTML = rows
@@ -233,12 +233,12 @@ function renderClientTopups(rows) {
       return `
         <tr>
           <td>${formatDate(row.created_at)}</td>
-          <td>${row.account_platform || '�'}</td>
-          <td>${row.account_name || '�'}</td>
+          <td>${row.account_platform || '—'}</td>
+          <td>${row.account_name || '—'}</td>
           <td>${formatMoney(row.amount_input)} ${row.currency || ''}</td>
-          <td>${row.fx_rate ?? '�'}</td>
+          <td>${row.fx_rate ?? '—'}</td>
           <td>${formatMoney(row.amount_net)} ${accountCurrency}</td>
-          <td>${row.status || '�'}</td>
+          <td>${row.status || '—'}</td>
         </tr>
       `
     })
@@ -248,18 +248,18 @@ function renderClientTopups(rows) {
 function renderClientAccounts(rows) {
   if (!clientAccounts) return
   if (!rows || rows.length === 0) {
-    clientAccounts.innerHTML = `<tr><td colspan="5" class="muted">��� ���������.</td></tr>`
+    clientAccounts.innerHTML = `<tr><td colspan="5" class="muted">Нет аккаунтов.</td></tr>`
     return
   }
   clientAccounts.innerHTML = rows
     .map(
       (row) => `
         <tr>
-          <td>${row.platform || '�'}</td>
-          <td>${row.name || '�'}</td>
-          <td>${row.account_code || '�'}</td>
-          <td>${row.currency || '�'}</td>
-          <td>${row.budget_total != null ? `${formatMoney(row.budget_total)} ${row.currency || ''}` : '�'}</td>
+          <td>${row.platform || '—'}</td>
+          <td>${row.name || '—'}</td>
+          <td>${row.account_code || '—'}</td>
+          <td>${row.currency || '—'}</td>
+          <td>${row.budget_total != null ? `${formatMoney(row.budget_total)} ${row.currency || ''}` : '—'}</td>
         </tr>
       `
     )
@@ -269,21 +269,21 @@ function renderClientAccounts(rows) {
 function renderClientProfile(profile) {
   if (!clientProfile) return
   if (!profile) {
-    clientProfile.innerHTML = `<div class="details-section"><p class="muted">��� ������ �������.</p></div>`
+    clientProfile.innerHTML = `<div class="details-section"><p class="muted">Нет данных профиля.</p></div>`
     return
   }
   clientProfile.innerHTML = `
     <div class="details-section">
-      <h4>��������</h4>
-      <div class="details-row"><span class="details-label">Email</span><span>${profile.email || '�'}</span></div>
-      <div class="details-row"><span class="details-label">�������</span><span>${profile.whatsapp_phone || '�'}</span></div>
-      <div class="details-row"><span class="details-label">Telegram</span><span>${profile.telegram_handle || '�'}</span></div>
+      <h4>Контакты</h4>
+      <div class="details-row"><span class="details-label">Email</span><span>${profile.email || '—'}</span></div>
+      <div class="details-row"><span class="details-label">Телефон</span><span>${profile.whatsapp_phone || '—'}</span></div>
+      <div class="details-row"><span class="details-label">Telegram</span><span>${profile.telegram_handle || '—'}</span></div>
     </div>
     <div class="details-section">
-      <h4>������</h4>
-      <div class="details-row"><span class="details-label">���</span><span>${profile.name || '�'}</span></div>
-      <div class="details-row"><span class="details-label">��������</span><span>${profile.company || '�'}</span></div>
-      <div class="details-row"><span class="details-label">����</span><span>${profile.language || 'ru'}</span></div>
+      <h4>Данные</h4>
+      <div class="details-row"><span class="details-label">Имя</span><span>${profile.name || '—'}</span></div>
+      <div class="details-row"><span class="details-label">Компания</span><span>${profile.company || '—'}</span></div>
+      <div class="details-row"><span class="details-label">Язык</span><span>${profile.language || 'ru'}</span></div>
     </div>
   `
 }
@@ -346,7 +346,7 @@ if (clientRequests) {
       const email = clientTitle?.textContent || ''
       if (userId) await openClientModal(userId, email)
     } catch (e) {
-      if (clientsStatus) clientsStatus.textContent = '������ ���������� ������.'
+      if (clientsStatus) clientsStatus.textContent = 'Ошибка обновления заявки.'
     }
   })
 }
@@ -373,9 +373,9 @@ if (feesSave) {
       if (!res.ok) throw new Error('fees update failed')
       const data = await res.json()
       renderClientFees(data)
-      if (feesStatus) feesStatus.textContent = '�������� ���������.'
+      if (feesStatus) feesStatus.textContent = 'Комиссии сохранены.'
     } catch (e) {
-      if (feesStatus) feesStatus.textContent = '������ ���������� ��������.'
+      if (feesStatus) feesStatus.textContent = 'Ошибка сохранения комиссий.'
     }
   })
 }
@@ -386,12 +386,11 @@ function formatMoney(value) {
 }
 
 function formatDate(value) {
-  if (!value) return '�'
+  if (!value) return '—'
   const str = String(value)
   if (str.includes('T')) return str.split('T')[0]
   return str.split(' ')[0]
 }
 
 fetchClients()
-
 

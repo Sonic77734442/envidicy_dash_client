@@ -1,9 +1,9 @@
-﻿const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
+const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 
 renderHeader({
-  eyebrow: 'Envidicy � Admin',
-  title: '������������',
-  subtitle: '��� ������������������, ��� ��� �� ���� ��������.',
+  eyebrow: 'Envidicy · Admin',
+  title: 'Пользователи',
+  subtitle: 'Все зарегистрированные, кто ещё не стал клиентом.',
   buttons: [],
 })
 
@@ -17,14 +17,14 @@ function authHeadersSafe() {
 
 function handleAuthFailure(res) {
   if (res.status === 401 || res.status === 403) {
-    if (usersStatus) usersStatus.textContent = '��� ������� � �������.'
+    if (usersStatus) usersStatus.textContent = 'Нет доступа к админке.'
     return true
   }
   return false
 }
 
 function formatDate(value) {
-  if (!value) return '�'
+  if (!value) return '—'
   const str = String(value)
   if (str.includes('T')) return str.split('T')[0]
   return str.split(' ')[0]
@@ -38,25 +38,25 @@ async function fetchUsers() {
     const data = await res.json()
     renderUsers(data)
   } catch (e) {
-    if (usersStatus) usersStatus.textContent = '������ �������� �������������.'
+    if (usersStatus) usersStatus.textContent = 'Ошибка загрузки пользователей.'
   }
 }
 
 function renderUsers(rows) {
   if (!usersBody) return
   if (!rows || rows.length === 0) {
-    usersBody.innerHTML = `<tr><td colspan="3" class="muted">��� �������������.</td></tr>`
+    usersBody.innerHTML = `<tr><td colspan="3" class="muted">Нет пользователей.</td></tr>`
     return
   }
   usersBody.innerHTML = rows
     .map(
       (row) => `
       <tr>
-        <td>${row.email || '�'}</td>
+        <td>${row.email || '—'}</td>
         <td>${formatDate(row.created_at)}</td>
         <td style="text-align:right;">
           <button class="btn primary small" data-make-client="${row.id}" data-email="${row.email || ''}">
-            ������� ��������
+            Сделать клиентом
           </button>
         </td>
       </tr>
@@ -70,9 +70,9 @@ if (usersBody) {
     const btn = event.target.closest('button[data-make-client]')
     if (!btn) return
     const userId = btn.dataset.makeClient
-    const email = btn.dataset.email || '������������'
+    const email = btn.dataset.email || 'пользователя'
     if (!userId) return
-    if (!confirm(`��������� ${email} � �������?`)) return
+    if (!confirm(`Перевести ${email} в клиента?`)) return
     try {
       const res = await fetch(`${apiBase}/admin/users/${userId}/make-client`, {
         method: 'POST',
@@ -80,14 +80,12 @@ if (usersBody) {
       })
       if (handleAuthFailure(res)) return
       if (!res.ok) throw new Error('Failed to update user')
-      if (usersStatus) usersStatus.textContent = '������������ �������� � �������.'
+      if (usersStatus) usersStatus.textContent = 'Пользователь переведён в клиента.'
       await fetchUsers()
     } catch (e) {
-      if (usersStatus) usersStatus.textContent = '������ �������� � �������.'
+      if (usersStatus) usersStatus.textContent = 'Ошибка перевода в клиента.'
     }
   })
 }
 
 fetchUsers()
-
-

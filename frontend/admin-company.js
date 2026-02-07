@@ -1,4 +1,4 @@
-﻿const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
+const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 
 renderHeader({
   eyebrow: 'Envidicy · Admin',
@@ -73,4 +73,3 @@ async function saveCompany() {
 if (saveBtn) saveBtn.addEventListener('click', saveCompany)
 
 loadCompany()
-
