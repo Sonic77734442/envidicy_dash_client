@@ -353,3 +353,4 @@ async function loadNotifications(isAdmin) {
     listEl.textContent = 'Не удалось загрузить уведомления.'
   }
 }
+
