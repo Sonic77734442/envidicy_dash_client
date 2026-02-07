@@ -2537,16 +2537,30 @@ def _get_or_create_profile(conn, user_id: int) -> Dict[str, object]:
     row = conn.execute("SELECT * FROM user_profiles WHERE user_id=?", (user_id,)).fetchone()
     if row:
         return dict(row)
-    conn.execute(
-        """
-        INSERT INTO user_profiles (user_id, name, company, language, fee_config, notifications_seen_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        (user_id, None, None, "ru", json.dumps(_default_fee_config(), ensure_ascii=False), None),
-    )
-    conn.commit()
+    try:
+        conn.execute(
+            """
+            INSERT INTO user_profiles (user_id, name, company, language, fee_config, notifications_seen_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (user_id, None, None, "ru", json.dumps(_default_fee_config(), ensure_ascii=False), None),
+        )
+        conn.commit()
+    except Exception:
+        # Fallback for older schema without new columns.
+        try:
+            conn.execute(
+                """
+                INSERT INTO user_profiles (user_id, name, company, language)
+                VALUES (?, ?, ?, ?)
+                """,
+                (user_id, None, None, "ru"),
+            )
+            conn.commit()
+        except Exception:
+            pass
     row = conn.execute("SELECT * FROM user_profiles WHERE user_id=?", (user_id,)).fetchone()
-    return dict(row)
+    return dict(row) if row else {"user_id": user_id}
 
 
 def _document_storage_dir() -> str:
@@ -3345,8 +3359,11 @@ def list_notifications(current_user=Depends(get_current_user)):
     if not get_conn:
         return {"items": [], "unread": 0}
     with get_conn() as conn:
-        profile = _get_or_create_profile(conn, current_user["id"])
-        seen_at = profile.get("notifications_seen_at")
+        try:
+            profile = _get_or_create_profile(conn, current_user["id"])
+            seen_at = profile.get("notifications_seen_at")
+        except Exception:
+            seen_at = None
         topups = conn.execute(
             """
             SELECT id, created_at, status, amount_input, amount_net, currency
@@ -3367,22 +3384,26 @@ def list_notifications(current_user=Depends(get_current_user)):
             """,
             (current_user["id"],),
         ).fetchall()
-        unread_topups = conn.execute(
-            """
-            SELECT COUNT(1) as cnt
-            FROM topups
-            WHERE user_id=? AND status='completed' AND (? IS NULL OR created_at > ?)
-            """,
-            (current_user["id"], seen_at, seen_at),
-        ).fetchone()
-        unread_requests = conn.execute(
-            """
-            SELECT COUNT(1) as cnt
-            FROM account_requests
-            WHERE user_id=? AND status='approved' AND (? IS NULL OR created_at > ?)
-            """,
-            (current_user["id"], seen_at, seen_at),
-        ).fetchone()
+        try:
+            unread_topups = conn.execute(
+                """
+                SELECT COUNT(1) as cnt
+                FROM topups
+                WHERE user_id=? AND status='completed' AND (? IS NULL OR created_at > ?)
+                """,
+                (current_user["id"], seen_at, seen_at),
+            ).fetchone()
+            unread_requests = conn.execute(
+                """
+                SELECT COUNT(1) as cnt
+                FROM account_requests
+                WHERE user_id=? AND status='approved' AND (? IS NULL OR created_at > ?)
+                """,
+                (current_user["id"], seen_at, seen_at),
+            ).fetchone()
+        except Exception:
+            unread_topups = None
+            unread_requests = None
     items: List[Dict[str, object]] = []
     for row in topups:
         items.append(
