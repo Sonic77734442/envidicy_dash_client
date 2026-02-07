@@ -1,9 +1,9 @@
-const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
+﻿const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 
 renderHeader({
-  eyebrow: 'Envidicy · Profile',
-  title: 'Настройки',
-  subtitle: 'Управляйте данными, безопасностью и документами.',
+  eyebrow: 'Envidicy В· Profile',
+  title: 'РќР°СЃС‚СЂРѕР№РєРё',
+  subtitle: 'РЈРїСЂР°РІР»СЏР№С‚Рµ РґР°РЅРЅС‹РјРё, Р±РµР·РѕРїР°СЃРЅРѕСЃС‚СЊСЋ Рё РґРѕРєСѓРјРµРЅС‚Р°РјРё.',
   buttons: [],
 })
 
@@ -82,17 +82,17 @@ async function loadProfile() {
       }
     }
   } catch (e) {
-    if (profile.status) profile.status.textContent = 'Не удалось загрузить профиль.'
+    if (profile.status) profile.status.textContent = 'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РїСЂРѕС„РёР»СЊ.'
   }
 }
 
 async function uploadAvatar() {
   const file = profile.avatarFile?.files?.[0]
   if (!file) {
-    if (profile.avatarStatus) profile.avatarStatus.textContent = 'Выберите файл.'
+    if (profile.avatarStatus) profile.avatarStatus.textContent = 'Р’С‹Р±РµСЂРёС‚Рµ С„Р°Р№Р».'
     return
   }
-  if (profile.avatarStatus) profile.avatarStatus.textContent = 'Загружаем...'
+  if (profile.avatarStatus) profile.avatarStatus.textContent = 'Р—Р°РіСЂСѓР¶Р°РµРј...'
   const form = new FormData()
   form.append('file', file)
   try {
@@ -110,14 +110,14 @@ async function uploadAvatar() {
     if (profile.avatarPreview && data.avatar_url) {
       profile.avatarPreview.innerHTML = `<img src="${apiBase}${data.avatar_url}" alt="avatar" />`
     }
-    if (profile.avatarStatus) profile.avatarStatus.textContent = 'Фото обновлено.'
+    if (profile.avatarStatus) profile.avatarStatus.textContent = 'Р¤РѕС‚Рѕ РѕР±РЅРѕРІР»РµРЅРѕ.'
   } catch (e) {
-    if (profile.avatarStatus) profile.avatarStatus.textContent = 'Не удалось загрузить фото.'
+    if (profile.avatarStatus) profile.avatarStatus.textContent = 'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ С„РѕС‚Рѕ.'
   }
 }
 
 async function saveProfile() {
-  if (profile.status) profile.status.textContent = 'Сохраняем...'
+  if (profile.status) profile.status.textContent = 'РЎРѕС…СЂР°РЅСЏРµРј...'
   const payload = {
     name: profile.name?.value?.trim() || null,
     company: profile.company?.value?.trim() || null,
@@ -136,9 +136,9 @@ async function saveProfile() {
       return
     }
     if (!res.ok) throw new Error('save failed')
-    if (profile.status) profile.status.textContent = 'Профиль обновлен.'
+    if (profile.status) profile.status.textContent = 'РџСЂРѕС„РёР»СЊ РѕР±РЅРѕРІР»РµРЅ.'
   } catch (e) {
-    if (profile.status) profile.status.textContent = 'Не удалось сохранить изменения.'
+    if (profile.status) profile.status.textContent = 'РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ РёР·РјРµРЅРµРЅРёСЏ.'
   }
 }
 
@@ -147,14 +147,14 @@ async function changePassword() {
   const next = password.next?.value?.trim()
   const confirm = password.confirm?.value?.trim()
   if (!current || !next) {
-    if (password.status) password.status.textContent = 'Заполните текущий и новый пароль.'
+    if (password.status) password.status.textContent = 'Р—Р°РїРѕР»РЅРёС‚Рµ С‚РµРєСѓС‰РёР№ Рё РЅРѕРІС‹Р№ РїР°СЂРѕР»СЊ.'
     return
   }
   if (next !== confirm) {
-    if (password.status) password.status.textContent = 'Пароли не совпадают.'
+    if (password.status) password.status.textContent = 'РџР°СЂРѕР»Рё РЅРµ СЃРѕРІРїР°РґР°СЋС‚.'
     return
   }
-  if (password.status) password.status.textContent = 'Обновляем пароль...'
+  if (password.status) password.status.textContent = 'РћР±РЅРѕРІР»СЏРµРј РїР°СЂРѕР»СЊ...'
   try {
     const res = await fetch(`${apiBase}/auth/change-password`, {
       method: 'POST',
@@ -168,36 +168,49 @@ async function changePassword() {
     if (!res.ok) throw new Error('change failed')
     const data = await res.json()
     if (data?.token) localStorage.setItem('auth_token', data.token)
-    if (password.status) password.status.textContent = 'Пароль обновлен.'
+    if (password.status) password.status.textContent = 'РџР°СЂРѕР»СЊ РѕР±РЅРѕРІР»РµРЅ.'
     if (password.current) password.current.value = ''
     if (password.next) password.next.value = ''
     if (password.confirm) password.confirm.value = ''
   } catch (e) {
-    if (password.status) password.status.textContent = 'Не удалось обновить пароль.'
+    if (password.status) password.status.textContent = 'РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±РЅРѕРІРёС‚СЊ РїР°СЂРѕР»СЊ.'
   }
 }
 
-function renderFees() {
+async function renderFees() {
   if (!feesBody) return
-  const rows = [
-    { platform: 'Meta', fee: '10%', note: 'Facebook / Instagram' },
-    { platform: 'Google Ads', fee: '10%', note: 'Search / Display / YouTube' },
-    { platform: 'TikTok Ads', fee: '10%', note: 'Video' },
-    { platform: 'Яндекс Директ', fee: '10%', note: 'Поиск / РСЯ' },
-    { platform: 'Telegram Ads', fee: '10%', note: 'Channels / Bots' },
-    { platform: 'Monochrome', fee: '10%', note: 'Programmatic' },
-  ]
-  feesBody.innerHTML = rows
-    .map(
-      (r) => `
+  try {
+    const res = await fetch(`${apiBase}/fees`, { headers: authHeaders() })
+    if (res.status === 401) {
+      window.location.href = '/login'
+      return
+    }
+    if (!res.ok) throw new Error('fees failed')
+    const data = await res.json()
+    const rows = [
+      { key: 'meta', platform: 'Meta', note: 'Facebook / Instagram' },
+      { key: 'google', platform: 'Google Ads', note: 'Search / Display / YouTube' },
+      { key: 'yandex', platform: 'Яндекс Директ', note: 'Поиск / РСЯ' },
+      { key: 'tiktok', platform: 'TikTok Ads', note: 'Video' },
+      { key: 'telegram', platform: 'Telegram Ads', note: 'Channels / Bots' },
+      { key: 'monochrome', platform: 'Monochrome', note: 'Programmatic' },
+    ]
+    feesBody.innerHTML = rows
+      .map((r) => {
+        const val = data?.[r.key]
+        const label = val == null || val === '' ? '—' : `${Number(val).toFixed(2)}%`
+        return `
     <tr>
       <td>${r.platform}</td>
-      <td>${r.fee}</td>
+      <td>${label}</td>
       <td>${r.note}</td>
     </tr>
   `
-    )
-    .join('')
+      })
+      .join('')
+  } catch (e) {
+    feesBody.innerHTML = `<tr><td colspan="3" class="muted">Не удалось загрузить комиссии.</td></tr>`
+  }
 }
 
 async function loadDocuments() {
@@ -222,9 +235,9 @@ async function loadDocuments() {
         (row) => `
       <tr>
         <td>${row.title}</td>
-        <td>${row.created_at?.split(' ')[0] || '—'}</td>
+        <td>${row.created_at?.split(' ')[0] || 'вЂ”'}</td>
         <td style="text-align:right;">
-          <a class="btn ghost small" href="${apiBase}/documents/${row.id}${token ? `?token=${encodeURIComponent(token)}` : ''}" target="_blank" rel="noopener">Скачать</a>
+          <a class="btn ghost small" href="${apiBase}/documents/${row.id}${token ? `?token=${encodeURIComponent(token)}` : ''}" target="_blank" rel="noopener">РЎРєР°С‡Р°С‚СЊ</a>
         </td>
       </tr>
     `
@@ -233,7 +246,7 @@ async function loadDocuments() {
   } catch (e) {
     if (docs.empty) {
       docs.empty.hidden = false
-      docs.empty.textContent = 'Не удалось загрузить документы.'
+      docs.empty.textContent = 'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РґРѕРєСѓРјРµРЅС‚С‹.'
     }
   }
 }
@@ -249,3 +262,5 @@ function init() {
 }
 
 init()
+
+

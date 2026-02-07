@@ -1332,11 +1332,14 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 16px;
-  width: min(480px, 90vw);
+  width: min(680px, 94vw);
+  max-width: 94vw;
+  min-width: 0;
   box-shadow: 0 10px 50px rgba(0, 0, 0, 0.4);
   max-height: 90vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .modal-head {
@@ -1352,7 +1355,8 @@ h1 {
   grid-template-columns: 1fr;
   gap: 10px;
   margin-bottom: 12px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   max-height: 65vh;
 }
 

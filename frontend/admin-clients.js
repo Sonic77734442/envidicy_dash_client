@@ -17,6 +17,14 @@ const clientRequests = document.getElementById('client-requests')
 const clientTopups = document.getElementById('client-topups')
 const clientAccounts = document.getElementById('client-accounts')
 const clientProfile = document.getElementById('client-profile')
+const feeMeta = document.getElementById('fee-meta')
+const feeGoogle = document.getElementById('fee-google')
+const feeYandex = document.getElementById('fee-yandex')
+const feeTiktok = document.getElementById('fee-tiktok')
+const feeTelegram = document.getElementById('fee-telegram')
+const feeMonochrome = document.getElementById('fee-monochrome')
+const feesSave = document.getElementById('fees-save')
+const feesStatus = document.getElementById('fees-status')
 const tabButtons = Array.from(document.querySelectorAll('.tab-button'))
 const tabPanels = Array.from(document.querySelectorAll('.tab-panel'))
 let cachedClients = []
@@ -92,17 +100,19 @@ if (clientModal) {
 async function openClientModal(userId, email) {
   if (!clientModal || !clientTitle) return
   clientTitle.textContent = email || 'Клиент'
-  const [requests, topups, accounts, profile] = await Promise.all([
+  const [requests, topups, accounts, profile, fees] = await Promise.all([
     fetchClientRequests(userId),
     fetchClientTopups(userId),
     fetchClientAccounts(userId),
     fetchClientProfile(userId),
+    fetchClientFees(userId),
   ])
   renderClientSummary(userId, email, requests, topups, accounts, profile)
   renderClientRequests(requests)
   renderClientTopups(topups)
   renderClientAccounts(accounts)
   renderClientProfile(profile)
+  renderClientFees(fees)
   setActiveTab('requests')
   clientModal.classList.add('show')
   await fetch(`${apiBase}/admin/clients/${userId}/mark-seen`, { method: 'POST', headers: authHeadersSafe() })
@@ -132,6 +142,13 @@ async function fetchClientAccounts(userId) {
 
 async function fetchClientProfile(userId) {
   const res = await fetch(`${apiBase}/admin/clients/${userId}/profile`, { headers: authHeadersSafe() })
+  if (handleAuthFailure(res)) return null
+  if (!res.ok) return null
+  return res.json()
+}
+
+async function fetchClientFees(userId) {
+  const res = await fetch(`${apiBase}/admin/users/${userId}/fees`, { headers: authHeadersSafe() })
   if (handleAuthFailure(res)) return null
   if (!res.ok) return null
   return res.json()
@@ -271,6 +288,17 @@ function renderClientProfile(profile) {
   `
 }
 
+function renderClientFees(fees) {
+  if (!fees) return
+  if (feeMeta) feeMeta.value = fees.meta ?? ''
+  if (feeGoogle) feeGoogle.value = fees.google ?? ''
+  if (feeYandex) feeYandex.value = fees.yandex ?? ''
+  if (feeTiktok) feeTiktok.value = fees.tiktok ?? ''
+  if (feeTelegram) feeTelegram.value = fees.telegram ?? ''
+  if (feeMonochrome) feeMonochrome.value = fees.monochrome ?? ''
+  if (feesStatus) feesStatus.textContent = ''
+}
+
 function setActiveTab(tabId) {
   tabButtons.forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.tab === tabId)
@@ -319,6 +347,35 @@ if (clientRequests) {
       if (userId) await openClientModal(userId, email)
     } catch (e) {
       if (clientsStatus) clientsStatus.textContent = 'Ошибка обновления заявки.'
+    }
+  })
+}
+
+if (feesSave) {
+  feesSave.addEventListener('click', async () => {
+    const userId = clientSummary?.dataset.userId
+    if (!userId) return
+    const payload = {
+      meta: feeMeta?.value ? Number(feeMeta.value) : null,
+      google: feeGoogle?.value ? Number(feeGoogle.value) : null,
+      yandex: feeYandex?.value ? Number(feeYandex.value) : null,
+      tiktok: feeTiktok?.value ? Number(feeTiktok.value) : null,
+      telegram: feeTelegram?.value ? Number(feeTelegram.value) : null,
+      monochrome: feeMonochrome?.value ? Number(feeMonochrome.value) : null,
+    }
+    try {
+      const res = await fetch(`${apiBase}/admin/users/${userId}/fees`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeadersSafe() },
+        body: JSON.stringify(payload),
+      })
+      if (handleAuthFailure(res)) return
+      if (!res.ok) throw new Error('fees update failed')
+      const data = await res.json()
+      renderClientFees(data)
+      if (feesStatus) feesStatus.textContent = 'Комиссии сохранены.'
+    } catch (e) {
+      if (feesStatus) feesStatus.textContent = 'Ошибка сохранения комиссий.'
     }
   })
 }

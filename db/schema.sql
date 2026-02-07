@@ -47,6 +47,8 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   whatsapp_phone TEXT,
   telegram_handle TEXT,
   avatar_path TEXT,
+  fee_config TEXT,
+  notifications_seen_at TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );

@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   language TEXT DEFAULT 'ru',
   whatsapp_phone TEXT,
   telegram_handle TEXT,
+  fee_config TEXT,
+  notifications_seen_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

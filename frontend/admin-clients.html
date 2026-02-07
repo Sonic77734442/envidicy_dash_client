@@ -1,9 +1,9 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Envidicy · Admin · Клиенты</title>
+    <title>Envidicy В· Admin В· РљР»РёРµРЅС‚С‹</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -14,8 +14,8 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Клиенты</p>
-            <h2>Клиенты и заявки</h2>
+            <p class="eyebrow">РљР»РёРµРЅС‚С‹</p>
+            <h2>РљР»РёРµРЅС‚С‹ Рё Р·Р°СЏРІРєРё</h2>
           </div>
           <span class="chip chip-ghost">clients</span>
         </div>
@@ -23,10 +23,10 @@
           <table class="table">
             <thead>
               <tr>
-                <th>Клиент</th>
-                <th>Заявки</th>
-                <th>Пополнено</th>
-                <th style="text-align:right;">Действие</th>
+                <th>РљР»РёРµРЅС‚</th>
+                <th>Р—Р°СЏРІРєРё</th>
+                <th>РџРѕРїРѕР»РЅРµРЅРѕ</th>
+                <th style="text-align:right;">Р”РµР№СЃС‚РІРёРµ</th>
               </tr>
             </thead>
             <tbody id="admin-clients"></tbody>
@@ -39,21 +39,22 @@
         <div class="modal-dialog modal-large">
           <div class="modal-head">
             <div>
-              <p class="eyebrow">Клиент</p>
-              <h3 id="client-title">Распределения</h3>
+              <p class="eyebrow">РљР»РёРµРЅС‚</p>
+              <h3 id="client-title">Р Р°СЃРїСЂРµРґРµР»РµРЅРёСЏ</h3>
             </div>
-            <button class="btn ghost small" id="client-close">Закрыть</button>
+            <button class="btn ghost small" id="client-close">Р—Р°РєСЂС‹С‚СЊ</button>
           </div>
           <div class="modal-body">
             <div class="grid-3" id="client-summary"></div>
 
             <div class="tabs">
               <div class="tab-buttons">
-                <button class="tab-button active" data-tab="requests">Заявки</button>
-                <button class="tab-button" data-tab="topups">Пополнения</button>
-                <button class="tab-button" data-tab="accounts">Аккаунты</button>
-                <button class="tab-button" data-tab="profile">Профиль</button>
-              </div>
+  <button class="tab-button active" data-tab="requests">Р—Р°СЏРІРєРё</button>
+  <button class="tab-button" data-tab="topups">РџРѕРїРѕР»РЅРµРЅРёСЏ</button>
+  <button class="tab-button" data-tab="accounts">РђРєРєР°СѓРЅС‚С‹</button>
+  <button class="tab-button" data-tab="fees">РљРѕРјРёСЃСЃРёРё</button>
+  <button class="tab-button" data-tab="profile">РџСЂРѕС„РёР»СЊ</button>
+</div>
 
               <div class="tab-panels">
                 <div class="tab-panel active" data-panel="requests">
@@ -61,14 +62,14 @@
                     <table class="table">
                       <thead>
                         <tr>
-                          <th>Дата</th>
-                          <th>Платформа</th>
-                          <th>Аккаунт</th>
-                          <th>Счёт</th>
-                          <th>Курс</th>
-                          <th>В аккаунт</th>
-                          <th>Статус</th>
-                          <th style="text-align:right;">Действие</th>
+                          <th>Р”Р°С‚Р°</th>
+                          <th>РџР»Р°С‚С„РѕСЂРјР°</th>
+                          <th>РђРєРєР°СѓРЅС‚</th>
+                          <th>РЎС‡С‘С‚</th>
+                          <th>РљСѓСЂСЃ</th>
+                          <th>Р’ Р°РєРєР°СѓРЅС‚</th>
+                          <th>РЎС‚Р°С‚СѓСЃ</th>
+                          <th style="text-align:right;">Р”РµР№СЃС‚РІРёРµ</th>
                         </tr>
                       </thead>
                       <tbody id="client-requests"></tbody>
@@ -81,13 +82,13 @@
                     <table class="table">
                       <thead>
                         <tr>
-                          <th>Дата</th>
-                          <th>Платформа</th>
-                          <th>Аккаунт</th>
-                          <th>Счёт</th>
-                          <th>Курс</th>
-                          <th>В аккаунт</th>
-                          <th>Статус</th>
+                          <th>Р”Р°С‚Р°</th>
+                          <th>РџР»Р°С‚С„РѕСЂРјР°</th>
+                          <th>РђРєРєР°СѓРЅС‚</th>
+                          <th>РЎС‡С‘С‚</th>
+                          <th>РљСѓСЂСЃ</th>
+                          <th>Р’ Р°РєРєР°СѓРЅС‚</th>
+                          <th>РЎС‚Р°С‚СѓСЃ</th>
                         </tr>
                       </thead>
                       <tbody id="client-topups"></tbody>
@@ -100,11 +101,11 @@
                     <table class="table">
                       <thead>
                         <tr>
-                          <th>Платформа</th>
-                          <th>Аккаунт</th>
-                          <th>Договор</th>
-                          <th>Валюта</th>
-                          <th>Бюджет</th>
+                          <th>РџР»Р°С‚С„РѕСЂРјР°</th>
+                          <th>РђРєРєР°СѓРЅС‚</th>
+                          <th>Р”РѕРіРѕРІРѕСЂ</th>
+                          <th>Р’Р°Р»СЋС‚Р°</th>
+                          <th>Р‘СЋРґР¶РµС‚</th>
                         </tr>
                       </thead>
                       <tbody id="client-accounts"></tbody>
@@ -112,7 +113,39 @@
                   </div>
                 </div>
 
-                <div class="tab-panel" data-panel="profile">
+                <div class="tab-panel" data-panel="fees">
+                  <div class="form-grid">
+                    <label class="field">
+                      <span>Meta (Facebook/Instagram), %</span>
+                      <input id="fee-meta" type="number" step="0.01" min="0" max="100" placeholder="5" />
+                    </label>
+                    <label class="field">
+                      <span>Google, %</span>
+                      <input id="fee-google" type="number" step="0.01" min="0" max="100" placeholder="5" />
+                    </label>
+                    <label class="field">
+                      <span>РЇРЅРґРµРєСЃ, %</span>
+                      <input id="fee-yandex" type="number" step="0.01" min="0" max="100" placeholder="3" />
+                    </label>
+                    <label class="field">
+                      <span>TikTok, %</span>
+                      <input id="fee-tiktok" type="number" step="0.01" min="0" max="100" placeholder="3" />
+                    </label>
+                    <label class="field">
+                      <span>Telegram, %</span>
+                      <input id="fee-telegram" type="number" step="0.01" min="0" max="100" placeholder="25" />
+                    </label>
+                    <label class="field">
+                      <span>Monochrome, %</span>
+                      <input id="fee-monochrome" type="number" step="0.01" min="0" max="100" placeholder="" />
+                    </label>
+                  </div>
+                  <div class="panel-actions" style="margin-top: 12px;">
+                    <button class="btn primary" id="fees-save">Сохранить</button>
+                    <p id="fees-status" class="muted small"></p>
+                  </div>
+                </div>
+<div class="tab-panel" data-panel="profile">
                   <div class="details-grid" id="client-profile"></div>
                 </div>
               </div>
@@ -126,3 +159,8 @@
     <script src="/admin-clients.js"></script>
   </body>
 </html>
+
+
+
+
+

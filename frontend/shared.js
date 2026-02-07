@@ -1,4 +1,4 @@
-function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
+﻿function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
   const root = document.getElementById('header-root')
   if (!root) return
   document.body.classList.add('with-sidebar')
@@ -7,21 +7,21 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
   const isAdmin = email === 'romant997@gmail.com' || email === 'kolyadov.denis@gmail.com'
   const navItems = isAdmin
     ? [
-        { label: 'Админ · Заявки', href: '/admin/requests' },
-        { label: 'Админ · Пользователи', href: '/admin/users' },
-        { label: 'Админ · Клиенты', href: '/admin/clients' },
-        { label: 'Админ · Аккаунты', href: '/admin/accounts' },
-        { label: 'Админ · Контрагенты', href: '/admin/legal-entities' },
-        { label: 'Админ · Компания', href: '/admin/company' },
-        { label: 'Админ · Кошелек', href: '/admin/wallet' },
+        { label: 'РђРґРјРёРЅ В· Р—Р°СЏРІРєРё', href: '/admin/requests' },
+        { label: 'РђРґРјРёРЅ В· РџРѕР»СЊР·РѕРІР°С‚РµР»Рё', href: '/admin/users' },
+        { label: 'РђРґРјРёРЅ В· РљР»РёРµРЅС‚С‹', href: '/admin/clients' },
+        { label: 'РђРґРјРёРЅ В· РђРєРєР°СѓРЅС‚С‹', href: '/admin/accounts' },
+        { label: 'РђРґРјРёРЅ В· РљРѕРЅС‚СЂР°РіРµРЅС‚С‹', href: '/admin/legal-entities' },
+        { label: 'РђРґРјРёРЅ В· РљРѕРјРїР°РЅРёСЏ', href: '/admin/company' },
+        { label: 'РђРґРјРёРЅ В· РљРѕС€РµР»РµРє', href: '/admin/wallet' },
       ]
     : [
-        { label: 'Пополнение аккаунтов', href: '/topup' },
-        { label: 'Финансы', href: '/funds' },
-        { label: 'Медиапланирование', href: '/plan' },
-        { label: 'Дашборд', href: '/dashboard' },
-        { label: 'Инструменты', href: '/tools' },
-        { label: 'Настройки', href: '/settings' },
+        { label: 'РџРѕРїРѕР»РЅРµРЅРёРµ Р°РєРєР°СѓРЅС‚РѕРІ', href: '/topup' },
+        { label: 'Р¤РёРЅР°РЅСЃС‹', href: '/funds' },
+        { label: 'РњРµРґРёР°РїР»Р°РЅРёСЂРѕРІР°РЅРёРµ', href: '/plan' },
+        { label: 'Р”Р°С€Р±РѕСЂРґ', href: '/dashboard' },
+        { label: 'РРЅСЃС‚СЂСѓРјРµРЅС‚С‹', href: '/tools' },
+        { label: 'РќР°СЃС‚СЂРѕР№РєРё', href: '/settings' },
       ]
   const current = location.pathname.split('/').pop()
   const navHtml = navItems
@@ -32,8 +32,8 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
     .join('')
   const hasAuth = Boolean(getAuthToken?.() || localStorage.getItem('auth_token'))
   const authHtml = hasAuth
-    ? '<button class="nav-link nav-exit" id="nav-logout" type="button">Выход</button>'
-    : '<a class="nav-link" href="/login">Вход</a>'
+    ? '<button class="nav-link nav-exit" id="nav-logout" type="button">Р’С‹С…РѕРґ</button>'
+    : '<a class="nav-link" href="/login">Р’С…РѕРґ</a>'
   root.innerHTML = `
     <nav class="sidebar">
       <div class="sidebar-brand">
@@ -49,42 +49,42 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
         <p class="lede">${subtitle ?? ''}</p>
       </div>
       <div class="topbar-right">
-        ${isAdmin ? '' : '<div id="header-balance" class="balance-pill">Баланс: —</div>'}
-        ${isAdmin ? '' : '<button class="btn primary" id="header-topup" type="button">Пополнить баланс</button>'}
+        ${isAdmin ? '' : '<div id="header-balance" class="balance-pill">Р‘Р°Р»Р°РЅСЃ: вЂ”</div>'}
+        ${isAdmin ? '' : '<button class="btn primary" id="header-topup" type="button">РџРѕРїРѕР»РЅРёС‚СЊ Р±Р°Р»Р°РЅСЃ</button>'}
         <div class="header-actions">
-          ${isAdmin ? '' : '<button class="icon-circle" id="help-btn" data-tooltip="Помощь">?</button>'}
+          ${isAdmin ? '' : '<button class="icon-circle" id="help-btn" data-tooltip="РџРѕРјРѕС‰СЊ">?</button>'}
           <div class="dropdown">
-            <button class="icon-circle" id="bell-btn" title="Уведомления">🔔</button>
+            <button class="icon-circle" id="bell-btn" title="РЈРІРµРґРѕРјР»РµРЅРёСЏ">рџ””</button>
             <span id="bell-count" class="badge" hidden></span>
             <div class="dropdown-menu" id="bell-menu">
-              <div class="dropdown-head">Уведомления</div>
-              <div class="dropdown-body" id="bell-list">Нет уведомлений.</div>
+              <div class="dropdown-head">РЈРІРµРґРѕРјР»РµРЅРёСЏ</div>
+              <div class="dropdown-body" id="bell-list">РќРµС‚ СѓРІРµРґРѕРјР»РµРЅРёР№.</div>
             </div>
           </div>
           <div class="dropdown">
             <button class="profile-btn" id="profile-btn">
               <span class="avatar" id="header-avatar">?</span>
               <span class="profile-meta">
-                <span id="header-name">Профиль</span>
+                <span id="header-name">РџСЂРѕС„РёР»СЊ</span>
                 <span id="header-email">${email || ''}</span>
               </span>
             </button>
             <div class="dropdown-menu" id="profile-menu">
-              <div class="dropdown-head">Аккаунт</div>
+              <div class="dropdown-head">РђРєРєР°СѓРЅС‚</div>
               <div class="dropdown-body">
                 <div class="dropdown-item">
-                  <div class="dropdown-title" id="profile-menu-name">Профиль</div>
+                  <div class="dropdown-title" id="profile-menu-name">РџСЂРѕС„РёР»СЊ</div>
                   <div class="dropdown-meta" id="profile-menu-email">${email || ''}</div>
                 </div>
               </div>
               <div class="dropdown-body">
-                <a class="dropdown-link" href="/settings">Редактировать профиль</a>
-                <button class="dropdown-link" id="profile-logout" type="button">Выйти</button>
+                <a class="dropdown-link" href="/settings">Р РµРґР°РєС‚РёСЂРѕРІР°С‚СЊ РїСЂРѕС„РёР»СЊ</a>
+                <button class="dropdown-link" id="profile-logout" type="button">Р’С‹Р№С‚Рё</button>
               </div>
             </div>
           </div>
         </div>
-        ${isAdmin ? '' : '<div class="help-popover" id="help-popover"><div class="help-title">Помощь</div><p>Нужна консультация? Оставьте заявку.</p><button class="btn ghost small" id="help-request">Оставить заявку</button></div>'}
+        ${isAdmin ? '' : '<div class="help-popover" id="help-popover"><div class="help-title">РџРѕРјРѕС‰СЊ</div><p>РќСѓР¶РЅР° РєРѕРЅСЃСѓР»СЊС‚Р°С†РёСЏ? РћСЃС‚Р°РІСЊС‚Рµ Р·Р°СЏРІРєСѓ.</p><button class="btn ghost small" id="help-request">РћСЃС‚Р°РІРёС‚СЊ Р·Р°СЏРІРєСѓ</button></div>'}
       </div>
     </div>
   `
@@ -137,7 +137,7 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
   const helpRequest = document.getElementById('help-request')
   if (helpRequest) {
     helpRequest.addEventListener('click', () => {
-      alert('Оставьте заявку, и мы свяжемся с вами.')
+      alert('РћСЃС‚Р°РІСЊС‚Рµ Р·Р°СЏРІРєСѓ, Рё РјС‹ СЃРІСЏР¶РµРјСЃСЏ СЃ РІР°РјРё.')
     })
   }
   bindDropdown('bell-btn', 'bell-menu')
@@ -145,6 +145,15 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
   loadWalletBalance()
   loadHeaderProfile()
   loadNotifications(isAdmin)
+  if (!isAdmin) {
+    const bellBtn = document.getElementById('bell-btn')
+    if (bellBtn && !bellBtn.dataset.readBound) {
+      bellBtn.addEventListener('click', () => {
+        markNotificationsRead()
+      })
+      bellBtn.dataset.readBound = '1'
+    }
+  }
 }
 
 function enforceAuth() {
@@ -169,7 +178,7 @@ function loadWalletBalance() {
   if (!el) return
   const token = getAuthToken()
   if (!token) {
-    el.textContent = 'Баланс: —'
+    el.textContent = 'Р‘Р°Р»Р°РЅСЃ: вЂ”'
     return
   }
   fetch(`${window.API_BASE || 'https://envidicy-dash-client.onrender.com'}/wallet`, { headers: authHeaders() })
@@ -180,10 +189,10 @@ function loadWalletBalance() {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       })
-      el.textContent = `Баланс: ₸${balance}`
+      el.textContent = `Р‘Р°Р»Р°РЅСЃ: в‚ё${balance}`
     })
     .catch(() => {
-      el.textContent = 'Баланс: —'
+      el.textContent = 'Р‘Р°Р»Р°РЅСЃ: вЂ”'
     })
 }
 
@@ -222,7 +231,7 @@ async function loadHeaderProfile() {
     const res = await fetch(`${window.API_BASE || 'https://envidicy-dash-client.onrender.com'}/profile`, { headers: authHeaders() })
     if (!res.ok) return
     const data = await res.json()
-    const displayName = data.name || data.company || 'Профиль'
+    const displayName = data.name || data.company || 'РџСЂРѕС„РёР»СЊ'
     if (nameEl) nameEl.textContent = displayName
     if (emailEl) emailEl.textContent = data.email || ''
     if (menuName) menuName.textContent = displayName
@@ -249,15 +258,17 @@ async function loadNotifications(isAdmin) {
       : `${window.API_BASE || 'https://envidicy-dash-client.onrender.com'}/notifications`
     const res = await fetch(url, { headers: authHeaders() })
     if (!res.ok) throw new Error('notifications failed')
-    const items = await res.json()
+    const data = await res.json()
+    const items = Array.isArray(data) ? data : data.items || []
+    const unread = Array.isArray(data) ? items.length : Number(data.unread || 0)
     if (!items.length) {
       listEl.textContent = 'Нет уведомлений.'
       if (countEl) countEl.hidden = true
       return
     }
     if (countEl) {
-      countEl.textContent = String(items.length)
-      countEl.hidden = false
+      countEl.textContent = String(unread)
+      countEl.hidden = unread <= 0
     }
     if (isAdmin) {
       const requests = items.filter((i) => i.type === 'account_request')
@@ -280,9 +291,23 @@ async function loadNotifications(isAdmin) {
   }
 }
 
+async function markNotificationsRead() {
+  try {
+    const res = await fetch(`${window.API_BASE || 'https://envidicy-dash-client.onrender.com'}/notifications/read`, {
+      method: 'POST',
+      headers: authHeaders(),
+    })
+    if (!res.ok) return
+    const countEl = document.getElementById('bell-count')
+    if (countEl) countEl.hidden = true
+  } catch (e) {
+    // ignore
+  }
+}
+
 function renderNotifications(items) {
   if (!items.length) {
-    return `<div class="dropdown-empty">Нет уведомлений</div>`
+    return `<div class="dropdown-empty">РќРµС‚ СѓРІРµРґРѕРјР»РµРЅРёР№</div>`
   }
   return items
     .map((item) => {
@@ -292,12 +317,12 @@ function renderNotifications(items) {
           ? `${item.platform || ''} ${item.name || ''}`.trim()
           : `${item.platform || ''} ${item.name || ''}`.trim()
       const amount =
-        item.amount != null ? ` · ${Number(item.amount).toLocaleString('ru-RU')} ${item.currency || ''}` : ''
-      const user = item.user_email ? ` · ${item.user_email}` : ''
+        item.amount != null ? ` В· ${Number(item.amount).toLocaleString('ru-RU')} ${item.currency || ''}` : ''
+      const user = item.user_email ? ` В· ${item.user_email}` : ''
       return `
         <div class="dropdown-item">
           <div class="dropdown-title">${item.title}${amount}${user}</div>
-          <div class="dropdown-meta">${subtitle} · ${date}</div>
+          <div class="dropdown-meta">${subtitle} В· ${date}</div>
         </div>
       `
     })
@@ -305,7 +330,7 @@ function renderNotifications(items) {
 }
 
 function formatDate(value) {
-  if (!value) return '—'
+  if (!value) return 'вЂ”'
   const str = String(value)
   if (str.includes('T')) return str.split('T')[0]
   return str.split(' ')[0]
@@ -322,3 +347,5 @@ function enforceAdminRoutes() {
 
 enforceAuth()
 enforceAdminRoutes()
+
+
