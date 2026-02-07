@@ -196,6 +196,31 @@ function loadWalletBalance() {
     })
 }
 
+function bindDropdown(triggerId, menuId) {
+  const trigger = document.getElementById(triggerId)
+  const menu = document.getElementById(menuId)
+  if (!trigger || !menu) return
+  trigger.addEventListener('click', (event) => {
+    event.stopPropagation()
+    closeAllPopovers()
+    menu.classList.toggle('show')
+  })
+  document.addEventListener('click', (event) => {
+    if (!menu.contains(event.target) && event.target !== trigger) {
+      menu.classList.remove('show')
+    }
+  })
+}
+
+function closeAllPopovers() {
+  const bellMenu = document.getElementById('bell-menu')
+  const profileMenu = document.getElementById('profile-menu')
+  const helpPopover = document.getElementById('help-popover')
+  bellMenu?.classList.remove('show')
+  profileMenu?.classList.remove('show')
+  helpPopover?.classList.remove('show')
+}
+
 async function markNotificationsRead() {
   try {
     const res = await fetch(`${window.API_BASE || 'https://envidicy-dash-client.onrender.com'}/notifications/read`, {
