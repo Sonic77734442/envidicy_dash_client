@@ -1,9 +1,10 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Envidicy · Admin · Аккаунты</title>
+    
+    <link rel="icon" href="/favicon.ico" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy В· Admin В· РђРєРєР°СѓРЅС‚С‹</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -14,22 +15,22 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Аккаунты</p>
-            <h2>Привязка к клиенту и договору</h2>
+            <p class="eyebrow">РђРєРєР°СѓРЅС‚С‹</p>
+            <h2>РџСЂРёРІСЏР·РєР° Рє РєР»РёРµРЅС‚Сѓ Рё РґРѕРіРѕРІРѕСЂСѓ</h2>
           </div>
           <div class="panel-actions">
-            <button class="btn ghost small" id="export-accounts">Экспорт Excel</button>
+            <button class="btn ghost small" id="export-accounts">Р­РєСЃРїРѕСЂС‚ Excel</button>
             <span class="chip chip-ghost">ad_accounts</span>
           </div>
         </div>
         <form id="account-bind-form" class="form-grid">
           <input type="hidden" id="account-id" />
           <label class="field">
-            <span>Клиент</span>
+            <span>РљР»РёРµРЅС‚</span>
             <select id="account-user" required></select>
           </label>
           <label class="field">
-            <span>Платформа</span>
+            <span>РџР»Р°С‚С„РѕСЂРјР°</span>
             <select id="account-platform" required>
               <option value="meta">Meta</option>
               <option value="google">Google Ads</option>
@@ -40,25 +41,25 @@
             </select>
           </label>
           <label class="field">
-            <span>Название</span>
-            <input id="account-name" type="text" placeholder="Основной аккаунт" required />
+            <span>РќР°Р·РІР°РЅРёРµ</span>
+            <input id="account-name" type="text" placeholder="РћСЃРЅРѕРІРЅРѕР№ Р°РєРєР°СѓРЅС‚" required />
           </label>
           <label class="field">
             <span>External ID</span>
-            <input id="account-external" type="text" placeholder="ID аккаунта" />
+            <input id="account-external" type="text" placeholder="ID Р°РєРєР°СѓРЅС‚Р°" />
           </label>
           <label class="field">
-            <span>Договор/код</span>
-            <input id="account-code" type="text" placeholder="Код договора" />
+            <span>Р”РѕРіРѕРІРѕСЂ/РєРѕРґ</span>
+            <input id="account-code" type="text" placeholder="РљРѕРґ РґРѕРіРѕРІРѕСЂР°" />
           </label>
           <label class="field">
-            <span>Валюта</span>
+            <span>Р’Р°Р»СЋС‚Р°</span>
             <input id="account-currency" type="text" placeholder="USD" />
           </label>
           <label class="field">
-            <span>Статус</span>
+            <span>РЎС‚Р°С‚СѓСЃ</span>
             <select id="account-status">
-              <option value="">—</option>
+              <option value="">вЂ”</option>
               <option value="pending">pending</option>
               <option value="active">active</option>
               <option value="paused">paused</option>
@@ -67,19 +68,19 @@
           </label>
         </form>
         <div class="panel-actions" style="margin-top: 16px;">
-          <button class="btn primary" id="account-save" type="button">Сохранить привязку</button>
-          <button class="btn ghost" id="account-reset" type="button">Сбросить</button>
+          <button class="btn primary" id="account-save" type="button">РЎРѕС…СЂР°РЅРёС‚СЊ РїСЂРёРІСЏР·РєСѓ</button>
+          <button class="btn ghost" id="account-reset" type="button">РЎР±СЂРѕСЃРёС‚СЊ</button>
         </div>
         <p id="account-bind-status" class="muted"></p>
         <div class="table-wrapper">
           <table class="table">
             <thead>
               <tr>
-                <th>Дата</th>
-                <th>Клиент</th>
-                <th>Платформа</th>
-                <th>Название</th>
-                <th>Договор/код</th>
+                <th>Р”Р°С‚Р°</th>
+                <th>РљР»РёРµРЅС‚</th>
+                <th>РџР»Р°С‚С„РѕСЂРјР°</th>
+                <th>РќР°Р·РІР°РЅРёРµ</th>
+                <th>Р”РѕРіРѕРІРѕСЂ/РєРѕРґ</th>
                 <th>External ID</th>
                 <th></th>
               </tr>
@@ -95,3 +96,4 @@
     <script src="/admin-accounts.js"></script>
   </body>
 </html>
+

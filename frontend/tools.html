@@ -1,9 +1,10 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Envidicy · Инструменты</title>
+    
+    <link rel="icon" href="/favicon.ico" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy В· РРЅСЃС‚СЂСѓРјРµРЅС‚С‹</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -14,16 +15,16 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Инструменты</p>
-            <h2>UTM генератор</h2>
+            <p class="eyebrow">РРЅСЃС‚СЂСѓРјРµРЅС‚С‹</p>
+            <h2>UTM РіРµРЅРµСЂР°С‚РѕСЂ</h2>
           </div>
           <span class="chip chip-ghost">utm</span>
         </div>
 
         <div class="tabs">
           <div class="tab-buttons">
-            <button class="tab-button active" data-tab="single">Одна ссылка</button>
-            <button class="tab-button" data-tab="bulk">Массово</button>
+            <button class="tab-button active" data-tab="single">РћРґРЅР° СЃСЃС‹Р»РєР°</button>
+            <button class="tab-button" data-tab="bulk">РњР°СЃСЃРѕРІРѕ</button>
           </div>
           <div class="tab-panels">
             <div class="tab-panel active" data-tab-panel="single">
@@ -36,43 +37,43 @@
                 <button class="chip chip-ghost" data-preset="monochrome">Monochrome</button>
               </div>
               <p class="muted small">
-                Автозамены: {platform}, {source}, {medium}, {date}, {date_ymd}, {date_ym}, {time}, {rand4}, {rand6}
+                РђРІС‚РѕР·Р°РјРµРЅС‹: {platform}, {source}, {medium}, {date}, {date_ymd}, {date_ym}, {time}, {rand4}, {rand6}
               </p>
               <div class="form-grid">
                 <label class="field">
-                  <span>Базовая ссылка</span>
+                  <span>Р‘Р°Р·РѕРІР°СЏ СЃСЃС‹Р»РєР°</span>
                   <input id="utm-url" type="url" placeholder="https://example.com/landing" />
                 </label>
                 <label class="field">
-                  <span>Источник (utm_source)</span>
+                  <span>РСЃС‚РѕС‡РЅРёРє (utm_source)</span>
                   <input id="utm-source" type="text" placeholder="google" />
                 </label>
                 <label class="field">
-                  <span>Канал (utm_medium)</span>
+                  <span>РљР°РЅР°Р» (utm_medium)</span>
                   <input id="utm-medium" type="text" placeholder="cpc" />
                 </label>
                 <label class="field">
-                  <span>Кампания (utm_campaign)</span>
+                  <span>РљР°РјРїР°РЅРёСЏ (utm_campaign)</span>
                   <input id="utm-campaign" type="text" placeholder="brand_launch" />
                 </label>
                 <label class="field">
-                  <span>Контент (utm_content)</span>
+                  <span>РљРѕРЅС‚РµРЅС‚ (utm_content)</span>
                   <input id="utm-content" type="text" placeholder="banner_a" />
                 </label>
                 <label class="field">
-                  <span>Ключевое слово (utm_term)</span>
+                  <span>РљР»СЋС‡РµРІРѕРµ СЃР»РѕРІРѕ (utm_term)</span>
                   <input id="utm-term" type="text" placeholder="buy_now" />
                 </label>
               </div>
 
               <div class="panel-actions">
-                <button class="btn primary" id="utm-generate">Сгенерировать</button>
-                <button class="btn ghost" id="utm-copy">Скопировать</button>
-                <button class="btn ghost" id="utm-reset">Очистить</button>
+                <button class="btn primary" id="utm-generate">РЎРіРµРЅРµСЂРёСЂРѕРІР°С‚СЊ</button>
+                <button class="btn ghost" id="utm-copy">РЎРєРѕРїРёСЂРѕРІР°С‚СЊ</button>
+                <button class="btn ghost" id="utm-reset">РћС‡РёСЃС‚РёС‚СЊ</button>
               </div>
 
               <div class="field">
-                <span>Результат</span>
+                <span>Р РµР·СѓР»СЊС‚Р°С‚</span>
                 <textarea id="utm-result" class="field-input textarea utm-result" readonly></textarea>
               </div>
 
@@ -88,43 +89,43 @@
                 <button class="chip chip-ghost" data-preset="monochrome">Monochrome</button>
               </div>
               <p class="muted small">
-                Автозамены: {platform}, {source}, {medium}, {date}, {date_ymd}, {date_ym}, {time}, {rand4}, {rand6}
+                РђРІС‚РѕР·Р°РјРµРЅС‹: {platform}, {source}, {medium}, {date}, {date_ymd}, {date_ym}, {time}, {rand4}, {rand6}
               </p>
               <div class="form-grid">
                 <label class="field">
-                  <span>Ссылки (по одной в строке)</span>
+                  <span>РЎСЃС‹Р»РєРё (РїРѕ РѕРґРЅРѕР№ РІ СЃС‚СЂРѕРєРµ)</span>
                   <textarea id="utm-bulk-urls" class="field-input small textarea" placeholder="https://site.com/one&#10;https://site.com/two"></textarea>
                 </label>
                 <label class="field">
-                  <span>Источник (utm_source)</span>
+                  <span>РСЃС‚РѕС‡РЅРёРє (utm_source)</span>
                   <input id="utm-bulk-source" type="text" placeholder="google" />
                 </label>
                 <label class="field">
-                  <span>Канал (utm_medium)</span>
+                  <span>РљР°РЅР°Р» (utm_medium)</span>
                   <input id="utm-bulk-medium" type="text" placeholder="cpc" />
                 </label>
                 <label class="field">
-                  <span>Кампания (utm_campaign)</span>
+                  <span>РљР°РјРїР°РЅРёСЏ (utm_campaign)</span>
                   <input id="utm-bulk-campaign" type="text" placeholder="brand_launch" />
                 </label>
                 <label class="field">
-                  <span>Контент (utm_content)</span>
+                  <span>РљРѕРЅС‚РµРЅС‚ (utm_content)</span>
                   <input id="utm-bulk-content" type="text" placeholder="banner_a" />
                 </label>
                 <label class="field">
-                  <span>Ключевое слово (utm_term)</span>
+                  <span>РљР»СЋС‡РµРІРѕРµ СЃР»РѕРІРѕ (utm_term)</span>
                   <input id="utm-bulk-term" type="text" placeholder="buy_now" />
                 </label>
               </div>
 
               <div class="panel-actions">
-                <button class="btn primary" id="utm-bulk-generate">Сгенерировать</button>
-                <button class="btn ghost" id="utm-bulk-copy">Скопировать все</button>
-                <button class="btn ghost" id="utm-bulk-export">Экспорт CSV</button>
+                <button class="btn primary" id="utm-bulk-generate">РЎРіРµРЅРµСЂРёСЂРѕРІР°С‚СЊ</button>
+                <button class="btn ghost" id="utm-bulk-copy">РЎРєРѕРїРёСЂРѕРІР°С‚СЊ РІСЃРµ</button>
+                <button class="btn ghost" id="utm-bulk-export">Р­РєСЃРїРѕСЂС‚ CSV</button>
               </div>
 
               <div class="field">
-                <span>Результат</span>
+                <span>Р РµР·СѓР»СЊС‚Р°С‚</span>
                 <textarea id="utm-bulk-result" class="field-input textarea utm-result" readonly></textarea>
               </div>
 
@@ -132,7 +133,7 @@
           </div>
         </div>
 
-        <p class="muted small">Скоро тут появится сокращатель ссылок.</p>
+        <p class="muted small">РЎРєРѕСЂРѕ С‚СѓС‚ РїРѕСЏРІРёС‚СЃСЏ СЃРѕРєСЂР°С‰Р°С‚РµР»СЊ СЃСЃС‹Р»РѕРє.</p>
       </section>
     </div>
     <script src="/config.js"></script>
@@ -140,3 +141,4 @@
     <script src="/tools.js"></script>
   </body>
 </html>
+

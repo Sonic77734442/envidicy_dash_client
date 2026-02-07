@@ -1,9 +1,10 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Envidicy · Admin · Контрагенты</title>
+    
+    <link rel="icon" href="/favicon.ico" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy В· Admin В· РљРѕРЅС‚СЂР°РіРµРЅС‚С‹</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -14,11 +15,11 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Админка</p>
-            <h2>Контрагенты клиентов</h2>
+            <p class="eyebrow">РђРґРјРёРЅРєР°</p>
+            <h2>РљРѕРЅС‚СЂР°РіРµРЅС‚С‹ РєР»РёРµРЅС‚РѕРІ</h2>
           </div>
           <div class="panel-actions">
-            <button class="btn primary small" id="entity-add" type="button">Добавить</button>
+            <button class="btn primary small" id="entity-add" type="button">Р”РѕР±Р°РІРёС‚СЊ</button>
             <span class="chip chip-ghost">legal_entities</span>
           </div>
         </div>
@@ -26,13 +27,13 @@
           <table class="table">
             <thead>
               <tr>
-                <th>Дата</th>
-                <th>Клиент</th>
-                <th>БИН/ИИН</th>
-                <th>Краткое имя</th>
-                <th>Полное имя</th>
-                <th>Юридический адрес</th>
-                <th style="text-align:right;">Действия</th>
+                <th>Р”Р°С‚Р°</th>
+                <th>РљР»РёРµРЅС‚</th>
+                <th>Р‘РРќ/РРРќ</th>
+                <th>РљСЂР°С‚РєРѕРµ РёРјСЏ</th>
+                <th>РџРѕР»РЅРѕРµ РёРјСЏ</th>
+                <th>Р®СЂРёРґРёС‡РµСЃРєРёР№ Р°РґСЂРµСЃ</th>
+                <th style="text-align:right;">Р”РµР№СЃС‚РІРёСЏ</th>
               </tr>
             </thead>
             <tbody id="admin-entities"></tbody>
@@ -45,38 +46,38 @@
         <div class="modal-dialog">
           <div class="modal-head">
             <div>
-              <p class="eyebrow">Контрагент</p>
-              <h3 id="entity-title">Новый контрагент</h3>
+              <p class="eyebrow">РљРѕРЅС‚СЂР°РіРµРЅС‚</p>
+              <h3 id="entity-title">РќРѕРІС‹Р№ РєРѕРЅС‚СЂР°РіРµРЅС‚</h3>
             </div>
-            <button class="btn ghost small" id="entity-close">Закрыть</button>
+            <button class="btn ghost small" id="entity-close">Р—Р°РєСЂС‹С‚СЊ</button>
           </div>
           <div class="modal-body">
             <div class="form-grid">
               <label class="field">
-                <span>Email клиента</span>
+                <span>Email РєР»РёРµРЅС‚Р°</span>
                 <input id="entity-user-email" type="email" placeholder="client@email.com" />
               </label>
               <label class="field">
-                <span>БИН или ИИН</span>
+                <span>Р‘РРќ РёР»Рё РРРќ</span>
                 <input id="entity-bin" type="text" placeholder="123456789012" />
               </label>
               <label class="field">
-                <span>Краткое наименование</span>
-                <input id="entity-short-name" type="text" placeholder="ТОО Пример" />
+                <span>РљСЂР°С‚РєРѕРµ РЅР°РёРјРµРЅРѕРІР°РЅРёРµ</span>
+                <input id="entity-short-name" type="text" placeholder="РўРћРћ РџСЂРёРјРµСЂ" />
               </label>
               <label class="field">
-                <span>Полное наименование</span>
-                <input id="entity-full-name" type="text" placeholder="Товарищество с ограниченной ответственностью Пример" />
+                <span>РџРѕР»РЅРѕРµ РЅР°РёРјРµРЅРѕРІР°РЅРёРµ</span>
+                <input id="entity-full-name" type="text" placeholder="РўРѕРІР°СЂРёС‰РµСЃС‚РІРѕ СЃ РѕРіСЂР°РЅРёС‡РµРЅРЅРѕР№ РѕС‚РІРµС‚СЃС‚РІРµРЅРЅРѕСЃС‚СЊСЋ РџСЂРёРјРµСЂ" />
               </label>
               <label class="field" style="grid-column: 1 / -1;">
-                <span>Юридический адрес</span>
-                <input id="entity-legal-address" type="text" placeholder="Город, улица, дом" />
+                <span>Р®СЂРёРґРёС‡РµСЃРєРёР№ Р°РґСЂРµСЃ</span>
+                <input id="entity-legal-address" type="text" placeholder="Р“РѕСЂРѕРґ, СѓР»РёС†Р°, РґРѕРј" />
               </label>
             </div>
             <p id="entity-notice" class="muted"></p>
           </div>
           <div class="modal-actions">
-            <button class="btn primary" id="entity-save" type="button">Сохранить</button>
+            <button class="btn primary" id="entity-save" type="button">РЎРѕС…СЂР°РЅРёС‚СЊ</button>
           </div>
         </div>
       </div>
@@ -86,3 +87,4 @@
     <script src="/admin-legal-entities.js"></script>
   </body>
 </html>
+

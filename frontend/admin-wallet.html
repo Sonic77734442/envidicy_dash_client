@@ -1,9 +1,10 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Envidicy · Admin · Кошелек</title>
+    
+    <link rel="icon" href="/favicon.ico" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy В· Admin В· РљРѕС€РµР»РµРє</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -14,37 +15,37 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Кошелек</p>
-            <h2>Балансы клиентов</h2>
+            <p class="eyebrow">РљРѕС€РµР»РµРє</p>
+            <h2>Р‘Р°Р»Р°РЅСЃС‹ РєР»РёРµРЅС‚РѕРІ</h2>
           </div>
           <span class="chip chip-ghost">wallets</span>
         </div>
         <div class="form-grid">
           <label class="field">
-            <span>Email клиента</span>
+            <span>Email РєР»РёРµРЅС‚Р°</span>
             <input id="wallet-email" type="email" placeholder="client@email.com" />
           </label>
           <label class="field">
-            <span>Сумма (₸)</span>
+            <span>РЎСѓРјРјР° (в‚ё)</span>
             <input id="wallet-amount" type="number" placeholder="100000" />
           </label>
           <label class="field">
-            <span>Комментарий</span>
-            <input id="wallet-note" type="text" placeholder="Пополнение" />
+            <span>РљРѕРјРјРµРЅС‚Р°СЂРёР№</span>
+            <input id="wallet-note" type="text" placeholder="РџРѕРїРѕР»РЅРµРЅРёРµ" />
           </label>
           <div class="actions-row">
-            <button class="btn primary" id="wallet-add">Начислить</button>
-            <button class="btn ghost" id="wallet-subtract">Списать</button>
+            <button class="btn primary" id="wallet-add">РќР°С‡РёСЃР»РёС‚СЊ</button>
+            <button class="btn ghost" id="wallet-subtract">РЎРїРёСЃР°С‚СЊ</button>
           </div>
         </div>
         <div class="table-wrapper">
           <table class="table">
             <thead>
               <tr>
-                <th>Клиент</th>
-                <th>Баланс</th>
-                <th>Порог</th>
-                <th>Обновлено</th>
+                <th>РљР»РёРµРЅС‚</th>
+                <th>Р‘Р°Р»Р°РЅСЃ</th>
+                <th>РџРѕСЂРѕРі</th>
+                <th>РћР±РЅРѕРІР»РµРЅРѕ</th>
               </tr>
             </thead>
             <tbody id="admin-wallets"></tbody>
@@ -56,8 +57,8 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Уведомления</p>
-            <h2>Низкий баланс (&lt;= 50 000 ₸)</h2>
+            <p class="eyebrow">РЈРІРµРґРѕРјР»РµРЅРёСЏ</p>
+            <h2>РќРёР·РєРёР№ Р±Р°Р»Р°РЅСЃ (&lt;= 50 000 в‚ё)</h2>
           </div>
           <span class="chip chip-warn">Low balance</span>
         </div>
@@ -65,10 +66,10 @@
           <table class="table">
             <thead>
               <tr>
-                <th>Клиент</th>
-                <th>Баланс</th>
-                <th>Порог</th>
-                <th>Обновлено</th>
+                <th>РљР»РёРµРЅС‚</th>
+                <th>Р‘Р°Р»Р°РЅСЃ</th>
+                <th>РџРѕСЂРѕРі</th>
+                <th>РћР±РЅРѕРІР»РµРЅРѕ</th>
               </tr>
             </thead>
             <tbody id="admin-wallets-low"></tbody>
@@ -80,7 +81,7 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">История операций</p>
+            <p class="eyebrow">РСЃС‚РѕСЂРёСЏ РѕРїРµСЂР°С†РёР№</p>
             <h2>Wallet transactions</h2>
           </div>
           <span class="chip chip-ghost">wallet_transactions</span>
@@ -89,11 +90,11 @@
           <table class="table">
             <thead>
               <tr>
-                <th>Дата</th>
-                <th>Клиент</th>
-                <th>Тип</th>
-                <th>Сумма</th>
-                <th>Комментарий</th>
+                <th>Р”Р°С‚Р°</th>
+                <th>РљР»РёРµРЅС‚</th>
+                <th>РўРёРї</th>
+                <th>РЎСѓРјРјР°</th>
+                <th>РљРѕРјРјРµРЅС‚Р°СЂРёР№</th>
               </tr>
             </thead>
             <tbody id="admin-wallet-transactions"></tbody>
@@ -107,3 +108,4 @@
     <script src="/admin-wallet.js"></script>
   </body>
 </html>
+

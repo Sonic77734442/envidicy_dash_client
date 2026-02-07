@@ -1,9 +1,10 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Envidicy · Media Plan Dashboard</title>
+    
+    <link rel="icon" href="/favicon.ico" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Envidicy В· Media Plan Dashboard</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -14,13 +15,13 @@
       <section class="panel" id="strategy-form">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Тип планирования</p>
-            <h2>Smart Plan или Strategy Plan</h2>
+            <p class="eyebrow">РўРёРї РїР»Р°РЅРёСЂРѕРІР°РЅРёСЏ</p>
+            <h2>Smart Plan РёР»Рё Strategy Plan</h2>
           </div>
         </div>
         <div class="form-grid">
           <label class="field">
-            <span>Режим</span>
+            <span>Р РµР¶РёРј</span>
             <select id="plan-mode">
               <option value="smart">Smart Plan (SMB)</option>
               <option value="strategy">Strategy Plan (Agency)</option>
@@ -33,20 +34,20 @@
         <div class="panel-head">
           <div>
             <p class="eyebrow">Smart Plan</p>
-            <h2>Минимум вводов — система сама подбирает каналы</h2>
+            <h2>РњРёРЅРёРјСѓРј РІРІРѕРґРѕРІ вЂ” СЃРёСЃС‚РµРјР° СЃР°РјР° РїРѕРґР±РёСЂР°РµС‚ РєР°РЅР°Р»С‹</h2>
           </div>
         </div>
         <div class="form-grid">
           <label class="field">
-            <span>Бюджет, $</span>
+            <span>Р‘СЋРґР¶РµС‚, $</span>
             <input id="smart-budget" type="number" value="2000" />
           </label>
           <label class="field">
-            <span>Период, дней</span>
+            <span>РџРµСЂРёРѕРґ, РґРЅРµР№</span>
             <input id="smart-period" type="number" value="30" />
           </label>
           <label class="field">
-            <span>Гео</span>
+            <span>Р“РµРѕ</span>
             <select id="smart-market">
               <option value="kz">Kazakhstan</option>
               <option value="uz">Uzbekistan</option>
@@ -54,35 +55,35 @@
             </select>
           </label>
           <label class="field">
-            <span>Цель</span>
+            <span>Р¦РµР»СЊ</span>
             <select id="smart-goal">
-              <option value="leads">Заявки</option>
-              <option value="sales">Продажи</option>
-              <option value="traffic">Трафик</option>
+              <option value="leads">Р—Р°СЏРІРєРё</option>
+              <option value="sales">РџСЂРѕРґР°Р¶Рё</option>
+              <option value="traffic">РўСЂР°С„РёРє</option>
             </select>
           </label>
           <label class="field">
-            <span>Тип бизнеса</span>
+            <span>РўРёРї Р±РёР·РЅРµСЃР°</span>
             <select id="smart-business">
-              <option value="services">Услуги</option>
+              <option value="services">РЈСЃР»СѓРіРё</option>
               <option value="ecom">Ecom</option>
               <option value="b2b">B2B</option>
-              <option value="local">Локальный бизнес</option>
-              <option value="content">Контент/медиа</option>
+              <option value="local">Р›РѕРєР°Р»СЊРЅС‹Р№ Р±РёР·РЅРµСЃ</option>
+              <option value="content">РљРѕРЅС‚РµРЅС‚/РјРµРґРёР°</option>
             </select>
           </label>
         </div>
         <div class="actions-row">
-          <button class="btn primary" id="btn-estimate">Рассчитать план</button>
-          <button class="btn ghost" id="btn-excel">Скачать Excel</button>
+          <button class="btn primary" id="btn-estimate">Р Р°СЃСЃС‡РёС‚Р°С‚СЊ РїР»Р°РЅ</button>
+          <button class="btn ghost" id="btn-excel">РЎРєР°С‡Р°С‚СЊ Excel</button>
         </div>
       </section>
 
       <section class="panel strategy-only">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Входы</p>
-            <h2>Client, budget, рынок, аудитория</h2>
+            <p class="eyebrow">Р’С…РѕРґС‹</p>
+            <h2>Client, budget, СЂС‹РЅРѕРє, Р°СѓРґРёС‚РѕСЂРёСЏ</h2>
           </div>
           <div class="chips small">
             <span class="chip chip-ghost">match: account</span>
@@ -102,27 +103,27 @@
             <input id="product" type="text" placeholder="ACME App" />
           </label>
           <label class="field">
-            <span>Бюджет, $</span>
+            <span>Р‘СЋРґР¶РµС‚, $</span>
             <input id="budget" type="number" value="2000" />
           </label>
           <label class="field">
-            <span>Валюта</span>
+            <span>Р’Р°Р»СЋС‚Р°</span>
             <select id="currency">
               <option value="USD">USD</option>
               <option value="KZT">KZT</option>
             </select>
           </label>
           <label class="field">
-            <span>Период, дней</span>
+            <span>РџРµСЂРёРѕРґ, РґРЅРµР№</span>
             <input id="period" type="number" value="30" />
           </label>
           <label class="field">
             <span>Objective</span>
             <select id="goal">
-              <option value="leads">Лиды</option>
-              <option value="traffic">Трафик</option>
-              <option value="reach">Охват</option>
-              <option value="conversions">Конверсии</option>
+              <option value="leads">Р›РёРґС‹</option>
+              <option value="traffic">РўСЂР°С„РёРє</option>
+              <option value="reach">РћС…РІР°С‚</option>
+              <option value="conversions">РљРѕРЅРІРµСЂСЃРёРё</option>
             </select>
           </label>
           <label class="field">
@@ -134,15 +135,15 @@
             </select>
           </label>
           <label class="field">
-            <span>Возраст min</span>
+            <span>Р’РѕР·СЂР°СЃС‚ min</span>
             <input id="age-min" type="number" value="18" />
           </label>
           <label class="field">
-            <span>Возраст max</span>
+            <span>Р’РѕР·СЂР°СЃС‚ max</span>
             <input id="age-max" type="number" value="55" />
           </label>
           <label class="field">
-            <span>Индустрия</span>
+            <span>РРЅРґСѓСЃС‚СЂРёСЏ</span>
             <select id="industry">
               <option value="fmcg">FMCG</option>
               <option value="pharma">Pharma</option>
@@ -169,34 +170,34 @@
           </label>
         </div>
         <div class="actions-row strategy-only">
-          <button class="btn primary" id="btn-estimate">Рассчитать план</button>
-          <button class="btn ghost" id="btn-excel">Скачать Excel</button>
+          <button class="btn primary" id="btn-estimate">Р Р°СЃСЃС‡РёС‚Р°С‚СЊ РїР»Р°РЅ</button>
+          <button class="btn ghost" id="btn-excel">РЎРєР°С‡Р°С‚СЊ Excel</button>
         </div>
         <details class="field details">
-          <summary>Агентские настройки</summary>
+          <summary>РђРіРµРЅС‚СЃРєРёРµ РЅР°СЃС‚СЂРѕР№РєРё</summary>
           <div class="extras">
             <label class="field">
-              <span>Автор</span>
+              <span>РђРІС‚РѕСЂ</span>
               <input id="author" type="text" placeholder="Media manager" />
             </label>
             <label class="field">
-              <span>Курс (KZT→USD)</span>
+              <span>РљСѓСЂСЃ (KZTв†’USD)</span>
               <input id="fx" type="number" step="0.01" placeholder="460" />
             </label>
             <label class="field">
-              <span>Дата начала</span>
+              <span>Р”Р°С‚Р° РЅР°С‡Р°Р»Р°</span>
               <input id="date-start" type="date" />
             </label>
             <label class="field">
-              <span>Дата конца</span>
+              <span>Р”Р°С‚Р° РєРѕРЅС†Р°</span>
               <input id="date-end" type="date" />
             </label>
             <label class="field">
-              <span>Города (через запятую)</span>
+              <span>Р“РѕСЂРѕРґР° (С‡РµСЂРµР· Р·Р°РїСЏС‚СѓСЋ)</span>
               <input id="cities" type="text" placeholder="Almaty, Astana" />
             </label>
             <label class="field">
-              <span>Интересы</span>
+              <span>РРЅС‚РµСЂРµСЃС‹</span>
               <input id="interests" type="text" placeholder="travel, fitness" />
             </label>
             <label class="field">
@@ -208,23 +209,23 @@
               </select>
             </label>
             <label class="field">
-              <span>Частота</span>
+              <span>Р§Р°СЃС‚РѕС‚Р°</span>
               <input id="freq" type="number" step="0.1" value="1.6" />
             </label>
             <label class="field">
-              <span>Таргетинг</span>
+              <span>РўР°СЂРіРµС‚РёРЅРі</span>
               <select id="depth">
-                <option value="balanced">Сбаланс.</option>
-                <option value="broad">Широкий</option>
-                <option value="focused">Узкий</option>
+                <option value="balanced">РЎР±Р°Р»Р°РЅСЃ.</option>
+                <option value="broad">РЁРёСЂРѕРєРёР№</option>
+                <option value="focused">РЈР·РєРёР№</option>
               </select>
             </label>
             <label class="field">
-              <span>Сезонность</span>
+              <span>РЎРµР·РѕРЅРЅРѕСЃС‚СЊ</span>
               <input id="seasonality" type="number" step="0.02" value="1" />
             </label>
             <label class="field">
-              <span>Match стратегия</span>
+              <span>Match СЃС‚СЂР°С‚РµРіРёСЏ</span>
               <select id="match">
                 <option value="account">ad_account_id</option>
                 <option value="campaign">campaign_name</option>
@@ -232,7 +233,7 @@
               </select>
             </label>
             <label class="field">
-              <span>KPI тип</span>
+              <span>KPI С‚РёРї</span>
               <select id="kpi-type">
                 <option value="cpl">CPL</option>
                 <option value="cpa">CPA</option>
@@ -241,7 +242,7 @@
               </select>
             </label>
             <label class="field">
-              <span>KPI цель, $</span>
+              <span>KPI С†РµР»СЊ, $</span>
               <input id="kpi-target" type="number" step="0.1" value="14" />
             </label>
             <label class="field">
@@ -255,7 +256,7 @@
             <label class="field">
               <span>Assumption profile</span>
               <select id="assumption-profile">
-                <option value="">Не выбран</option>
+                <option value="">РќРµ РІС‹Р±СЂР°РЅ</option>
                 <option value="base">Base</option>
                 <option value="conservative">Conservative</option>
                 <option value="aggressive">Aggressive</option>
@@ -271,34 +272,34 @@
             </label>
             <label class="field">
               <span>Methodology</span>
-              <input id="assumption-method" type="text" placeholder="Методология расчёта" />
+              <input id="assumption-method" type="text" placeholder="РњРµС‚РѕРґРѕР»РѕРіРёСЏ СЂР°СЃС‡С‘С‚Р°" />
             </label>
             <label class="field">
               <span>Recalc after 7 days</span>
-              <input id="assumption-recalc" type="text" placeholder="Что пересчитываем после learning phase" />
+              <input id="assumption-recalc" type="text" placeholder="Р§С‚Рѕ РїРµСЂРµСЃС‡РёС‚С‹РІР°РµРј РїРѕСЃР»Рµ learning phase" />
             </label>
             <label class="field checkbox">
-              <span>Пиксели настроены</span>
+              <span>РџРёРєСЃРµР»Рё РЅР°СЃС‚СЂРѕРµРЅС‹</span>
               <input id="pixels" type="checkbox" />
             </label>
             <label class="field">
-              <span>Комиссия, %</span>
+              <span>РљРѕРјРёСЃСЃРёСЏ, %</span>
               <input id="fee" type="number" step="0.1" placeholder="10" />
             </label>
             <label class="field">
-              <span>НДС, %</span>
+              <span>РќР”РЎ, %</span>
               <input id="vat" type="number" step="0.1" placeholder="12" />
             </label>
             <label class="field">
-              <span>Funnel split · Awareness %</span>
+              <span>Funnel split В· Awareness %</span>
               <input id="split-awareness" type="number" step="1" placeholder="40" />
             </label>
             <label class="field">
-              <span>Funnel split · Consideration %</span>
+              <span>Funnel split В· Consideration %</span>
               <input id="split-consideration" type="number" step="1" placeholder="35" />
             </label>
             <label class="field">
-              <span>Funnel split · Performance %</span>
+              <span>Funnel split В· Performance %</span>
               <input id="split-performance" type="number" step="1" placeholder="25" />
             </label>
           </div>
@@ -310,17 +311,17 @@
       <section class="panel strategy-only">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Выходы</p>
-            <h2>Стандартный формат</h2>
+            <p class="eyebrow">Р’С‹С…РѕРґС‹</p>
+            <h2>РЎС‚Р°РЅРґР°СЂС‚РЅС‹Р№ С„РѕСЂРјР°С‚</h2>
           </div>
         </div>
         <div class="table-wrapper">
           <table class="table">
             <thead>
               <tr>
-                <th>Метрика</th>
-                <th>Значение</th>
-                <th>Тип</th>
+                <th>РњРµС‚СЂРёРєР°</th>
+                <th>Р—РЅР°С‡РµРЅРёРµ</th>
+                <th>РўРёРї</th>
               </tr>
             </thead>
             <tbody id="output-summary"></tbody>
@@ -331,8 +332,8 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Модули каналов</p>
-            <h2>Свои вводные для Meta, Google Search, Telegram</h2>
+            <p class="eyebrow">РњРѕРґСѓР»Рё РєР°РЅР°Р»РѕРІ</p>
+            <h2>РЎРІРѕРё РІРІРѕРґРЅС‹Рµ РґР»СЏ Meta, Google Search, Telegram</h2>
           </div>
           <span class="chip chip-ghost">Overrides</span>
         </div>
@@ -371,11 +372,11 @@
       <section class="panel strategy-only" id="month-panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Агентский режим</p>
-            <h2>Календарь по месяцам</h2>
+            <p class="eyebrow">РђРіРµРЅС‚СЃРєРёР№ СЂРµР¶РёРј</p>
+            <h2>РљР°Р»РµРЅРґР°СЂСЊ РїРѕ РјРµСЃСЏС†Р°Рј</h2>
           </div>
           <label class="field checkbox" style="max-width: 260px;">
-            <span>Включить сплит по месяцам</span>
+            <span>Р’РєР»СЋС‡РёС‚СЊ СЃРїР»РёС‚ РїРѕ РјРµСЃСЏС†Р°Рј</span>
             <label class="toggle">
               <input type="checkbox" id="toggle-agency" />
               <span class="slider"></span>
@@ -390,10 +391,10 @@
       <section class="panel strategy-only">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Плейсменты (опционально)</p>
-            <h2>Включайте/отключайте инвентарь</h2>
+            <p class="eyebrow">РџР»РµР№СЃРјРµРЅС‚С‹ (РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ)</p>
+            <h2>Р’РєР»СЋС‡Р°Р№С‚Рµ/РѕС‚РєР»СЋС‡Р°Р№С‚Рµ РёРЅРІРµРЅС‚Р°СЂСЊ</h2>
           </div>
-          <span class="chip chip-ghost">По умолчанию включены все</span>
+          <span class="chip chip-ghost">РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РІРєР»СЋС‡РµРЅС‹ РІСЃРµ</span>
         </div>
         <div id="placement-container" class="placement-list"></div>
       </section>
@@ -401,8 +402,8 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Расчёты</p>
-            <h2>Медиасплит и расчётные метрики</h2>
+            <p class="eyebrow">Р Р°СЃС‡С‘С‚С‹</p>
+            <h2>РњРµРґРёР°СЃРїР»РёС‚ Рё СЂР°СЃС‡С‘С‚РЅС‹Рµ РјРµС‚СЂРёРєРё</h2>
           </div>
           <div id="warnings" class="warnings"></div>
         </div>
@@ -410,17 +411,17 @@
           <table class="table" id="plan-table">
             <thead>
               <tr>
-                <th>Платформа</th>
-                <th class="smart-only">Зачем канал</th>
-                <th class="strategy-only">Доля</th>
-                <th>Бюджет (net)</th>
-                <th>Комиссия/VAT</th>
-                <th>Пополнение (gross)</th>
-                <th>Охват</th>
-                <th>Показы</th>
-                <th>Клики</th>
-                <th>Лиды</th>
-                <th>Конв.</th>
+                <th>РџР»Р°С‚С„РѕСЂРјР°</th>
+                <th class="smart-only">Р—Р°С‡РµРј РєР°РЅР°Р»</th>
+                <th class="strategy-only">Р”РѕР»СЏ</th>
+                <th>Р‘СЋРґР¶РµС‚ (net)</th>
+                <th>РљРѕРјРёСЃСЃРёСЏ/VAT</th>
+                <th>РџРѕРїРѕР»РЅРµРЅРёРµ (gross)</th>
+                <th>РћС…РІР°С‚</th>
+                <th>РџРѕРєР°Р·С‹</th>
+                <th>РљР»РёРєРё</th>
+                <th>Р›РёРґС‹</th>
+                <th>РљРѕРЅРІ.</th>
                 <th class="strategy-only">CPM</th>
                 <th class="strategy-only">CPC</th>
                 <th class="strategy-only">CVR</th>
@@ -434,10 +435,10 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Бюджет по периодам</p>
-            <h2>Месяцы и недели</h2>
+            <p class="eyebrow">Р‘СЋРґР¶РµС‚ РїРѕ РїРµСЂРёРѕРґР°Рј</p>
+            <h2>РњРµСЃСЏС†С‹ Рё РЅРµРґРµР»Рё</h2>
           </div>
-          <span class="chip chip-ghost">Авто-сплит по период_days</span>
+          <span class="chip chip-ghost">РђРІС‚Рѕ-СЃРїР»РёС‚ РїРѕ РїРµСЂРёРѕРґ_days</span>
         </div>
         <div id="flight-container"></div>
       </section>
@@ -448,3 +449,4 @@
     <script src="/app.js"></script>
   </body>
 </html>
+
