@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     
     <link rel="icon" href="/favicon.ico" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Envidicy · Admin · Заявки</title>
+    <title>Envidicy � Admin � ������</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -15,39 +15,39 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Админка</p>
-            <h2>Заявки на открытие</h2>
+            <p class="eyebrow">�������</p>
+            <h2>������ �� ��������</h2>
           </div>
           <div class="panel-actions">
-            <button class="btn ghost small" id="export-requests">Экспорт Excel</button>
-            <span class="chip chip-ghost">Только для администратора</span>
+            <button class="btn ghost small" id="export-requests">������� Excel</button>
+            <span class="chip chip-ghost">������ ��� ��������������</span>
           </div>
         </div>
         <div class="form-grid">
           <label class="field">
-            <span>Статус</span>
+            <span>������</span>
             <select id="filter-status">
-              <option value="">Все</option>
-              <option value="new">Новые</option>
-              <option value="processing">В работе</option>
-              <option value="approved">Открыт</option>
-              <option value="rejected">Отклонен</option>
+              <option value="">���</option>
+              <option value="new">�����</option>
+              <option value="processing">� ������</option>
+              <option value="approved">������</option>
+              <option value="rejected">��������</option>
             </select>
           </label>
           <label class="field">
-            <span>Платформа</span>
+            <span>���������</span>
             <select id="filter-platform">
-              <option value="">Все</option>
+              <option value="">���</option>
               <option value="meta">Meta</option>
               <option value="google">Google</option>
               <option value="tiktok">TikTok</option>
-              <option value="yandex">Яндекс</option>
+              <option value="yandex">������</option>
               <option value="telegram">Telegram</option>
               <option value="monochrome">Monochrome</option>
             </select>
           </label>
           <label class="field">
-            <span>Клиент (email)</span>
+            <span>������ (email)</span>
             <input id="filter-email" type="text" placeholder="client@email.com" />
           </label>
         </div>
@@ -55,13 +55,13 @@
           <table class="table">
             <thead>
               <tr>
-                <th>Дата</th>
-                <th>Клиент</th>
-                <th>Платформа</th>
-                <th>Название</th>
-                <th>Договор/код</th>
-                <th>Статус</th>
-                <th style="text-align:right;">Действия</th>
+                <th>����</th>
+                <th>������</th>
+                <th>���������</th>
+                <th>��������</th>
+                <th>�������/���</th>
+                <th>������</th>
+                <th style="text-align:right;">��������</th>
               </tr>
             </thead>
             <tbody id="admin-requests"></tbody>
@@ -74,10 +74,10 @@
         <div class="modal-dialog modal-large">
           <div class="modal-head">
             <div>
-              <p class="eyebrow">Карточка заявки</p>
-              <h3 id="request-title">Заявка</h3>
+              <p class="eyebrow">�������� ������</p>
+              <h3 id="request-title">������</h3>
             </div>
-            <button class="btn ghost small" id="request-close">Закрыть</button>
+            <button class="btn ghost small" id="request-close">�������</button>
           </div>
           <div class="modal-body" id="request-body"></div>
           <div class="modal-actions" id="request-actions"></div>
@@ -89,5 +89,6 @@
     <script src="/admin-requests.js"></script>
   </body>
 </html>
+
 
 

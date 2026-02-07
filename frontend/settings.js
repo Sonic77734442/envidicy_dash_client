@@ -1,9 +1,9 @@
 ﻿const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 
 renderHeader({
-  eyebrow: 'Envidicy · Profile',
-  title: 'Настройки',
-  subtitle: 'Управляйте данными, безопасностью и документами.',
+  eyebrow: 'Envidicy � Profile',
+  title: '���������',
+  subtitle: '���������� �������, ������������� � �����������.',
   buttons: [],
 })
 
@@ -82,17 +82,17 @@ async function loadProfile() {
       }
     }
   } catch (e) {
-    if (profile.status) profile.status.textContent = 'Не удалось загрузить профиль.'
+    if (profile.status) profile.status.textContent = '�� ������� ��������� �������.'
   }
 }
 
 async function uploadAvatar() {
   const file = profile.avatarFile?.files?.[0]
   if (!file) {
-    if (profile.avatarStatus) profile.avatarStatus.textContent = 'Выберите файл.'
+    if (profile.avatarStatus) profile.avatarStatus.textContent = '�������� ����.'
     return
   }
-  if (profile.avatarStatus) profile.avatarStatus.textContent = 'Загружаем...'
+  if (profile.avatarStatus) profile.avatarStatus.textContent = '���������...'
   const form = new FormData()
   form.append('file', file)
   try {
@@ -110,14 +110,14 @@ async function uploadAvatar() {
     if (profile.avatarPreview && data.avatar_url) {
       profile.avatarPreview.innerHTML = `<img src="${apiBase}${data.avatar_url}" alt="avatar" />`
     }
-    if (profile.avatarStatus) profile.avatarStatus.textContent = 'Фото обновлено.'
+    if (profile.avatarStatus) profile.avatarStatus.textContent = '���� ���������.'
   } catch (e) {
-    if (profile.avatarStatus) profile.avatarStatus.textContent = 'Не удалось загрузить фото.'
+    if (profile.avatarStatus) profile.avatarStatus.textContent = '�� ������� ��������� ����.'
   }
 }
 
 async function saveProfile() {
-  if (profile.status) profile.status.textContent = 'Сохраняем...'
+  if (profile.status) profile.status.textContent = '���������...'
   const payload = {
     name: profile.name?.value?.trim() || null,
     company: profile.company?.value?.trim() || null,
@@ -136,9 +136,9 @@ async function saveProfile() {
       return
     }
     if (!res.ok) throw new Error('save failed')
-    if (profile.status) profile.status.textContent = 'Профиль обновлен.'
+    if (profile.status) profile.status.textContent = '������� ��������.'
   } catch (e) {
-    if (profile.status) profile.status.textContent = 'Не удалось сохранить изменения.'
+    if (profile.status) profile.status.textContent = '�� ������� ��������� ���������.'
   }
 }
 
@@ -147,14 +147,14 @@ async function changePassword() {
   const next = password.next?.value?.trim()
   const confirm = password.confirm?.value?.trim()
   if (!current || !next) {
-    if (password.status) password.status.textContent = 'Заполните текущий и новый пароль.'
+    if (password.status) password.status.textContent = '��������� ������� � ����� ������.'
     return
   }
   if (next !== confirm) {
-    if (password.status) password.status.textContent = 'Пароли не совпадают.'
+    if (password.status) password.status.textContent = '������ �� ���������.'
     return
   }
-  if (password.status) password.status.textContent = 'Обновляем пароль...'
+  if (password.status) password.status.textContent = '��������� ������...'
   try {
     const res = await fetch(`${apiBase}/auth/change-password`, {
       method: 'POST',
@@ -168,12 +168,12 @@ async function changePassword() {
     if (!res.ok) throw new Error('change failed')
     const data = await res.json()
     if (data?.token) localStorage.setItem('auth_token', data.token)
-    if (password.status) password.status.textContent = 'Пароль обновлен.'
+    if (password.status) password.status.textContent = '������ ��������.'
     if (password.current) password.current.value = ''
     if (password.next) password.next.value = ''
     if (password.confirm) password.confirm.value = ''
   } catch (e) {
-    if (password.status) password.status.textContent = 'Не удалось обновить пароль.'
+    if (password.status) password.status.textContent = '�� ������� �������� ������.'
   }
 }
 
@@ -190,7 +190,7 @@ async function renderFees() {
     const rows = [
       { key: 'meta', platform: 'Meta', note: 'Facebook / Instagram' },
       { key: 'google', platform: 'Google Ads', note: 'Search / Display / YouTube' },
-      { key: 'yandex', platform: '������ ������', note: '����� / ���' },
+      { key: 'yandex', platform: '?????? ??????', note: '????? / ???' },
       { key: 'tiktok', platform: 'TikTok Ads', note: 'Video' },
       { key: 'telegram', platform: 'Telegram Ads', note: 'Channels / Bots' },
       { key: 'monochrome', platform: 'Monochrome', note: 'Programmatic' },
@@ -198,7 +198,7 @@ async function renderFees() {
     feesBody.innerHTML = rows
       .map((r) => {
         const val = data?.[r.key]
-        const label = val == null || val === '' ? '�' : `${Number(val).toFixed(2)}%`
+        const label = val == null || val === '' ? '?' : `${Number(val).toFixed(2)}%`
         return `
     <tr>
       <td>${r.platform}</td>
@@ -209,7 +209,7 @@ async function renderFees() {
       })
       .join('')
   } catch (e) {
-    feesBody.innerHTML = `<tr><td colspan="3" class="muted">�� ������� ��������� ��������.</td></tr>`
+    feesBody.innerHTML = `<tr><td colspan="3" class="muted">?? ??????? ????????? ????????.</td></tr>`
   }
 }
 
@@ -235,9 +235,9 @@ async function loadDocuments() {
         (row) => `
       <tr>
         <td>${row.title}</td>
-        <td>${row.created_at?.split(' ')[0] || '—'}</td>
+        <td>${row.created_at?.split(' ')[0] || '�'}</td>
         <td style="text-align:right;">
-          <a class="btn ghost small" href="${apiBase}/documents/${row.id}${token ? `?token=${encodeURIComponent(token)}` : ''}" target="_blank" rel="noopener">Скачать</a>
+          <a class="btn ghost small" href="${apiBase}/documents/${row.id}${token ? `?token=${encodeURIComponent(token)}` : ''}" target="_blank" rel="noopener">�������</a>
         </td>
       </tr>
     `
@@ -246,7 +246,7 @@ async function loadDocuments() {
   } catch (e) {
     if (docs.empty) {
       docs.empty.hidden = false
-      docs.empty.textContent = 'Не удалось загрузить документы.'
+      docs.empty.textContent = '�� ������� ��������� ���������.'
     }
   }
 }
@@ -262,6 +262,7 @@ function init() {
 }
 
 init()
+
 
 
 

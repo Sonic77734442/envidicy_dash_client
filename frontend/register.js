@@ -1,4 +1,4 @@
-const form = document.getElementById('register-form')
+﻿const form = document.getElementById('register-form')
 const statusEl = document.getElementById('register-status')
 const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 
@@ -62,3 +62,4 @@ if (form && statusEl) {
     }
   })
 }
+

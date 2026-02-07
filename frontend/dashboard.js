@@ -1,4 +1,4 @@
-renderHeader({
+﻿renderHeader({
   eyebrow: 'Envidicy · Insights',
   title: 'Универсальный дашборд',
   subtitle: 'Сводка по подключенным рекламным кабинетам.',
@@ -851,3 +851,4 @@ function formatMoney(value) {
 function formatPct(value) {
   return `${(value * 100).toFixed(2)}%`
 }
+

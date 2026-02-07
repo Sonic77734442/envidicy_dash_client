@@ -1,4 +1,4 @@
-renderHeader({
+﻿renderHeader({
   eyebrow: 'Envidicy · Tools',
   title: 'Инструменты',
   subtitle: 'UTM генератор и будущий сокращатель ссылок.',
@@ -232,3 +232,4 @@ if (bulk.presets) {
     applyPreset(bulk, btn.dataset.preset)
   })
 }
+

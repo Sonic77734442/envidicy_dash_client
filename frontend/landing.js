@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+﻿document.addEventListener('DOMContentLoaded', () => {
   // Smooth scroll for internal anchors
   document.querySelectorAll('a[href^="#"]').forEach((link) => {
     link.addEventListener('click', (e) => {
@@ -29,3 +29,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     
     <link rel="icon" href="/favicon.ico" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Envidicy В· РђРґРјРёРЅ-РґРѕСЃС‚СѓРї</title>
+    <title>Envidicy · Админ-доступ</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -14,8 +14,8 @@
         <section class="login-card">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">РђРґРјРёРЅ</p>
-              <h2>РЎР±СЂРѕСЃ РїР°СЂРѕР»СЏ</h2>
+              <p class="eyebrow">Админ</p>
+              <h2>Сброс пароля</h2>
             </div>
             <span class="chip chip-ghost">Private</span>
           </div>
@@ -25,17 +25,17 @@
               <input id="reset-email" type="email" placeholder="name@gmail.com" required />
             </label>
             <label class="field">
-              <span>РќРѕРІС‹Р№ РїР°СЂРѕР»СЊ</span>
-              <input id="reset-password" type="password" placeholder="вЂўвЂўвЂўвЂўвЂўвЂўвЂўвЂў" required />
+              <span>Новый пароль</span>
+              <input id="reset-password" type="password" placeholder="••••••••" required />
             </label>
             <label class="field">
               <span>Admin token</span>
               <input id="reset-token" type="text" placeholder="Bearer token" required />
             </label>
-            <button class="btn primary full" type="submit">РЎР±СЂРѕСЃРёС‚СЊ РїР°СЂРѕР»СЊ</button>
-            <a class="btn ghost full login-secondary" href="/login">Р’РµСЂРЅСѓС‚СЊСЃСЏ РєРѕ РІС…РѕРґСѓ</a>
+            <button class="btn primary full" type="submit">Сбросить пароль</button>
+            <a class="btn ghost full login-secondary" href="/login">Вернуться ко входу</a>
           </form>
-          <p id="reset-status" class="login-status">РќСѓР¶РµРЅ Р°РґРјРёРЅ-С‚РѕРєРµРЅ РґР»СЏ СЃР±СЂРѕСЃР°.</p>
+          <p id="reset-status" class="login-status">Нужен админ-токен для сброса.</p>
         </section>
       </div>
     </div>
@@ -43,4 +43,5 @@
     <script src="/admin-login.js"></script>
   </body>
 </html>
+
 

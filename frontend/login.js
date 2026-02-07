@@ -1,4 +1,4 @@
-const form = document.getElementById('login-form')
+﻿const form = document.getElementById('login-form')
 const statusEl = document.getElementById('login-status')
 const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 
@@ -32,3 +32,4 @@ if (form && statusEl) {
     }
   })
 }
+

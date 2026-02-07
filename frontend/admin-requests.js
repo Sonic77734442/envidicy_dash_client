@@ -1,9 +1,9 @@
 ﻿const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 
 renderHeader({
-  eyebrow: 'Envidicy · Admin',
-  title: 'Заявки',
-  subtitle: 'Все запросы на открытие аккаунтов.',
+  eyebrow: 'Envidicy � Admin',
+  title: '������',
+  subtitle: '��� ������� �� �������� ���������.',
   buttons: [],
 })
 
@@ -27,7 +27,7 @@ function authHeadersSafe() {
 
 function handleAuthFailure(res) {
   if (res.status === 401 || res.status === 403) {
-    if (statusEl) statusEl.textContent = 'Нет доступа к админке.'
+    if (statusEl) statusEl.textContent = '��� ������� � �������.'
     return true
   }
   return false
@@ -42,7 +42,7 @@ async function fetchRequests() {
     allRows = data
     applyFilters()
   } catch (e) {
-    if (statusEl) statusEl.textContent = 'Ошибка загрузки заявок.'
+    if (statusEl) statusEl.textContent = '������ �������� ������.'
   }
 }
 
@@ -63,19 +63,19 @@ function renderRows(rows) {
     .map(
       (row) => `
       <tr>
-        <td>${row.created_at?.split(' ')[0] || '—'}</td>
-        <td>${row.user_email || '—'}</td>
+        <td>${row.created_at?.split(' ')[0] || '�'}</td>
+        <td>${row.user_email || '�'}</td>
         <td>${row.platform}</td>
         <td>${row.name}</td>
         <td>
-          <input class="field-input small" data-code="${row.id}" type="text" placeholder="Напр. KZ-2024-01" value="${row.account_code || row.account_code_db || ''}" />
+          <input class="field-input small" data-code="${row.id}" type="text" placeholder="����. KZ-2024-01" value="${row.account_code || row.account_code_db || ''}" />
         </td>
         <td>${statusLabel(row.status)}</td>
         <td style="text-align:right; display:flex; gap:6px; justify-content:flex-end;">
-          <button class="btn ghost small" data-action="processing" data-id="${row.id}">В работе</button>
-          <button class="btn primary small" data-action="approved" data-id="${row.id}">Одобрить</button>
-          <button class="btn ghost small" data-action="rejected" data-id="${row.id}">Отклонить</button>
-          <button class="btn ghost small" data-action="details" data-id="${row.id}">Карточка</button>
+          <button class="btn ghost small" data-action="processing" data-id="${row.id}">� ������</button>
+          <button class="btn primary small" data-action="approved" data-id="${row.id}">��������</button>
+          <button class="btn ghost small" data-action="rejected" data-id="${row.id}">���������</button>
+          <button class="btn ghost small" data-action="details" data-id="${row.id}">��������</button>
         </td>
       </tr>
     `
@@ -84,10 +84,10 @@ function renderRows(rows) {
 }
 
 function statusLabel(status) {
-  if (status === 'approved') return 'Открыт'
-  if (status === 'processing') return 'В работе'
-  if (status === 'rejected') return 'Отклонен'
-  return 'Новая'
+  if (status === 'approved') return '������'
+  if (status === 'processing') return '� ������'
+  if (status === 'rejected') return '��������'
+  return '�����'
 }
 
 if (tableBody) {
@@ -113,7 +113,7 @@ if (tableBody) {
       if (!res.ok) throw new Error('update failed')
       await fetchRequests()
     } catch (e) {
-      if (statusEl) statusEl.textContent = 'Ошибка обновления статуса.'
+      if (statusEl) statusEl.textContent = '������ ���������� �������.'
     }
   })
 }
@@ -136,22 +136,22 @@ function openRequestModal(row) {
   if (!modalEl || !modalTitle || !modalBody) return
   activeRow = row
   const payload = normalizePayload(row.payload)
-  modalTitle.textContent = `${row.platform} · ${row.name}`
+  modalTitle.textContent = `${row.platform} � ${row.name}`
   modalBody.innerHTML = buildDetailsHtml(row, payload)
   if (modalActions) {
     const currency = row.account_currency || (row.platform === 'telegram' ? 'EUR' : 'USD')
     modalActions.innerHTML = `
       <div class="modal-actions-row">
-        <input class="field-input small" id="modal-account-code" type="text" placeholder="Код договора/аккаунта" value="${row.account_code || ''}" />
-        <input class="field-input small" id="modal-budget-total" type="number" step="0.01" placeholder="Бюджет (${currency})" value="${row.budget_total ?? ''}" />
-        <input class="field-input small" id="modal-manager-email" type="text" placeholder="Менеджер (email)" value="${row.manager_email || ''}" />
-        <textarea class="field-input small textarea" id="modal-comment" rows="2" placeholder="Комментарий">${row.comment || ''}</textarea>
+        <input class="field-input small" id="modal-account-code" type="text" placeholder="��� ��������/��������" value="${row.account_code || ''}" />
+        <input class="field-input small" id="modal-budget-total" type="number" step="0.01" placeholder="������ (${currency})" value="${row.budget_total ?? ''}" />
+        <input class="field-input small" id="modal-manager-email" type="text" placeholder="�������� (email)" value="${row.manager_email || ''}" />
+        <textarea class="field-input small textarea" id="modal-comment" rows="2" placeholder="�����������">${row.comment || ''}</textarea>
         <div class="modal-actions-buttons">
-          <button class="btn ghost" data-action="save" data-id="${row.id}">Сохранить</button>
-          <button class="btn ghost" data-action="processing" data-id="${row.id}">В работе</button>
-          <button class="btn primary" data-action="approved" data-id="${row.id}">Одобрить</button>
-          <button class="btn ghost" data-action="rejected" data-id="${row.id}">Отклонить</button>
-          <button class="btn ghost" data-action="comment" data-id="${row.id}">Комментарий</button>
+          <button class="btn ghost" data-action="save" data-id="${row.id}">���������</button>
+          <button class="btn ghost" data-action="processing" data-id="${row.id}">� ������</button>
+          <button class="btn primary" data-action="approved" data-id="${row.id}">��������</button>
+          <button class="btn ghost" data-action="rejected" data-id="${row.id}">���������</button>
+          <button class="btn ghost" data-action="comment" data-id="${row.id}">�����������</button>
         </div>
       </div>
     `
@@ -176,11 +176,11 @@ if (modalActions) {
     const budgetValueRaw = budgetInput?.value?.trim()
     const budgetTotal = budgetValueRaw ? Number(budgetValueRaw) : null
     if (budgetValueRaw && Number.isNaN(budgetTotal)) {
-      if (statusEl) statusEl.textContent = 'Введите корректный бюджет.'
+      if (statusEl) statusEl.textContent = '������� ���������� ������.'
       return
     }
     if (status === 'comment' && !comment && !managerEmail) {
-      if (statusEl) statusEl.textContent = 'Введите комментарий или менеджера.'
+      if (statusEl) statusEl.textContent = '������� ����������� ��� ���������.'
       return
     }
     try {
@@ -209,7 +209,7 @@ if (modalActions) {
         fetchEvents(id)
       }
     } catch (e) {
-      if (statusEl) statusEl.textContent = 'Ошибка обновления статуса.'
+      if (statusEl) statusEl.textContent = '������ ���������� �������.'
     }
   })
 }
@@ -224,50 +224,50 @@ function buildDetailsHtml(row, payload) {
   const topupTotal = row.topup_completed_total != null ? Number(row.topup_completed_total) : null
   const formatMoney = (value) =>
     value == null || Number.isNaN(value)
-      ? '—'
+      ? '�'
       : `${value.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
   return `
     <div class="details-grid">
-      ${section('Основное', [
-        ['Клиент', row.user_email || '—'],
-        ['Платформа', row.platform || '—'],
-        ['Название', row.name || '—'],
-        ['Статус', statusLabel(row.status)],
-        ['Менеджер', row.manager_email || '—'],
-        ['Дата', row.created_at || '—'],
+      ${section('��������', [
+        ['������', row.user_email || '�'],
+        ['���������', row.platform || '�'],
+        ['��������', row.name || '�'],
+        ['������', statusLabel(row.status)],
+        ['��������', row.manager_email || '�'],
+        ['����', row.created_at || '�'],
       ])}
-      ${section('Финансы', [
-        ['Бюджет (ручной)', formatMoney(budgetTotal)],
-        ['Пополнено (completed)', formatMoney(topupTotal)],
+      ${section('�������', [
+        ['������ (������)', formatMoney(budgetTotal)],
+        ['��������� (completed)', formatMoney(topupTotal)],
       ])}
-      ${section('Ссылки', [
-        ['Сайт', payload.website || '—'],
-        ['Приложение', payload.app || '—'],
-        ['Facebook', payload.facebook_page || '—'],
-        ['Instagram', payload.instagram_page || '—'],
-        ['Telegram-канал', payload.telegram_channel || '—'],
+      ${section('������', [
+        ['����', payload.website || '�'],
+        ['����������', payload.app || '�'],
+        ['Facebook', payload.facebook_page || '�'],
+        ['Instagram', payload.instagram_page || '�'],
+        ['Telegram-�����', payload.telegram_channel || '�'],
       ])}
-      ${section('Доступы', [
-        ['MCC e-mail', payload.mcc_email || '—'],
-        ['Яндекс mail', payload.yandex_email || '—'],
-        ['Access list', accessList.length ? accessList.join(', ') : '—'],
+      ${section('�������', [
+        ['MCC e-mail', payload.mcc_email || '�'],
+        ['������ mail', payload.yandex_email || '�'],
+        ['Access list', accessList.length ? accessList.join(', ') : '�'],
       ])}
       ${section('Meta', [
-        ['BM ID', payload.business_manager_id || '—'],
-        ['ГЕО', payload.geo || '—'],
-        ['Конечный рекламодатель', payload.final_advertiser === 'no' ? 'Нет' : 'Да'],
-        ['Конечный рекламодатель (имя)', payload.final_name || '—'],
-        ['Страна', payload.final_country || '—'],
-        ['Налоговый номер', payload.final_tax_id || '—'],
-        ['Адрес', payload.final_address || '—'],
-        ['Форма собственности', payload.final_ownership || '—'],
+        ['BM ID', payload.business_manager_id || '�'],
+        ['���', payload.geo || '�'],
+        ['�������� �������������', payload.final_advertiser === 'no' ? '���' : '��'],
+        ['�������� ������������� (���)', payload.final_name || '�'],
+        ['������', payload.final_country || '�'],
+        ['��������� �����', payload.final_tax_id || '�'],
+        ['�����', payload.final_address || '�'],
+        ['����� �������������', payload.final_ownership || '�'],
       ])}
       ${section('TikTok', [
-        ['Business ID', tiktokIds.length ? tiktokIds.join(', ') : '—'],
-        ['Часовой пояс', payload.tiktok_timezone || '—'],
-        ['География', payload.tiktok_geo || '—'],
+        ['Business ID', tiktokIds.length ? tiktokIds.join(', ') : '�'],
+        ['������� ����', payload.tiktok_timezone || '�'],
+        ['���������', payload.tiktok_geo || '�'],
       ])}
-      ${section('Лог', ['log-placeholder'])}
+      ${section('���', ['log-placeholder'])}
     </div>
     <details class="field details">
       <summary>Raw payload</summary>
@@ -299,7 +299,7 @@ function section(title, rows) {
   return `
     <div class="details-section">
       <h4>${title}</h4>
-      ${body || '<div class="muted">Нет данных</div>'}
+      ${body || '<div class="muted">��� ������</div>'}
     </div>
   `
 }
@@ -336,23 +336,23 @@ async function fetchEvents(requestId) {
     const data = await res.json()
     renderEvents(logEl, data)
   } catch (e) {
-    logEl.textContent = 'Ошибка загрузки лога.'
+    logEl.textContent = '������ �������� ����.'
   }
 }
 
 function renderEvents(container, events) {
   if (!events.length) {
-    container.innerHTML = '<div class="muted">Нет событий.</div>'
+    container.innerHTML = '<div class="muted">��� �������.</div>'
     return
   }
   container.innerHTML = events
     .map((event) => {
       const when = event.created_at?.replace('T', ' ') || ''
-      const manager = event.manager_email ? `Менеджер: ${event.manager_email}` : ''
-      const comment = event.comment ? `Комментарий: ${event.comment}` : ''
-      const status = event.status ? `Статус: ${statusLabel(event.status)}` : ''
-      const meta = [status, manager, comment].filter(Boolean).join(' · ')
-      return `<div>${when} · ${event.type}${meta ? ` · ${meta}` : ''}</div>`
+      const manager = event.manager_email ? `��������: ${event.manager_email}` : ''
+      const comment = event.comment ? `�����������: ${event.comment}` : ''
+      const status = event.status ? `������: ${statusLabel(event.status)}` : ''
+      const meta = [status, manager, comment].filter(Boolean).join(' � ')
+      return `<div>${when} � ${event.type}${meta ? ` � ${meta}` : ''}</div>`
     })
     .join('')
 }
@@ -380,4 +380,5 @@ if (exportRequests) exportRequests.addEventListener('click', () => exportFile('/
 
 fetchRequests()
 let activeRow = null
+
 

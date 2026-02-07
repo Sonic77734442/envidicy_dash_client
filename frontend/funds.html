@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     
     <link rel="icon" href="/favicon.ico" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Envidicy · Финансы</title>
+    <title>Envidicy � �������</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -15,33 +15,33 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Фильтры</p>
-            <h2>Период и аккаунты</h2>
+            <p class="eyebrow">�������</p>
+            <h2>������ � ��������</h2>
           </div>
           <div class="panel-actions">
-            <button class="btn primary" id="wallet-topup-open">Пополнить баланс</button>
+            <button class="btn primary" id="wallet-topup-open">��������� ������</button>
           </div>
         </div>
         <div class="form-grid">
           <label class="field">
-            <span>С</span>
+            <span>�</span>
             <input id="date-from" type="date" />
           </label>
           <label class="field">
-            <span>По</span>
+            <span>��</span>
             <input id="date-to" type="date" />
           </label>
           <label class="field">
-            <span>Платформа</span>
+            <span>���������</span>
             <select id="filter-platform">
-              <option value="">Все</option>
+              <option value="">���</option>
               <option value="meta">Meta</option>
               <option value="google">Google</option>
               <option value="tiktok">TikTok</option>
             </select>
           </label>
           <label class="field">
-            <span>Аккаунт</span>
+            <span>�������</span>
             <input id="filter-account" type="text" placeholder="meta-001" />
           </label>
         </div>
@@ -50,15 +50,15 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Финансы</p>
-            <h2>Счета и транзакции</h2>
+            <p class="eyebrow">�������</p>
+            <h2>����� � ����������</h2>
           </div>
         </div>
         <div class="tabs">
           <div class="tab-buttons">
-            <button class="tab-button active" data-tab="invoices">Счета</button>
-            <button class="tab-button" data-tab="transactions">Транзакции</button>
-            <button class="tab-button" data-tab="docs">Закрывающие документы</button>
+            <button class="tab-button active" data-tab="invoices">�����</button>
+            <button class="tab-button" data-tab="transactions">����������</button>
+            <button class="tab-button" data-tab="docs">����������� ���������</button>
           </div>
           <div class="tab-panels">
             <div class="tab-panel active" data-tab-panel="invoices">
@@ -66,11 +66,11 @@
                 <table class="table">
                   <thead>
                     <tr>
-                      <th>Дата</th>
-                      <th>Контрагент</th>
-                      <th>Сумма</th>
-                      <th>Номер</th>
-                      <th style="text-align:right;">Файл</th>
+                      <th>����</th>
+                      <th>����������</th>
+                      <th>�����</th>
+                      <th>�����</th>
+                      <th style="text-align:right;">����</th>
                     </tr>
                   </thead>
                   <tbody id="wallet-invoices-body"></tbody>
@@ -80,8 +80,8 @@
             <div class="tab-panel" data-tab-panel="transactions">
               <div class="panel-head">
                 <div>
-                  <p class="eyebrow">Сводка</p>
-                  <h2>Итого по выборке</h2>
+                  <p class="eyebrow">������</p>
+                  <h2>����� �� �������</h2>
                 </div>
                 <div class="chips small" id="summary-chips"></div>
               </div>
@@ -89,14 +89,14 @@
                 <table class="table">
                   <thead>
                     <tr>
-                      <th>Дата</th>
-                      <th>Платформа</th>
-                      <th>Аккаунт</th>
-                      <th>Тип</th>
-                      <th>Сумма</th>
-                      <th>Курс</th>
-                      <th>Валюта</th>
-                      <th>Примечание</th>
+                      <th>����</th>
+                      <th>���������</th>
+                      <th>�������</th>
+                      <th>���</th>
+                      <th>�����</th>
+                      <th>����</th>
+                      <th>������</th>
+                      <th>����������</th>
                     </tr>
                   </thead>
                   <tbody id="funds-body"></tbody>
@@ -106,12 +106,12 @@
             <div class="tab-panel" data-tab-panel="docs">
               <div class="panel-head">
                 <div>
-                  <p class="eyebrow">Документы</p>
-                  <h2>Закрывающие документы</h2>
+                  <p class="eyebrow">���������</p>
+                  <h2>����������� ���������</h2>
                 </div>
               </div>
               <div class="empty-state">
-                <p class="muted">Пока нет закрывающих документов. Они появятся после подтверждения оплат.</p>
+                <p class="muted">���� ��� ����������� ����������. ��� �������� ����� ������������� �����.</p>
               </div>
             </div>
           </div>
@@ -122,55 +122,55 @@
       <div class="modal-dialog">
         <div class="modal-head">
           <div>
-            <p class="eyebrow">Баланс платформы</p>
-            <h3>Пополнение баланса</h3>
+            <p class="eyebrow">������ ���������</p>
+            <h3>���������� �������</h3>
           </div>
-          <button class="btn ghost small" id="wallet-topup-close">Закрыть</button>
+          <button class="btn ghost small" id="wallet-topup-close">�������</button>
         </div>
         <div class="modal-body">
           <label class="field">
-            <span>Контрагент</span>
+            <span>����������</span>
             <select id="wallet-topup-legal-entity"></select>
           </label>
           <div class="notice" id="wallet-entity-notice" hidden></div>
           <div class="inline-actions">
-            <button class="btn ghost small" id="wallet-entity-toggle" type="button">Добавить контрагента</button>
+            <button class="btn ghost small" id="wallet-entity-toggle" type="button">�������� �����������</button>
           </div>
           <div id="wallet-entity-form" class="modal-step" hidden>
             <label class="field">
-              <span>Наименование контрагента</span>
-              <input id="wallet-entity-name" type="text" placeholder="ТОО Пример" />
+              <span>������������ �����������</span>
+              <input id="wallet-entity-name" type="text" placeholder="��� ������" />
             </label>
             <label class="field">
-              <span>БИН/ИИН</span>
+              <span>���/���</span>
               <input id="wallet-entity-bin" type="text" placeholder="123456789012" />
             </label>
             <label class="field">
-              <span>Адрес</span>
-              <input id="wallet-entity-address" type="text" placeholder="Город, улица, дом" />
+              <span>�����</span>
+              <input id="wallet-entity-address" type="text" placeholder="�����, �����, ���" />
             </label>
             <label class="field">
               <span>E-mail</span>
               <input id="wallet-entity-email" type="email" placeholder="accounting@company.kz" />
             </label>
             <div class="inline-actions">
-              <button class="btn primary small" id="wallet-entity-save" type="button">Сохранить</button>
+              <button class="btn primary small" id="wallet-entity-save" type="button">���������</button>
             </div>
           </div>
           <label class="field">
-            <span>Сумма пополнения, ₸</span>
+            <span>����� ����������, ?</span>
             <input id="wallet-topup-amount" type="number" min="0" step="100" placeholder="100000" />
           </label>
           <label class="field">
-            <span>Комментарий (опционально)</span>
-            <input id="wallet-topup-note" type="text" placeholder="Например: январь 2026" />
+            <span>����������� (�����������)</span>
+            <input id="wallet-topup-note" type="text" placeholder="��������: ������ 2026" />
           </label>
         </div>
         <div class="modal-actions">
-          <button class="btn ghost" id="wallet-topup-cancel">Отмена</button>
-          <button class="btn primary" id="wallet-topup-submit">Сформировать счет</button>
+          <button class="btn ghost" id="wallet-topup-cancel">������</button>
+          <button class="btn primary" id="wallet-topup-submit">������������ ����</button>
         </div>
-        <p class="muted small">После формирования счёта откроется страница оплаты.</p>
+        <p class="muted small">����� ������������ ����� ��������� �������� ������.</p>
       </div>
     </div>
     <script src="/config.js"></script>
@@ -178,5 +178,6 @@
     <script src="/funds.js"></script>
   </body>
 </html>
+
 
 

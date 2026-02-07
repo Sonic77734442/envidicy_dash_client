@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     
     <link rel="icon" href="/favicon.ico" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Envidicy В· Dashboard</title>
+    <title>Envidicy · Dashboard</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -16,25 +16,25 @@
         <div class="panel-head">
           <div>
             <p class="eyebrow">Meta</p>
-            <h2>Insights РїРѕ РєР°РјРїР°РЅРёСЏРј</h2>
+            <h2>Insights по кампаниям</h2>
           </div>
           <span class="chip chip-ghost">Campaign</span>
         </div>
         <div class="form-grid">
           <label class="field">
-            <span>РџРµСЂРёРѕРґ СЃ</span>
+            <span>Период с</span>
             <input id="meta-date-from" type="date" />
           </label>
           <label class="field">
-            <span>РџРµСЂРёРѕРґ РїРѕ</span>
+            <span>Период по</span>
             <input id="meta-date-to" type="date" />
           </label>
           <label class="field">
-            <span>РђРєРєР°СѓРЅС‚</span>
+            <span>Аккаунт</span>
             <select id="meta-account"></select>
           </label>
           <div class="panel-actions">
-            <button class="btn primary" id="meta-load">Р—Р°РіСЂСѓР·РёС‚СЊ</button>
+            <button class="btn primary" id="meta-load">Загрузить</button>
           </div>
         </div>
         <p id="meta-status" class="muted small"></p>
@@ -62,25 +62,25 @@
         <div class="panel-head">
           <div>
             <p class="eyebrow">Google Ads</p>
-            <h2>Insights РїРѕ РєР°РјРїР°РЅРёСЏРј</h2>
+            <h2>Insights по кампаниям</h2>
           </div>
           <span class="chip chip-ghost">Campaign</span>
         </div>
         <div class="form-grid">
           <label class="field">
-            <span>РџРµСЂРёРѕРґ СЃ</span>
+            <span>Период с</span>
             <input id="google-date-from" type="date" />
           </label>
           <label class="field">
-            <span>РџРµСЂРёРѕРґ РїРѕ</span>
+            <span>Период по</span>
             <input id="google-date-to" type="date" />
           </label>
           <label class="field">
-            <span>РђРєРєР°СѓРЅС‚</span>
+            <span>Аккаунт</span>
             <select id="google-account"></select>
           </label>
           <div class="panel-actions">
-            <button class="btn primary" id="google-load">Р—Р°РіСЂСѓР·РёС‚СЊ</button>
+            <button class="btn primary" id="google-load">Загрузить</button>
           </div>
         </div>
         <p id="google-status" class="muted small"></p>
@@ -108,25 +108,25 @@
         <div class="panel-head">
           <div>
             <p class="eyebrow">TikTok Ads</p>
-            <h2>Insights РїРѕ РєР°РјРїР°РЅРёСЏРј</h2>
+            <h2>Insights по кампаниям</h2>
           </div>
           <span class="chip chip-ghost">Campaign</span>
         </div>
         <div class="form-grid">
           <label class="field">
-            <span>РџРµСЂРёРѕРґ СЃ</span>
+            <span>Период с</span>
             <input id="tiktok-date-from" type="date" />
           </label>
           <label class="field">
-            <span>РџРµСЂРёРѕРґ РїРѕ</span>
+            <span>Период по</span>
             <input id="tiktok-date-to" type="date" />
           </label>
           <label class="field">
-            <span>РђРєРєР°СѓРЅС‚</span>
+            <span>Аккаунт</span>
             <select id="tiktok-account"></select>
           </label>
           <div class="panel-actions">
-            <button class="btn primary" id="tiktok-load">Р—Р°РіСЂСѓР·РёС‚СЊ</button>
+            <button class="btn primary" id="tiktok-load">Загрузить</button>
           </div>
         </div>
         <p id="tiktok-status" class="muted small"></p>
@@ -187,24 +187,24 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Р’РёР·СѓР°Р»РёР·Р°С†РёСЏ</p>
-            <h2>Р”РѕР»Рё Рё РґРёРЅР°РјРёРєР°</h2>
+            <p class="eyebrow">Визуализация</p>
+            <h2>Доли и динамика</h2>
           </div>
           <span class="chip chip-ghost">Charts</span>
         </div>
         <div class="chart-grid">
           <div class="chart-card">
             <div class="chart-head">
-              <p class="eyebrow">KPI РєРѕР»СЊС†Р°</p>
+              <p class="eyebrow">KPI кольца</p>
               <div class="panel-actions">
-                <button class="btn ghost small" id="report-load" type="button">РћР±РЅРѕРІРёС‚СЊ</button>
-                <button class="btn ghost small" id="report-export" type="button">Р­РєСЃРїРѕСЂС‚ PDF</button>
+                <button class="btn ghost small" id="report-load" type="button">Обновить</button>
+                <button class="btn ghost small" id="report-export" type="button">Экспорт PDF</button>
               </div>
             </div>
             <div id="kpi-rings" class="ring-grid"></div>
           </div>
           <div class="chart-card">
-            <p class="eyebrow">Р”РѕР»СЏ СЂР°СЃС…РѕРґРѕРІ</p>
+            <p class="eyebrow">Доля расходов</p>
             <div id="spend-donut" class="chart-donut"></div>
             <div id="spend-legend" class="legend"></div>
           </div>
@@ -212,7 +212,7 @@
         <p id="report-status" class="muted small"></p>
         <div class="chart-card">
           <div class="chart-head">
-            <p class="eyebrow">Р”РёРЅР°РјРёРєР° РїРѕ РґРЅСЏРј</p>
+            <p class="eyebrow">Динамика по дням</p>
             <div class="chip chip-ghost">Spend vs Clicks</div>
           </div>
           <div id="line-chart" class="chart-line"></div>
@@ -222,23 +222,23 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">РђСѓРґРёС‚РѕСЂРёСЏ</p>
-            <h2>РљРѕРіРѕ РѕС…РІР°С‚РёР»Рё</h2>
+            <p class="eyebrow">Аудитория</p>
+            <h2>Кого охватили</h2>
           </div>
           <span class="chip chip-ghost">Audience</span>
         </div>
         <div class="chart-grid">
           <div class="chart-card">
             <div class="chart-head">
-              <p class="eyebrow">Р’РѕР·СЂР°СЃС‚ / РџРѕР»</p>
-              <button class="btn ghost small" id="audience-age-load" type="button">РћР±РЅРѕРІРёС‚СЊ</button>
+              <p class="eyebrow">Возраст / Пол</p>
+              <button class="btn ghost small" id="audience-age-load" type="button">Обновить</button>
             </div>
             <div class="table-wrapper">
               <table class="table">
                 <thead>
                   <tr>
-                    <th>РџР»Р°С‚С„РѕСЂРјР°</th>
-                    <th>РЎРµРіРјРµРЅС‚</th>
+                    <th>Платформа</th>
+                    <th>Сегмент</th>
                     <th>Impr</th>
                     <th>Clicks</th>
                     <th>Spend</th>
@@ -250,15 +250,15 @@
           </div>
           <div class="chart-card">
             <div class="chart-head">
-              <p class="eyebrow">Р“РµРѕ</p>
-              <button class="btn ghost small" id="audience-geo-load" type="button">РћР±РЅРѕРІРёС‚СЊ</button>
+              <p class="eyebrow">Гео</p>
+              <button class="btn ghost small" id="audience-geo-load" type="button">Обновить</button>
             </div>
             <div class="table-wrapper">
               <table class="table">
                 <thead>
                   <tr>
-                    <th>РџР»Р°С‚С„РѕСЂРјР°</th>
-                    <th>РЎРµРіРјРµРЅС‚</th>
+                    <th>Платформа</th>
+                    <th>Сегмент</th>
                     <th>Impr</th>
                     <th>Clicks</th>
                     <th>Spend</th>
@@ -270,15 +270,15 @@
           </div>
           <div class="chart-card">
             <div class="chart-head">
-              <p class="eyebrow">РџР»РµР№СЃРјРµРЅС‚С‹ / РЈСЃС‚СЂРѕР№СЃС‚РІР°</p>
-              <button class="btn ghost small" id="audience-device-load" type="button">РћР±РЅРѕРІРёС‚СЊ</button>
+              <p class="eyebrow">Плейсменты / Устройства</p>
+              <button class="btn ghost small" id="audience-device-load" type="button">Обновить</button>
             </div>
             <div class="table-wrapper">
               <table class="table">
                 <thead>
                   <tr>
-                    <th>РџР»Р°С‚С„РѕСЂРјР°</th>
-                    <th>РЎРµРіРјРµРЅС‚</th>
+                    <th>Платформа</th>
+                    <th>Сегмент</th>
                     <th>Impr</th>
                     <th>Clicks</th>
                     <th>Spend</th>
@@ -289,7 +289,7 @@
             </div>
           </div>
         </div>
-        <p class="muted small" id="audience-status">TikTok Insights Р±СѓРґРµС‚ РґРѕР±Р°РІР»РµРЅ РїРѕСЃР»Рµ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РїРѕР»РµР№ API.</p>
+        <p class="muted small" id="audience-status">TikTok Insights будет добавлен после подтверждения полей API.</p>
       </section>
 
     </div>
@@ -298,4 +298,5 @@
     <script src="/dashboard.js"></script>
   </body>
 </html>
+
 

@@ -1,9 +1,9 @@
 ﻿const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 
 renderHeader({
-  eyebrow: 'Envidicy · Admin',
-  title: 'Пополнения',
-  subtitle: 'Реестр оплат и статусы.',
+  eyebrow: 'Envidicy � Admin',
+  title: '����������',
+  subtitle: '������ ����� � �������.',
   buttons: [],
 })
 
@@ -21,7 +21,7 @@ function authHeadersSafe() {
 
 function handleAuthFailure(res) {
   if (res.status === 401 || res.status === 403) {
-    if (topupsStatus) topupsStatus.textContent = 'Нет доступа к админке.'
+    if (topupsStatus) topupsStatus.textContent = '��� ������� � �������.'
     return true
   }
   return false
@@ -36,7 +36,7 @@ async function fetchTopups() {
     topupRows = data
     applyTopupFilters()
   } catch (e) {
-    if (topupsStatus) topupsStatus.textContent = 'Ошибка загрузки пополнений.'
+    if (topupsStatus) topupsStatus.textContent = '������ �������� ����������.'
   }
 }
 
@@ -58,16 +58,16 @@ function renderTopups(rows) {
       const gross = row.amount_input + fee + vat
       return `
         <tr>
-          <td>${row.created_at?.split(' ')[0] || '—'}</td>
-          <td>${row.user_email || '—'}</td>
-          <td>${row.account_platform || '—'}</td>
-          <td>${row.account_name || '—'}</td>
+          <td>${row.created_at?.split(' ')[0] || '�'}</td>
+          <td>${row.user_email || '�'}</td>
+          <td>${row.account_platform || '�'}</td>
+          <td>${row.account_name || '�'}</td>
           <td>${formatMoney(row.amount_input)} ${row.currency || ''}</td>
           <td>${formatMoney(fee)} ${row.currency || ''}</td>
           <td>${formatMoney(gross)} ${row.currency || ''}</td>
-          <td>${row.status || '—'}</td>
+          <td>${row.status || '�'}</td>
           <td style="text-align:right;">
-            <button class="btn ghost small" data-topup-status="completed" data-topup-id="${row.id}">Оплачен</button>
+            <button class="btn ghost small" data-topup-status="completed" data-topup-id="${row.id}">�������</button>
           </td>
         </tr>
       `
@@ -93,7 +93,7 @@ if (topupsBody) {
       if (!res.ok) throw new Error('update failed')
       await fetchTopups()
     } catch (e) {
-      if (topupsStatus) topupsStatus.textContent = 'Ошибка обновления статуса.'
+      if (topupsStatus) topupsStatus.textContent = '������ ���������� �������.'
     }
   })
 }
@@ -122,4 +122,5 @@ function formatMoney(value) {
 }
 
 fetchTopups()
+
 
