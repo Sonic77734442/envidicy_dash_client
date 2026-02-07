@@ -10,14 +10,14 @@ const authHeadersSafe =
       }
 
 renderHeader({
-  eyebrow: 'Envidicy В· Billing Desk',
-  title: 'РџРѕРїРѕР»РЅРµРЅРёРµ СЂРµРєР»Р°РјРЅС‹С… Р°РєРєР°СѓРЅС‚РѕРІ',
-  subtitle: 'Р’С‹Р±РµСЂРёС‚Рµ Р°РєРєР°СѓРЅС‚ Meta, Google РёР»Рё TikTok, РѕСЃС‚Р°РІСЊС‚Рµ e-mail Рё РґР°РЅРЅС‹Рµ РєРѕРјРїР°РЅРёРё РґР»СЏ РІС‹СЃС‚Р°РІР»РµРЅРёСЏ СЃС‡С‘С‚Р°.',
+  eyebrow: 'Envidicy · Billing Desk',
+  title: 'Пополнение рекламных аккаунтов',
+  subtitle: 'Выберите аккаунт Meta, Google или TikTok, оставьте e-mail и данные компании для выставления счёта.',
   buttons: [
-    { label: 'Р”Р°С€Р±РѕСЂРґ', href: '/dashboard', kind: 'ghost' },
-    { label: 'Р¤РёРЅР°РЅСЃС‹', href: '/funds', kind: 'ghost' },
-    { label: 'РњРµРґРёР°РїР»Р°РЅ', href: '/plan', kind: 'ghost' },
-    { label: 'Р’С…РѕРґ', href: '/login', kind: 'ghost' },
+    { label: 'Дашборд', href: '/dashboard', kind: 'ghost' },
+    { label: 'Финансы', href: '/funds', kind: 'ghost' },
+    { label: 'Медиаплан', href: '/plan', kind: 'ghost' },
+    { label: 'Вход', href: '/login', kind: 'ghost' },
   ],
 })
 
@@ -52,8 +52,8 @@ const platforms = [
   },
   {
     key: 'yandex',
-    title: 'РЇРЅРґРµРєСЃ Р”РёСЂРµРєС‚',
-    subtitle: 'РџРѕРёСЃРє / Р РЎРЇ / РњРµРґРёР№РєР°',
+    title: 'Яндекс Директ',
+    subtitle: 'Поиск / РСЯ / Медийка',
     badge: 'ADS',
   },
   {
@@ -139,7 +139,7 @@ const createState = {
 
 function handleAuthFailure(res) {
   if (res.status === 401) {
-    alert('Р”Р»СЏ РґРѕСЃС‚СѓРїР° Рє РєР°Р±РёРЅРµС‚Сѓ РЅСѓР¶РЅРѕ РІРѕР№С‚Рё.')
+    alert('Для доступа к кабинету нужно войти.')
     window.location.href = '/login'
     return true
   }
@@ -157,7 +157,7 @@ function renderCards() {
         <p class="eyebrow">${p.badge}</p>
         <h3>${p.title}</h3>
       </div>
-      <button class="btn primary" data-platform="${p.key}">РћС‚РєСЂС‹С‚СЊ Р°РєРєР°СѓРЅС‚</button>
+      <button class="btn primary" data-platform="${p.key}">Открыть аккаунт</button>
     `
     container.appendChild(div)
   })
@@ -176,7 +176,7 @@ function renderOpenAccounts() {
     const tr = document.createElement('tr')
     const budgetLabel =
       row.budget == null
-        ? 'вЂ”'
+        ? '—'
         : `${Number(row.budget).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${row.currency || 'USD'}`
     tr.innerHTML = `
       <td>${platformLabel(row.platform)}</td>
@@ -189,11 +189,11 @@ function renderOpenAccounts() {
         ${
           hasAccount
             ? `
-        <button class="icon-btn" title="РџРѕРїРѕР»РЅРёС‚СЊ" data-topup="${row.account_db_id}" data-platform="${row.platform}">$</button>
-        <button class="icon-btn stat" title="РЎС‚Р°С‚РёСЃС‚РёРєР°" data-stat="${row.account_db_id}" data-platform="${row.platform}">рџ“Љ</button>
-        <button class="icon-btn refresh" title="РћР±РЅРѕРІРёС‚СЊ" data-refresh="${row.account_db_id}" data-platform="${row.platform}">вџі</button>
+        <button class="icon-btn" title="Пополнить" data-topup="${row.account_db_id}" data-platform="${row.platform}">$</button>
+        <button class="icon-btn stat" title="Статистика" data-stat="${row.account_db_id}" data-platform="${row.platform}">📊</button>
+        <button class="icon-btn refresh" title="Обновить" data-refresh="${row.account_db_id}" data-platform="${row.platform}">⟳</button>
         `
-            : `<span class="muted small">РћР¶РёРґР°РµС‚ РѕС‚РєСЂС‹С‚РёСЏ</span>`
+            : `<span class="muted small">Ожидает открытия</span>`
         }
       </td>
     `
@@ -209,11 +209,11 @@ function renderOpenAccounts() {
       }
       const stat = e.target.closest('button[data-stat]')
       if (stat) {
-        alert('РЎС‚Р°С‚РёСЃС‚РёРєР° Р±СѓРґРµС‚ РїРѕРґС‚СЏРіРёРІР°С‚СЊСЃСЏ РїРѕР·Р¶Рµ.')
+        alert('Статистика будет подтягиваться позже.')
       }
       const refresh = e.target.closest('button[data-refresh]')
       if (refresh) {
-        alert('РћР±РЅРѕРІР»РµРЅРёРµ Р±СЋРґР¶РµС‚Р° Р±СѓРґРµС‚ РґРѕР±Р°РІР»РµРЅРѕ РїРѕР·Р¶Рµ.')
+        alert('Обновление бюджета будет добавлено позже.')
       }
     })
     tbody.dataset.bound = '1'
@@ -221,24 +221,24 @@ function renderOpenAccounts() {
 }
 
 function normalizeAccountStatus(status) {
-  if (!status) return 'РќР° РјРѕРґРµСЂР°С†РёРё'
-  if (status === 'pending') return 'РќР° РјРѕРґРµСЂР°С†РёРё'
-  if (status === 'active') return 'РђРєС‚РёРІРµРЅ'
-  if (status === 'paused') return 'РџСЂРёРѕСЃС‚Р°РЅРѕРІР»РµРЅ'
-  if (status === 'archived') return 'Р—Р°РєСЂС‹С‚'
+  if (!status) return 'На модерации'
+  if (status === 'pending') return 'На модерации'
+  if (status === 'active') return 'Активен'
+  if (status === 'paused') return 'Приостановлен'
+  if (status === 'archived') return 'Закрыт'
   return status
 }
 
 function statusClass(status) {
-  if (status === 'РќРѕРІР°СЏ') return 'status-paused'
-  if (status === 'Р’ СЂР°Р±РѕС‚Рµ') return 'status-warn'
-  if (status === 'РћС‚РєСЂС‹С‚') return 'status-active'
-  if (status === 'РћС‚РєР»РѕРЅРµРЅ') return 'status-blocked'
-  if (status === 'РќР° РјРѕРґРµСЂР°С†РёРё') return 'status-warn'
-  if (status === 'РђРєС‚РёРІРµРЅ') return 'status-active'
-  if (status === 'РџСЂРёРѕСЃС‚Р°РЅРѕРІР»РµРЅ') return 'status-paused'
-  if (status === 'Р—Р°Р±Р»РѕРєРёСЂРѕРІР°РЅ') return 'status-blocked'
-  if (status === 'Р—Р°РєСЂС‹С‚') return 'status-closed'
+  if (status === 'Новая') return 'status-paused'
+  if (status === 'В работе') return 'status-warn'
+  if (status === 'Открыт') return 'status-active'
+  if (status === 'Отклонен') return 'status-blocked'
+  if (status === 'На модерации') return 'status-warn'
+  if (status === 'Активен') return 'status-active'
+  if (status === 'Приостановлен') return 'status-paused'
+  if (status === 'Заблокирован') return 'status-blocked'
+  if (status === 'Закрыт') return 'status-closed'
   return ''
 }
 
@@ -249,10 +249,10 @@ function syncOpenAccounts() {
     accountIndex.set(key, acc.id)
     return {
       platform: acc.platform,
-      account_id: acc.name || acc.external_id || `РђРєРєР°СѓРЅС‚ #${acc.id}`,
+      account_id: acc.name || acc.external_id || `Аккаунт #${acc.id}`,
       account_db_id: acc.id,
       company: '',
-      email: 'вЂ”',
+      email: '—',
       budget: acc.budget_total ?? null,
       currency: acc.currency || (acc.platform === 'telegram' ? 'EUR' : 'USD'),
       status: normalizeAccountStatus(acc.status),
@@ -264,10 +264,10 @@ function syncOpenAccounts() {
       const accountDbId = accountIndex.get(`${req.platform}:${req.name}`) || null
       return {
         platform: req.platform,
-        account_id: req.name || `Р—Р°СЏРІРєР° #${req.id}`,
+        account_id: req.name || `Заявка #${req.id}`,
         account_db_id: accountDbId,
         company: '',
-        email: req.email || 'вЂ”',
+        email: req.email || '—',
         budget: req.budget_total,
         currency: req.account_currency || (req.platform === 'telegram' ? 'EUR' : 'USD'),
         status: req.status,
@@ -281,7 +281,7 @@ function syncOpenAccounts() {
 
 function openCreateModal(platformKey) {
   createModal.platform.value = platformLabel(platformKey)
-  createModal.title.textContent = `РћС‚РєСЂС‹С‚СЊ В· ${platformLabel(platformKey)}`
+  createModal.title.textContent = `Открыть · ${platformLabel(platformKey)}`
   createState.mccSent = false
   createState.metaStage = 'primary'
   createModal.notice.hidden = true
@@ -331,7 +331,7 @@ function closeCreateModal() {
 
 function openTopupModal(platformKey, accountId) {
   if (!accounts[platformKey] || accounts[platformKey].length === 0) {
-    alert('РќРµС‚ РґРѕСЃС‚СѓРїРЅС‹С… Р°РєРєР°СѓРЅС‚РѕРІ РґР»СЏ РїРѕРїРѕР»РЅРµРЅРёСЏ. Р”РѕР¶РґРёС‚РµСЃСЊ РѕС‚РєСЂС‹С‚РёСЏ Р°РєРєР°СѓРЅС‚Р°.')
+    alert('Нет доступных аккаунтов для пополнения. Дождитесь открытия аккаунта.')
     return
   }
   const feeVal = state.fees ? state.fees[platformKey] : null
@@ -356,7 +356,7 @@ function platformLabel(key) {
   if (key === 'meta') return 'Meta'
   if (key === 'google') return 'Google Ads'
   if (key === 'tiktok') return 'TikTok Ads'
-  if (key === 'yandex') return 'РЇРЅРґРµРєСЃ Р”РёСЂРµРєС‚'
+  if (key === 'yandex') return 'Яндекс Директ'
   if (key === 'telegram') return 'Telegram Ads'
   if (key === 'monochrome') return 'Monochrome'
   return key
@@ -371,11 +371,11 @@ function setCreateStep(step) {
   const platformKey = createModal.el.dataset.platform || 'google'
   updateCreatePlatformUI(platformKey)
   if (step === 'mcc') {
-    createModal.title.textContent = 'РћС‚РєСЂС‹С‚СЊ MCC'
+    createModal.title.textContent = 'Открыть MCC'
   } else if (step === 'tiktok-info') {
     createModal.title.textContent = 'TikTok Business Center'
   } else {
-    createModal.title.textContent = `РћС‚РєСЂС‹С‚СЊ В· ${platformLabel(platformKey)}`
+    createModal.title.textContent = `Открыть · ${platformLabel(platformKey)}`
   }
 }
 
@@ -392,7 +392,7 @@ function updateCreatePlatformUI(platformKey) {
   createModal.telegramFields.hidden = !isTelegram
   createModal.stepMcc.hidden = !isGoogle && createState.step !== 'mcc'
   createModal.stepTiktokInfo.hidden = !isTiktok && createState.step !== 'tiktok-info'
-  createModal.nameLabel.textContent = isMeta ? 'РќР°Р·РІР°РЅРёРµ РєР°Р±РёРЅРµС‚Р°' : 'Р’РІРµРґРёС‚Рµ РЅР°Р·РІР°РЅРёРµ Р°РєРєР°СѓРЅС‚Р°'
+  createModal.nameLabel.textContent = isMeta ? 'Название кабинета' : 'Введите название аккаунта'
   if (!isMeta) {
     createState.metaStage = 'primary'
   }
@@ -413,9 +413,9 @@ function renderAccessList() {
         <div class="access-item">
           <div>
             <div class="access-email">${item.email}</div>
-            <div class="muted small">${item.role === 'read' ? 'РўРѕР»СЊРєРѕ С‡С‚РµРЅРёРµ' : 'РЎС‚Р°РЅРґР°СЂС‚РЅС‹Р№ РґРѕСЃС‚СѓРї'}</div>
+            <div class="muted small">${item.role === 'read' ? 'Только чтение' : 'Стандартный доступ'}</div>
           </div>
-          <button class="btn ghost small" type="button" data-remove="${index}">РЈР±СЂР°С‚СЊ</button>
+          <button class="btn ghost small" type="button" data-remove="${index}">Убрать</button>
         </div>
       `
     )
@@ -428,7 +428,7 @@ function renderTiktokIds() {
       (id, index) => `
         <div class="access-item">
           <div class="access-email">${id}</div>
-          <button class="btn ghost small" type="button" data-remove-id="${index}">РЈР±СЂР°С‚СЊ</button>
+          <button class="btn ghost small" type="button" data-remove-id="${index}">Убрать</button>
         </div>
       `
     )
@@ -442,11 +442,11 @@ function bindModal() {
   createModal.mccSend.onclick = () => {
     const email = createModal.mccEmail.value.trim()
     if (!email) {
-      alert('Р’РІРµРґРёС‚Рµ e-mail РґР»СЏ РґРѕСЃС‚СѓРїР° РІ MCC.')
+      alert('Введите e-mail для доступа в MCC.')
       return
     }
     createState.mccSent = true
-    createModal.notice.textContent = `Р”РѕСЃС‚СѓРї РІ MCC РѕС‚РїСЂР°РІР»РµРЅ РЅР° ${email}.`
+    createModal.notice.textContent = `Доступ в MCC отправлен на ${email}.`
     createModal.notice.hidden = false
     setCreateStep('account')
   }
@@ -454,7 +454,7 @@ function bindModal() {
     const email = createModal.accessEmail.value.trim()
     const role = createModal.accessRole.value
     if (!email) {
-      alert('Р’РІРµРґРёС‚Рµ e-mail РґР»СЏ РґРѕСЃС‚СѓРїР°.')
+      alert('Введите e-mail для доступа.')
       return
     }
     createState.access.push({ email, role })
@@ -472,11 +472,11 @@ function bindModal() {
   createModal.tiktokIdAdd.onclick = () => {
     const value = createModal.tiktokIdInput.value.trim()
     if (!value) {
-      alert('Р’РІРµРґРёС‚Рµ TikTok Business ID.')
+      alert('Введите TikTok Business ID.')
       return
     }
     if (createState.tiktokIds.length >= 10) {
-      alert('РњРѕР¶РЅРѕ РґРѕР±Р°РІРёС‚СЊ РґРѕ 10 Business ID.')
+      alert('Можно добавить до 10 Business ID.')
       return
     }
     createState.tiktokIds.push(value)
@@ -496,20 +496,20 @@ function bindModal() {
     const name = createModal.name.value.trim()
     const website = createModal.website.value.trim()
     if (!name) {
-      alert('Р’РІРµРґРёС‚Рµ РЅР°Р·РІР°РЅРёРµ Р°РєРєР°СѓРЅС‚Р°.')
+      alert('Введите название аккаунта.')
       return
     }
     if (platform === 'meta') {
       const required = [
         { value: createModal.bmId.value.trim(), label: 'ID Business Manager Facebook' },
-        { value: createModal.geo.value.trim(), label: 'Р“Р•Рћ Р·Р°РїСѓСЃРєР° СЂРµРєР»Р°РјС‹' },
-        { value: createModal.facebookPage.value.trim(), label: 'РЎС‚СЂР°РЅРёС†Р° Р¤РµР№СЃР±СѓРє' },
-        { value: createModal.instagramPage.value.trim(), label: 'РЎС‚СЂР°РЅРёС†Р° РРЅСЃС‚Р°РіСЂР°Рј' },
+        { value: createModal.geo.value.trim(), label: 'ГЕО запуска рекламы' },
+        { value: createModal.facebookPage.value.trim(), label: 'Страница Фейсбук' },
+        { value: createModal.instagramPage.value.trim(), label: 'Страница Инстаграм' },
       ]
       if (createModal.finalAdvertiser.value === 'no' && createState.metaStage !== 'final') {
         const missingPrimary = required.find((item) => !item.value)
         if (missingPrimary) {
-          alert(`Р—Р°РїРѕР»РЅРёС‚Рµ РїРѕР»Рµ: ${missingPrimary.label}.`)
+          alert(`Заполните поле: ${missingPrimary.label}.`)
           return
         }
         createState.metaStage = 'final'
@@ -518,51 +518,51 @@ function bindModal() {
       }
       if (createModal.finalAdvertiser.value === 'no') {
         required.push(
-          { value: createModal.finalName.value.trim(), label: 'РќР°РёРјРµРЅРѕРІР°РЅРёРµ РєРѕРЅРµС‡РЅРѕРіРѕ СЂРµРєР»Р°РјРѕРґР°С‚РµР»СЏ' },
-          { value: createModal.finalCountry.value.trim(), label: 'РЎС‚СЂР°РЅР° РєРѕРЅРµС‡РЅРѕРіРѕ СЂРµРєР»Р°РјРѕРґР°С‚РµР»СЏ' },
-          { value: createModal.finalTaxId.value.trim(), label: 'РќРѕРјРµСЂ РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєР° РєРѕРЅРµС‡РЅРѕРіРѕ СЂРµРєР»Р°РјРѕРґР°С‚РµР»СЏ' },
-          { value: createModal.finalAddress.value.trim(), label: 'РђРґСЂРµСЃ РєРѕРЅРµС‡РЅРѕРіРѕ СЂРµРєР»Р°РјРѕРґР°С‚РµР»СЏ' },
-          { value: createModal.finalOwnership.value.trim(), label: 'Р¤РѕСЂРјР° СЃРѕР±СЃС‚РІРµРЅРЅРѕСЃС‚Рё РєРѕРЅРµС‡РЅРѕРіРѕ СЂРµРєР»Р°РјРѕРґР°С‚РµР»СЏ' }
+          { value: createModal.finalName.value.trim(), label: 'Наименование конечного рекламодателя' },
+          { value: createModal.finalCountry.value.trim(), label: 'Страна конечного рекламодателя' },
+          { value: createModal.finalTaxId.value.trim(), label: 'Номер налогоплательщика конечного рекламодателя' },
+          { value: createModal.finalAddress.value.trim(), label: 'Адрес конечного рекламодателя' },
+          { value: createModal.finalOwnership.value.trim(), label: 'Форма собственности конечного рекламодателя' }
         )
       }
       const missing = required.find((item) => !item.value)
       if (missing) {
-        alert(`Р—Р°РїРѕР»РЅРёС‚Рµ РїРѕР»Рµ: ${missing.label}.`)
+        alert(`Заполните поле: ${missing.label}.`)
         return
       }
     }
     if (platform === 'tiktok') {
       if (!createState.tiktokIds.length) {
-        alert('Р”РѕР±Р°РІСЊС‚Рµ С…РѕС‚СЏ Р±С‹ РѕРґРёРЅ TikTok Business ID.')
+        alert('Добавьте хотя бы один TikTok Business ID.')
         return
       }
       if (!createModal.tiktokTimezone.value.trim()) {
-        alert('РЈРєР°Р¶РёС‚Рµ С‡Р°СЃРѕРІРѕР№ РїРѕСЏСЃ.')
+        alert('Укажите часовой пояс.')
         return
       }
       if (!createModal.tiktokGeo.value.trim()) {
-        alert('РЈРєР°Р¶РёС‚Рµ РіРµРѕРіСЂР°С„РёСЋ.')
+        alert('Укажите географию.')
         return
       }
     }
     if (platform === 'yandex') {
       if (!createModal.yandexEmail.value.trim()) {
-        alert('РЈРєР°Р¶РёС‚Рµ mail РїРѕС‡С‚РѕРІРѕРіРѕ РєР»РёРµРЅС‚Р° РЇРЅРґРµРєСЃ.')
+        alert('Укажите mail почтового клиента Яндекс.')
         return
       }
     }
     if (platform === 'telegram') {
       if (!createModal.telegramChannel.value.trim()) {
-        alert('РЈРєР°Р¶РёС‚Рµ СЃСЃС‹Р»РєСѓ РЅР° Telegram-РєР°РЅР°Р».')
+        alert('Укажите ссылку на Telegram-канал.')
         return
       }
     }
     if (!website) {
-      alert('РЈРєР°Р¶РёС‚Рµ СЃСЃС‹Р»РєСѓ РЅР° СЃР°Р№С‚.')
+      alert('Укажите ссылку на сайт.')
       return
     }
     if ((platform === 'google' || platform === 'telegram' || platform === 'monochrome') && !createState.access.length) {
-      alert('Р”РѕР±Р°РІСЊС‚Рµ С…РѕС‚СЏ Р±С‹ РѕРґРёРЅ e-mail РґР»СЏ РґРѕСЃС‚СѓРїР°.')
+      alert('Добавьте хотя бы один e-mail для доступа.')
       return
     }
     const payload = {
@@ -599,10 +599,10 @@ function bindModal() {
       if (handleAuthFailure(res)) return
       if (!res.ok) throw new Error('create account failed')
       await fetchAccountRequests()
-      alert('Р—Р°СЏРІРєР° РѕС‚РїСЂР°РІР»РµРЅР°. РњС‹ СЃРІСЏР¶РµРјСЃСЏ СЃ РІР°РјРё РїРѕСЃР»Рµ РѕР±СЂР°Р±РѕС‚РєРё.')
+      alert('Заявка отправлена. Мы свяжемся с вами после обработки.')
       closeCreateModal()
     } catch (e) {
-      alert('РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё. РџРѕРїСЂРѕР±СѓР№С‚Рµ СЃРЅРѕРІР°.')
+      alert('Ошибка отправки. Попробуйте снова.')
     }
   }
 
@@ -610,11 +610,11 @@ function bindModal() {
   document.getElementById('topup-cancel').onclick = closeTopupModal
   document.getElementById('topup-submit').onclick = async () => {
     if (!topupModal.account.value) {
-      alert('Р’С‹Р±РµСЂРёС‚Рµ Р°РєРєР°СѓРЅС‚ РґР»СЏ РїРѕРїРѕР»РЅРµРЅРёСЏ.')
+      alert('Выберите аккаунт для пополнения.')
       return
     }
     if (topupModal.feePercent == null) {
-      alert('РљРѕРјРёСЃСЃРёСЏ РґР»СЏ СЌС‚РѕР№ РїР»Р°С‚С„РѕСЂРјС‹ РЅРµ Р·Р°РґР°РЅР°. РћР±СЂР°С‚РёС‚РµСЃСЊ Рє Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂСѓ.')
+      alert('Комиссия для этой платформы не задана. Обратитесь к администратору.')
       return
     }
     const payload = {
@@ -632,7 +632,7 @@ function bindModal() {
       })
       if (handleAuthFailure(res)) return
       if (!res.ok) {
-        let message = 'РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё. РџРѕРїСЂРѕР±СѓР№С‚Рµ СЃРЅРѕРІР°.'
+        let message = 'Ошибка отправки. Попробуйте снова.'
         try {
           const data = await res.json()
           if (data?.detail) message = data.detail
@@ -644,10 +644,10 @@ function bindModal() {
       }
       const data = await res.json()
       await fetchTopups()
-      alert('РџРѕРїРѕР»РЅРµРЅРёРµ РѕС‚РїСЂР°РІР»РµРЅРѕ РЅР° РѕР±СЂР°Р±РѕС‚РєСѓ.')
+      alert('Пополнение отправлено на обработку.')
       closeTopupModal()
     } catch (e) {
-      alert('РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё. РџРѕРїСЂРѕР±СѓР№С‚Рµ СЃРЅРѕРІР°.')
+      alert('Ошибка отправки. Попробуйте снова.')
     }
   }
 
@@ -661,11 +661,11 @@ function updateFee() {
   const vat = amt * (topupModal.vatPercent / 100)
   const gross = amt + fee + vat
   if (topupModal.feeLabel) {
-    topupModal.feeLabel.textContent = topupModal.feePercent == null ? '—' : String(feePct)
+    topupModal.feeLabel.textContent = topupModal.feePercent == null ? '�' : String(feePct)
   }
-  topupModal.fee.textContent = `в‚ё${fee.toFixed(2)}`
-  topupModal.net.textContent = `в‚ё${gross.toFixed(2)}`
-  topupModal.accountAmount.textContent = `в‚ё${amt.toFixed(2)}`
+  topupModal.fee.textContent = `₸${fee.toFixed(2)}`
+  topupModal.net.textContent = `₸${gross.toFixed(2)}`
+  topupModal.accountAmount.textContent = `₸${amt.toFixed(2)}`
 }
 
 function init() {
@@ -765,9 +765,10 @@ async function fetchFees() {
 }
 
 function normalizeRequestStatus(status) {
-  if (status === 'processing') return 'Р’ СЂР°Р±РѕС‚Рµ'
-  if (status === 'approved') return 'РћС‚РєСЂС‹С‚'
-  if (status === 'rejected') return 'РћС‚РєР»РѕРЅРµРЅ'
-  return 'РќРѕРІР°СЏ'
+  if (status === 'processing') return 'В работе'
+  if (status === 'approved') return 'Открыт'
+  if (status === 'rejected') return 'Отклонен'
+  return 'Новая'
 }
+
 

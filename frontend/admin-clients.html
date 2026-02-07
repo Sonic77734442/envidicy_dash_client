@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Envidicy В· Admin В· РљР»РёРµРЅС‚С‹</title>
+    <title>Envidicy · Admin · Клиенты</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -14,8 +14,8 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">РљР»РёРµРЅС‚С‹</p>
-            <h2>РљР»РёРµРЅС‚С‹ Рё Р·Р°СЏРІРєРё</h2>
+            <p class="eyebrow">Клиенты</p>
+            <h2>Клиенты и заявки</h2>
           </div>
           <span class="chip chip-ghost">clients</span>
         </div>
@@ -23,10 +23,10 @@
           <table class="table">
             <thead>
               <tr>
-                <th>РљР»РёРµРЅС‚</th>
-                <th>Р—Р°СЏРІРєРё</th>
-                <th>РџРѕРїРѕР»РЅРµРЅРѕ</th>
-                <th style="text-align:right;">Р”РµР№СЃС‚РІРёРµ</th>
+                <th>Клиент</th>
+                <th>Заявки</th>
+                <th>Пополнено</th>
+                <th style="text-align:right;">Действие</th>
               </tr>
             </thead>
             <tbody id="admin-clients"></tbody>
@@ -39,21 +39,21 @@
         <div class="modal-dialog modal-large">
           <div class="modal-head">
             <div>
-              <p class="eyebrow">РљР»РёРµРЅС‚</p>
-              <h3 id="client-title">Р Р°СЃРїСЂРµРґРµР»РµРЅРёСЏ</h3>
+              <p class="eyebrow">Клиент</p>
+              <h3 id="client-title">Распределения</h3>
             </div>
-            <button class="btn ghost small" id="client-close">Р—Р°РєСЂС‹С‚СЊ</button>
+            <button class="btn ghost small" id="client-close">Закрыть</button>
           </div>
           <div class="modal-body">
             <div class="grid-3" id="client-summary"></div>
 
             <div class="tabs">
               <div class="tab-buttons">
-  <button class="tab-button active" data-tab="requests">Р—Р°СЏРІРєРё</button>
-  <button class="tab-button" data-tab="topups">РџРѕРїРѕР»РЅРµРЅРёСЏ</button>
-  <button class="tab-button" data-tab="accounts">РђРєРєР°СѓРЅС‚С‹</button>
-  <button class="tab-button" data-tab="fees">РљРѕРјРёСЃСЃРёРё</button>
-  <button class="tab-button" data-tab="profile">РџСЂРѕС„РёР»СЊ</button>
+  <button class="tab-button active" data-tab="requests">Заявки</button>
+  <button class="tab-button" data-tab="topups">Пополнения</button>
+  <button class="tab-button" data-tab="accounts">Аккаунты</button>
+  <button class="tab-button" data-tab="fees">Комиссии</button>
+  <button class="tab-button" data-tab="profile">Профиль</button>
 </div>
 
               <div class="tab-panels">
@@ -62,14 +62,14 @@
                     <table class="table">
                       <thead>
                         <tr>
-                          <th>Р”Р°С‚Р°</th>
-                          <th>РџР»Р°С‚С„РѕСЂРјР°</th>
-                          <th>РђРєРєР°СѓРЅС‚</th>
-                          <th>РЎС‡С‘С‚</th>
-                          <th>РљСѓСЂСЃ</th>
-                          <th>Р’ Р°РєРєР°СѓРЅС‚</th>
-                          <th>РЎС‚Р°С‚СѓСЃ</th>
-                          <th style="text-align:right;">Р”РµР№СЃС‚РІРёРµ</th>
+                          <th>Дата</th>
+                          <th>Платформа</th>
+                          <th>Аккаунт</th>
+                          <th>Счёт</th>
+                          <th>Курс</th>
+                          <th>В аккаунт</th>
+                          <th>Статус</th>
+                          <th style="text-align:right;">Действие</th>
                         </tr>
                       </thead>
                       <tbody id="client-requests"></tbody>
@@ -82,13 +82,13 @@
                     <table class="table">
                       <thead>
                         <tr>
-                          <th>Р”Р°С‚Р°</th>
-                          <th>РџР»Р°С‚С„РѕСЂРјР°</th>
-                          <th>РђРєРєР°СѓРЅС‚</th>
-                          <th>РЎС‡С‘С‚</th>
-                          <th>РљСѓСЂСЃ</th>
-                          <th>Р’ Р°РєРєР°СѓРЅС‚</th>
-                          <th>РЎС‚Р°С‚СѓСЃ</th>
+                          <th>Дата</th>
+                          <th>Платформа</th>
+                          <th>Аккаунт</th>
+                          <th>Счёт</th>
+                          <th>Курс</th>
+                          <th>В аккаунт</th>
+                          <th>Статус</th>
                         </tr>
                       </thead>
                       <tbody id="client-topups"></tbody>
@@ -101,11 +101,11 @@
                     <table class="table">
                       <thead>
                         <tr>
-                          <th>РџР»Р°С‚С„РѕСЂРјР°</th>
-                          <th>РђРєРєР°СѓРЅС‚</th>
-                          <th>Р”РѕРіРѕРІРѕСЂ</th>
-                          <th>Р’Р°Р»СЋС‚Р°</th>
-                          <th>Р‘СЋРґР¶РµС‚</th>
+                          <th>Платформа</th>
+                          <th>Аккаунт</th>
+                          <th>Договор</th>
+                          <th>Валюта</th>
+                          <th>Бюджет</th>
                         </tr>
                       </thead>
                       <tbody id="client-accounts"></tbody>
@@ -124,7 +124,7 @@
                       <input id="fee-google" type="number" step="0.01" min="0" max="100" placeholder="5" />
                     </label>
                     <label class="field">
-                      <span>РЇРЅРґРµРєСЃ, %</span>
+                      <span>Яндекс, %</span>
                       <input id="fee-yandex" type="number" step="0.01" min="0" max="100" placeholder="3" />
                     </label>
                     <label class="field">
@@ -141,7 +141,7 @@
                     </label>
                   </div>
                   <div class="panel-actions" style="margin-top: 12px;">
-                    <button class="btn primary" id="fees-save">Сохранить</button>
+                    <button class="btn primary" id="fees-save">���������</button>
                     <p id="fees-status" class="muted small"></p>
                   </div>
                 </div>
@@ -159,6 +159,7 @@
     <script src="/admin-clients.js"></script>
   </body>
 </html>
+
 
 
 

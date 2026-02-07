@@ -1,4 +1,4 @@
-const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
+﻿const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 let funds = []
 let legalEntities = []
 let invoices = []
@@ -362,3 +362,4 @@ function init() {
 }
 
 init()
+

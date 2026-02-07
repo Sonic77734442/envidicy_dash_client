@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Envidicy В· РџРѕРїРѕР»РЅРµРЅРёРµ Р°РєРєР°СѓРЅС‚РѕРІ</title>
+    <title>Envidicy · Пополнение аккаунтов</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -14,10 +14,10 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">РђРєРєР°СѓРЅС‚С‹</p>
-            <h2>Р’С‹Р±РµСЂРёС‚Рµ РїР»РѕС‰Р°РґРєСѓ</h2>
+            <p class="eyebrow">Аккаунты</p>
+            <h2>Выберите площадку</h2>
           </div>
-          <span class="chip chip-ghost">Р”РѕСЃС‚СѓРї РїРѕ e-mail, СЃС‡С‘С‚ РЅР° СЋСЂР»РёС†Рѕ</span>
+          <span class="chip chip-ghost">Доступ по e-mail, счёт на юрлицо</span>
         </div>
         <div id="topup-list" class="topup-list"></div>
       </section>
@@ -25,22 +25,22 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">РћС‚РєСЂС‹С‚С‹Рµ Р°РєРєР°СѓРЅС‚С‹</p>
-            <h2>РЎС‚Р°С‚СѓСЃС‹ Р·Р°СЏРІРѕРє</h2>
+            <p class="eyebrow">Открытые аккаунты</p>
+            <h2>Статусы заявок</h2>
           </div>
-          <span class="chip chip-ghost">РћР±РЅРѕРІР»СЏРµС‚СЃСЏ РїРѕСЃР»Рµ Р·Р°СЏРІРєРё</span>
+          <span class="chip chip-ghost">Обновляется после заявки</span>
         </div>
         <div class="table-wrapper">
           <table class="table">
             <thead>
               <tr>
-                <th>РџР»Р°С‚С„РѕСЂРјР°</th>
-                <th>РђРєРєР°СѓРЅС‚</th>
-                <th>РљРѕРјРїР°РЅРёСЏ</th>
+                <th>Платформа</th>
+                <th>Аккаунт</th>
+                <th>Компания</th>
                 <th>Email</th>
-                <th>Р‘СЋРґР¶РµС‚</th>
-                <th>РЎС‚Р°С‚СѓСЃ</th>
-                <th style="text-align:right;">Р”РµР№СЃС‚РІРёРµ</th>
+                <th>Бюджет</th>
+                <th>Статус</th>
+                <th style="text-align:right;">Действие</th>
               </tr>
             </thead>
             <tbody id="accounts-body"></tbody>
@@ -52,44 +52,44 @@
         <div class="modal-dialog">
           <div class="modal-head">
             <div>
-              <p class="eyebrow">РћС‚РєСЂС‹С‚СЊ Р°РєРєР°СѓРЅС‚</p>
-              <h3 id="create-modal-title">Р’С‹Р±РµСЂРёС‚Рµ Р°РєРєР°СѓРЅС‚</h3>
+              <p class="eyebrow">Открыть аккаунт</p>
+              <h3 id="create-modal-title">Выберите аккаунт</h3>
             </div>
-            <button class="btn ghost small" id="create-modal-close">Р—Р°РєСЂС‹С‚СЊ</button>
+            <button class="btn ghost small" id="create-modal-close">Закрыть</button>
           </div>
           <div class="modal-body">
             <div id="create-step-tiktok-info" class="modal-step" hidden>
-              <p class="muted small">РџРµСЂРµРґ Р·Р°РїСѓСЃРєРѕРј РЅСѓР¶РµРЅ TikTok Business Center.</p>
+              <p class="muted small">Перед запуском нужен TikTok Business Center.</p>
               <a
                 class="link"
                 href="https://ads.tiktok.com/help/article/create-tiktok-business-center?lang=ru"
                 target="_blank"
                 rel="noopener"
               >
-                РРЅСЃС‚СЂСѓРєС†РёСЏ: СЃРѕР·РґР°РЅРёРµ TikTok Business Center
+                Инструкция: создание TikTok Business Center
               </a>
               <div class="inline-actions">
-                <button class="btn primary" id="create-tiktok-has-account" type="button">РђРєРєР°СѓРЅС‚ РµСЃС‚СЊ</button>
+                <button class="btn primary" id="create-tiktok-has-account" type="button">Аккаунт есть</button>
               </div>
             </div>
             <div id="create-step-mcc" class="modal-step" hidden>
               <label class="field">
-                <span>Email РґР»СЏ РґРѕСЃС‚СѓРїР° РІ MCC</span>
+                <span>Email для доступа в MCC</span>
                 <input id="create-mcc-email" type="email" placeholder="user@company.com" />
               </label>
               <div class="inline-actions">
-                <button class="btn primary" id="create-mcc-send" type="button">РћС‚РїСЂР°РІРёС‚СЊ РґРѕСЃС‚СѓРї</button>
+                <button class="btn primary" id="create-mcc-send" type="button">Отправить доступ</button>
               </div>
             </div>
             <div id="create-step-account" class="modal-step" hidden>
               <div id="create-account-notice" class="notice" hidden></div>
               <div id="create-account-primary">
                 <label class="field">
-                  <span>РџР»Р°С‚С„РѕСЂРјР°</span>
+                  <span>Платформа</span>
                   <input id="create-platform" type="text" disabled />
                 </label>
                 <label class="field">
-                  <span id="create-name-label">Р’РІРµРґРёС‚Рµ РЅР°Р·РІР°РЅРёРµ Р°РєРєР°СѓРЅС‚Р°</span>
+                  <span id="create-name-label">Введите название аккаунта</span>
                   <input id="create-name" type="text" placeholder="Brand Ads KZ" />
                 </label>
                 <div id="create-meta-fields" class="meta-fields" hidden>
@@ -98,106 +98,106 @@
                     <input id="create-bm-id" type="text" placeholder="123456789012345" />
                   </label>
                   <label class="field">
-                    <span>Р“Р•Рћ Р·Р°РїСѓСЃРєР° СЂРµРєР»Р°РјС‹</span>
-                    <input id="create-geo" type="text" placeholder="РљР°Р·Р°С…СЃС‚Р°РЅ" />
+                    <span>ГЕО запуска рекламы</span>
+                    <input id="create-geo" type="text" placeholder="Казахстан" />
                   </label>
                   <label class="field">
-                    <span>РЎС‚СЂР°РЅРёС†Р° Р¤РµР№СЃР±СѓРє</span>
+                    <span>Страница Фейсбук</span>
                     <input id="create-facebook-page" type="url" placeholder="https://facebook.com/brand" />
                   </label>
                   <label class="field">
-                    <span>РЎС‚СЂР°РЅРёС†Р° РРЅСЃС‚Р°РіСЂР°Рј</span>
+                    <span>Страница Инстаграм</span>
                     <input id="create-instagram-page" type="url" placeholder="https://instagram.com/brand" />
                   </label>
                   <label class="field">
-                    <span>Р’С‹ РєРѕРЅРµС‡РЅС‹Р№ СЂРµРєР»Р°РјРѕРґР°С‚РµР»СЊ?</span>
+                    <span>Вы конечный рекламодатель?</span>
                     <select id="create-final-advertiser">
-                      <option value="yes">Р”Р°</option>
-                      <option value="no">РќРµС‚</option>
+                      <option value="yes">Да</option>
+                      <option value="no">Нет</option>
                     </select>
                   </label>
                 </div>
                 <label class="field">
-                  <span>РЎСЃС‹Р»РєР° РЅР° СЃР°Р№С‚ (РѕР±СЏР·Р°С‚РµР»СЊРЅР°СЏ СЃС‚СЂРѕРєР°)</span>
+                  <span>Ссылка на сайт (обязательная строка)</span>
                   <input id="create-website" type="url" placeholder="https://example.com" />
                 </label>
                 <label class="field">
-                  <span>РЎСЃС‹Р»РєР° РЅР° РїСЂРёР»РѕР¶РµРЅРёРµ</span>
+                  <span>Ссылка на приложение</span>
                   <input id="create-app" type="url" placeholder="https://apps.apple.com/app/..." />
                 </label>
                 <div id="create-yandex-fields" class="yandex-fields" hidden>
                   <label class="field">
-                    <span>Mail РїРѕС‡С‚РѕРІРѕРіРѕ РєР»РёРµРЅС‚Р° РЇРЅРґРµРєСЃ</span>
+                    <span>Mail почтового клиента Яндекс</span>
                     <input id="create-yandex-email" type="email" placeholder="user@yandex.ru" />
                   </label>
                 </div>
                 <div id="create-telegram-fields" class="telegram-fields" hidden>
                   <label class="field">
-                    <span>РЎСЃС‹Р»РєР° РЅР° Telegram-РєР°РЅР°Р»</span>
+                    <span>Ссылка на Telegram-канал</span>
                     <input id="create-telegram-channel" type="url" placeholder="https://t.me/your_channel" />
                   </label>
                 </div>
                 <div id="create-tiktok-fields" class="tiktok-fields" hidden>
                   <div class="field">
-                    <span>TikTok Business ID (РґРѕ 10)</span>
+                    <span>TikTok Business ID (до 10)</span>
                     <div id="create-tiktok-id-list" class="access-list"></div>
                     <div class="id-row">
                       <input id="create-tiktok-id" type="text" placeholder="1234567890" />
-                      <button class="btn ghost small" id="create-tiktok-id-add" type="button">Р”РѕР±Р°РІРёС‚СЊ</button>
+                      <button class="btn ghost small" id="create-tiktok-id-add" type="button">Добавить</button>
                     </div>
                   </div>
                   <label class="field">
-                    <span>Р§Р°СЃРѕРІРѕР№ РїРѕСЏСЃ</span>
+                    <span>Часовой пояс</span>
                     <input id="create-tiktok-timezone" type="text" placeholder="Asia/Almaty" />
                   </label>
                   <label class="field">
-                    <span>Р“РµРѕРіСЂР°С„РёСЏ (С‡РµСЂРµР· Р·Р°РїСЏС‚СѓСЋ)</span>
-                    <input id="create-tiktok-geo" type="text" placeholder="РљР°Р·Р°С…СЃС‚Р°РЅ, РЈР·Р±РµРєРёСЃС‚Р°РЅ" />
+                    <span>География (через запятую)</span>
+                    <input id="create-tiktok-geo" type="text" placeholder="Казахстан, Узбекистан" />
                   </label>
                 </div>
                 <div id="create-access-block" class="field">
-                  <span>Р”РѕСЃС‚СѓРїС‹ РїРѕ e-mail</span>
+                  <span>Доступы по e-mail</span>
                   <div id="create-access-list" class="access-list"></div>
                   <div class="access-row">
                     <input id="create-access-email" type="email" placeholder="user@company.com" />
                     <select id="create-access-role">
-                      <option value="standard">РЎС‚Р°РЅРґР°СЂС‚РЅС‹Р№ РґРѕСЃС‚СѓРї</option>
-                      <option value="read">РўРѕР»СЊРєРѕ С‡С‚РµРЅРёРµ</option>
+                      <option value="standard">Стандартный доступ</option>
+                      <option value="read">Только чтение</option>
                     </select>
-                    <button class="btn ghost small" id="create-access-add" type="button">Р”РѕР±Р°РІРёС‚СЊ</button>
+                    <button class="btn ghost small" id="create-access-add" type="button">Добавить</button>
                   </div>
                 </div>
               </div>
               <div id="create-account-final" class="final-details" hidden>
-                <p class="muted small">Р”Р°РЅРЅС‹Рµ РєРѕРЅРµС‡РЅРѕРіРѕ СЂРµРєР»Р°РјРѕРґР°С‚РµР»СЏ</p>
+                <p class="muted small">Данные конечного рекламодателя</p>
                 <label class="field">
-                  <span>РќР°РёРјРµРЅРѕРІР°РЅРёРµ РєРѕРЅРµС‡РЅРѕРіРѕ СЂРµРєР»Р°РјРѕРґР°С‚РµР»СЏ</span>
-                  <input id="create-final-name" type="text" placeholder="РћРћРћ Р РµРєР»Р°РјРѕРґР°С‚РµР»СЊ" />
+                  <span>Наименование конечного рекламодателя</span>
+                  <input id="create-final-name" type="text" placeholder="ООО Рекламодатель" />
                 </label>
                 <label class="field">
-                  <span>Р’ РєР°РєРѕР№ СЃС‚СЂР°РЅРµ РЅР°С…РѕРґРёС‚СЃСЏ РєРѕРЅРµС‡РЅС‹Р№ СЂРµРєР»Р°РјРѕРґР°С‚РµР»СЊ</span>
-                  <input id="create-final-country" type="text" placeholder="РљР°Р·Р°С…СЃС‚Р°РЅ" />
+                  <span>В какой стране находится конечный рекламодатель</span>
+                  <input id="create-final-country" type="text" placeholder="Казахстан" />
                 </label>
                 <label class="field">
-                  <span>РќРѕРјРµСЂ РЅР°Р»РѕРіРѕРїР»Р°С‚РµР»СЊС‰РёРєР° РєРѕРЅРµС‡РЅРѕРіРѕ СЂРµРєР»Р°РјРѕРґР°С‚РµР»СЏ</span>
+                  <span>Номер налогоплательщика конечного рекламодателя</span>
                   <input id="create-final-tax-id" type="text" placeholder="123456789012" />
                 </label>
                 <label class="field">
-                  <span>РђРґСЂРµСЃ РєРѕРЅРµС‡РЅРѕРіРѕ СЂРµРєР»Р°РјРѕРґР°С‚РµР»СЏ</span>
-                  <input id="create-final-address" type="text" placeholder="Р“РѕСЂРѕРґ, СѓР»РёС†Р°, РґРѕРј" />
+                  <span>Адрес конечного рекламодателя</span>
+                  <input id="create-final-address" type="text" placeholder="Город, улица, дом" />
                 </label>
                 <label class="field">
-                  <span>Р¤РѕСЂРјР° СЃРѕР±СЃС‚РІРµРЅРЅРѕСЃС‚Рё РєРѕРЅРµС‡РЅРѕРіРѕ СЂРµРєР»Р°РјРѕРґР°С‚РµР»СЏ</span>
-                  <input id="create-final-ownership" type="text" placeholder="РўРћРћ" />
+                  <span>Форма собственности конечного рекламодателя</span>
+                  <input id="create-final-ownership" type="text" placeholder="ТОО" />
                 </label>
               </div>
             </div>
           </div>
           <div class="modal-actions" id="create-modal-actions">
-            <button class="btn ghost" id="create-modal-cancel">РћС‚РјРµРЅР°</button>
-            <button class="btn primary" id="create-modal-submit">РћС‚РєСЂС‹С‚СЊ</button>
+            <button class="btn ghost" id="create-modal-cancel">Отмена</button>
+            <button class="btn primary" id="create-modal-submit">Открыть</button>
           </div>
-          <p class="muted small">РњС‹ РѕС‚РїСЂР°РІРёРј РґРѕСЃС‚СѓРїС‹ РїРѕ СѓРєР°Р·Р°РЅРЅС‹Рј e-mail Рё РїРѕРґРіРѕС‚РѕРІРёРј Р°РєРєР°СѓРЅС‚ Рє Р·Р°РїСѓСЃРєСѓ.</p>
+          <p class="muted small">Мы отправим доступы по указанным e-mail и подготовим аккаунт к запуску.</p>
         </div>
       </div>
 
@@ -205,28 +205,28 @@
         <div class="modal-dialog">
           <div class="modal-head">
             <div class="platform-chip" id="topup-badge">Meta</div>
-            <button class="btn ghost small" id="topup-close">Р—Р°РєСЂС‹С‚СЊ</button>
+            <button class="btn ghost small" id="topup-close">Закрыть</button>
           </div>
           <div class="modal-body">
             <label class="field">
-              <span>РђРєРєР°СѓРЅС‚</span>
+              <span>Аккаунт</span>
               <select id="topup-account"></select>
             </label>
             <label class="field">
-              <span>Р‘СЋРґР¶РµС‚ РїРѕРїРѕР»РЅРµРЅРёСЏ, в‚ё</span>
+              <span>Бюджет пополнения, ₸</span>
               <input id="topup-budget" type="number" min="0" step="10" placeholder="1000" />
             </label>
             <div class="fee-row">
-              <div class="fee-note">РљРѕРјРёСЃСЃРёСЏ <span id="fee-percent">вЂ”</span>%: <span id="fee-amount">в‚ё0</span></div>
-              <div class="fee-strong">Рљ РѕРїР»Р°С‚Рµ (СЃ РєРѕРјРёСЃСЃРёРµР№): <span id="net-amount">в‚ё0</span></div>
+              <div class="fee-note">Комиссия <span id="fee-percent">—</span>%: <span id="fee-amount">₸0</span></div>
+              <div class="fee-strong">К оплате (с комиссией): <span id="net-amount">₸0</span></div>
             </div>
-            <p class="muted small">РќР° Р°РєРєР°СѓРЅС‚ СЃСЏРґРµС‚: <span id="account-amount">в‚ё0</span></p>
+            <p class="muted small">На аккаунт сядет: <span id="account-amount">₸0</span></p>
           </div>
           <div class="modal-actions">
-            <button class="btn ghost" id="topup-cancel">РћС‚РјРµРЅР°</button>
-            <button class="btn primary" id="topup-submit">РџРѕРїРѕР»РЅРёС‚СЊ</button>
+            <button class="btn ghost" id="topup-cancel">Отмена</button>
+            <button class="btn primary" id="topup-submit">Пополнить</button>
           </div>
-          <p class="muted small">РњС‹ СЃРЅРёРјРµРј 10% Р·Р° СЌРєРІР°Р№СЂРёРЅРі. РќР° Р°РєРєР°СѓРЅС‚ СѓРїР°РґС‘С‚ СЃСѓРјРјР° Рє Р·Р°С‡РёСЃР»РµРЅРёСЋ.</p>
+          <p class="muted small">Мы снимем 10% за эквайринг. На аккаунт упадёт сумма к зачислению.</p>
         </div>
       </div>
     </div>
@@ -235,5 +235,6 @@
     <script src="/topup.js"></script>
   </body>
 </html>
+
 
 
