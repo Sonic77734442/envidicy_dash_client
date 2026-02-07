@@ -221,6 +221,35 @@ function closeAllPopovers() {
   helpPopover?.classList.remove('show')
 }
 
+async function loadHeaderProfile() {
+  const nameEl = document.getElementById('header-name')
+  const emailEl = document.getElementById('header-email')
+  const avatarEl = document.getElementById('header-avatar')
+  const menuName = document.getElementById('profile-menu-name')
+  const menuEmail = document.getElementById('profile-menu-email')
+  try {
+    const res = await fetch(`${window.API_BASE || 'https://envidicy-dash-client.onrender.com'}/profile`, {
+      headers: authHeaders(),
+    })
+    if (!res.ok) return
+    const data = await res.json()
+    const displayName = data.name || data.company || 'Профиль'
+    if (nameEl) nameEl.textContent = displayName
+    if (emailEl) emailEl.textContent = data.email || ''
+    if (menuName) menuName.textContent = displayName
+    if (menuEmail) menuEmail.textContent = data.email || ''
+    if (avatarEl && data.avatar_url) {
+      avatarEl.innerHTML = `<img src="${window.API_BASE || 'https://envidicy-dash-client.onrender.com'}${data.avatar_url}" alt="avatar" />`
+    } else if (avatarEl) {
+      const letter = (data.email || 'U').trim().charAt(0).toUpperCase()
+      avatarEl.textContent = letter || '?'
+    }
+  } catch (e) {
+    if (emailEl) emailEl.textContent = localStorage.getItem('auth_email') || ''
+    if (menuEmail) menuEmail.textContent = localStorage.getItem('auth_email') || ''
+  }
+}
+
 async function markNotificationsRead() {
   try {
     const res = await fetch(`${window.API_BASE || 'https://envidicy-dash-client.onrender.com'}/notifications/read`, {
@@ -281,3 +310,46 @@ enforceAdminRoutes()
 
 
 
+
+async function loadNotifications(isAdmin) {
+  const listEl = document.getElementById('bell-list')
+  const countEl = document.getElementById('bell-count')
+  if (!listEl) return
+  try {
+    const url = isAdmin
+      ? `${window.API_BASE || 'https://envidicy-dash-client.onrender.com'}/admin/notifications`
+      : `${window.API_BASE || 'https://envidicy-dash-client.onrender.com'}/notifications`
+    const res = await fetch(url, { headers: authHeaders() })
+    if (!res.ok) throw new Error('notifications failed')
+    const data = await res.json()
+    const items = Array.isArray(data) ? data : data.items || []
+    const unread = Array.isArray(data) ? items.length : Number(data.unread || 0)
+    if (!items.length) {
+      listEl.textContent = 'Нет уведомлений.'
+      if (countEl) countEl.hidden = true
+      return
+    }
+    if (countEl) {
+      countEl.textContent = String(unread)
+      countEl.hidden = unread <= 0
+    }
+    if (isAdmin) {
+      const requests = items.filter((i) => i.type === 'account_request')
+      const topups = items.filter((i) => i.type === 'topup')
+      listEl.innerHTML = `
+        <div class="dropdown-section">
+          <div class="dropdown-subhead">Заявки на аккаунт</div>
+          ${renderNotifications(requests)}
+        </div>
+        <div class="dropdown-section">
+          <div class="dropdown-subhead">Пополнения</div>
+          ${renderNotifications(topups)}
+        </div>
+      `
+      return
+    }
+    listEl.innerHTML = renderNotifications(items)
+  } catch (e) {
+    listEl.textContent = 'Не удалось загрузить уведомления.'
+  }
+}
