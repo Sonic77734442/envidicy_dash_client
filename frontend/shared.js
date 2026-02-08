@@ -32,7 +32,7 @@
     .join('')
   const hasAuth = Boolean(getAuthToken?.() || localStorage.getItem('auth_token'))
   const authHtml = hasAuth
-    ? '<button class="nav-link nav-exit" id="nav-logout" type="button">Выход</button>'
+    ? '<button class="nav-link nav-exit nav-logout" type="button">Выход</button>'
     : '<a class="nav-link" href="/login">Вход</a>'
   root.innerHTML = `
     <nav class="sidebar">
@@ -99,15 +99,15 @@
       </div>
     </div>
   `
-  const logoutBtn = document.getElementById('nav-logout')
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
+  const logoutButtons = Array.from(document.querySelectorAll('.nav-logout'))
+  logoutButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
       localStorage.removeItem('auth_token')
       localStorage.removeItem('auth_email')
       localStorage.removeItem('auth_user_id')
       window.location.href = '/login'
     })
-  }
+  })
   const navToggle = document.getElementById('nav-toggle')
   const navDrawer = document.getElementById('nav-drawer')
   const navClose = document.getElementById('nav-close')
@@ -124,6 +124,11 @@
   if (navDrawer) {
     navDrawer.addEventListener('click', (event) => {
       if (event.target === navDrawer) navDrawer.classList.remove('show')
+    })
+    navDrawer.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', () => {
+        navDrawer.classList.remove('show')
+      })
     })
   }
   const headerTopup = document.getElementById('header-topup')
