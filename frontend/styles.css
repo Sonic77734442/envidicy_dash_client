@@ -528,6 +528,7 @@ h1 {
   text-transform: none;
   cursor: pointer;
   color: var(--text);
+  white-space: nowrap;
 }
 
 .btn.primary {
@@ -1130,6 +1131,7 @@ h1 {
   border-bottom: 1px solid var(--line);
   text-align: left;
   font-size: 13px;
+  white-space: nowrap;
 }
 
 .collapse {
@@ -1817,7 +1819,10 @@ h1 {
   }
 
   .dropdown-menu {
-    right: 0;
+    right: 8px;
+    left: 8px;
+    width: auto;
+    max-width: 92vw;
   }
 
   .field-input.small {
@@ -1842,13 +1847,9 @@ h1 {
     font-size: 12px;
   }
 
-  .table th {
-    white-space: nowrap;
-  }
-
+  .table th,
   .table td {
-    white-space: normal;
-    word-break: break-word;
+    white-space: nowrap;
   }
 }
 
