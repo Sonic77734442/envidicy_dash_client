@@ -36,12 +36,23 @@
     : '<a class="nav-link" href="/login">Вход</a>'
   root.innerHTML = `
     <nav class="sidebar">
+      <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Menu">☰</button>
       <div class="sidebar-brand">
         <span>Envidicy</span>
       </div>
       <div class="nav">${navHtml}</div>
       <div class="nav-footer">${authHtml}</div>
     </nav>
+    <div class="nav-drawer" id="nav-drawer">
+      <div class="nav-drawer-panel">
+        <div class="nav-drawer-head">
+          <span>Envidicy</span>
+          <button class="btn ghost small" id="nav-close" type="button">Закрыть</button>
+        </div>
+        <div class="nav-drawer-links">${navHtml}</div>
+        <div class="nav-drawer-footer">${authHtml}</div>
+      </div>
+    </div>
     <div class="topbar">
       <div class="topbar-left">
         <p class="eyebrow">${eyebrow ?? ''}</p>
@@ -95,6 +106,24 @@
       localStorage.removeItem('auth_email')
       localStorage.removeItem('auth_user_id')
       window.location.href = '/login'
+    })
+  }
+  const navToggle = document.getElementById('nav-toggle')
+  const navDrawer = document.getElementById('nav-drawer')
+  const navClose = document.getElementById('nav-close')
+  if (navToggle && navDrawer) {
+    navToggle.addEventListener('click', () => {
+      navDrawer.classList.add('show')
+    })
+  }
+  if (navClose && navDrawer) {
+    navClose.addEventListener('click', () => {
+      navDrawer.classList.remove('show')
+    })
+  }
+  if (navDrawer) {
+    navDrawer.addEventListener('click', (event) => {
+      if (event.target === navDrawer) navDrawer.classList.remove('show')
     })
   }
   const headerTopup = document.getElementById('header-topup')
@@ -353,4 +382,3 @@ async function loadNotifications(isAdmin) {
     listEl.textContent = 'Не удалось загрузить уведомления.'
   }
 }
-
