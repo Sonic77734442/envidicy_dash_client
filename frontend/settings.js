@@ -190,7 +190,7 @@ async function renderFees() {
     const rows = [
       { key: 'meta', platform: 'Meta', note: 'Facebook / Instagram' },
       { key: 'google', platform: 'Google Ads', note: 'Search / Display / YouTube' },
-      { key: 'yandex', platform: '������ ������', note: '����� / ���' },
+      { key: 'yandex', platform: 'Яндекс Директ', note: 'Поиск/РСЯ' },
       { key: 'tiktok', platform: 'TikTok Ads', note: 'Video' },
       { key: 'telegram', platform: 'Telegram Ads', note: 'Channels / Bots' },
       { key: 'monochrome', platform: 'Monochrome', note: 'Programmatic' },
@@ -198,7 +198,7 @@ async function renderFees() {
     feesBody.innerHTML = rows
       .map((r) => {
         const val = data?.[r.key]
-        const label = val == null || val === '' ? '�' : `${Number(val).toFixed(2)}%`
+        const label = val == null || val === '' ? '—' : `${Number(val).toFixed(2)}%`
         return `
     <tr>
       <td>${r.platform}</td>
@@ -209,7 +209,7 @@ async function renderFees() {
       })
       .join('')
   } catch (e) {
-    feesBody.innerHTML = `<tr><td colspan="3" class="muted">�� ������� ��������� ��������.</td></tr>`
+    feesBody.innerHTML = `<tr><td colspan="3" class="muted">Не удалось загрузить комиссии.</td></tr>`
   }
 }
 
@@ -262,6 +262,5 @@ function init() {
 }
 
 init()
-
 
 

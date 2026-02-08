@@ -1840,6 +1840,13 @@ h1 {
   .table td {
     padding: 8px;
     font-size: 12px;
+  }
+
+  .table th {
+    white-space: nowrap;
+  }
+
+  .table td {
     white-space: normal;
     word-break: break-word;
   }
