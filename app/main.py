@@ -1511,10 +1511,10 @@ except Exception:
 
 ADMIN_EMAILS = {"romant997@gmail.com", "kolyadov.denis@gmail.com"}
 BENEFICIARY = {
-    "name": "РРџ Art Book Inc.",
+    "name": "ИП Art Book Inc.",
     "bin": "960910300234",
     "iban": "KZ588562204108888284",
-    "bank": "РђРћ Р‘Р°РЅРє Р¦РµРЅС‚СЂРљСЂРµРґРёС‚",
+    "bank": "АО Банк ЦентрКредит",
     "bic": "KCJBKZKX",
     "kbe": "19",
     "currency": "KZT",
@@ -1660,8 +1660,8 @@ def _amount_to_words_ru(amount: float) -> str:
 def _invoice_1c_html(payload: Dict[str, object]) -> str:
     amount = payload.get("amount", "0.00")
     currency = payload.get("currency", "KZT")
-    number = payload.get("number", "вЂ”")
-    date = payload.get("date", "вЂ”")
+    number = payload.get("number", "—")
+    date = payload.get("date", "—")
     beneficiary_name = payload.get("beneficiary_name", "")
     beneficiary_bin = payload.get("beneficiary_bin", "")
     beneficiary_bank = payload.get("beneficiary_bank", "")
@@ -1687,7 +1687,7 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>РЎС‡РµС‚ РЅР° РѕРїР»Р°С‚Сѓ</title>
+    <title>Счет на оплату</title>
     <style>
       @page {{
         size: A4;
@@ -1778,81 +1778,81 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
   </head>
   <body>
     <div class="wrap">
-      <a class="print-btn" href="{pdf_url}">РЎРєР°С‡Р°С‚СЊ PDF</a>
+      <a class="print-btn" href="{pdf_url}">Скачать PDF</a>
       <table class="bank-table">
         <tr>
           <td>
-            <strong>РћР±СЂР°Р·РµС† РїР»Р°С‚РµР¶РЅРѕРіРѕ РїРѕСЂСѓС‡РµРЅРёСЏ</strong><br />
-            Р‘РµРЅРµС„РёС†РёР°СЂ: {beneficiary_name}<br />
-            Р‘РРќ/РРРќ: {beneficiary_bin}
+            <strong>Образец платежного поручения</strong><br />
+            Бенефициар: {beneficiary_name}<br />
+            БИН/ИИН: {beneficiary_bin}
           </td>
           <td>
-            РРРљ<br />
+            ИИК<br />
             <strong>{beneficiary_iban}</strong>
           </td>
           <td class="center">
-            РљР‘Рµ<br />
+            КБе<br />
             <strong>{beneficiary_kbe}</strong>
           </td>
         </tr>
         <tr>
-          <td>Р‘Р°РЅРє Р±РµРЅРµС„РёС†РёР°СЂР°:<br />{beneficiary_bank}</td>
+          <td>Банк бенефициара:<br />{beneficiary_bank}</td>
           <td>
-            Р‘РРљ<br />
+            БИК<br />
             <strong>{beneficiary_bic}</strong>
           </td>
           <td class="center">
-            РљРѕРґ РЅР°Р·РЅР°С‡РµРЅРёСЏ РїР»Р°С‚РµР¶Р°<br />
+            Код назначения платежа<br />
             <strong>{payment_code}</strong>
           </td>
         </tr>
       </table>
 
-      <p class="note">РЎС‡РµС‚ РґРµР№СЃС‚РІРёС‚РµР»РµРЅ РІ С‚РµС‡РµРЅРёРµ 5 СЂР°Р±РѕС‡РёС… РґРЅРµР№</p>
+      <p class="note">Счет действителен в течение 5 рабочих дней</p>
 
-      <h1>РЎС‡РµС‚ РЅР° РѕРїР»Р°С‚Сѓ в„– {number} РѕС‚ {date}</h1>
+      <h1>Счет на оплату № {number} от {date}</h1>
       <div class="title-line"></div>
 
       <table class="no-border">
         <tr>
-          <td>РСЃРїРѕР»РЅРёС‚РµР»СЊ</td>
+          <td>Исполнитель</td>
           <td><strong>
-            Р‘РРќ/РРРќ {beneficiary_bin}, {beneficiary_name}
-            {f", {beneficiary_address}" if beneficiary_address else ""}{f", С‚РµР».: {beneficiary_phone}" if beneficiary_phone else ""}
+            БИН/ИИН {beneficiary_bin}, {beneficiary_name}
+            {f", {beneficiary_address}" if beneficiary_address else ""}{f", тел.: {beneficiary_phone}" if beneficiary_phone else ""}
           </strong></td>
         </tr>
         <tr>
-          <td>Р—Р°РєР°Р·С‡РёРє</td>
-          <td><strong>Р‘РРќ/РРРќ {payer_bin}, {payer_name}, {payer_address}</strong></td>
+          <td>Заказчик</td>
+          <td><strong>БИН/ИИН {payer_bin}, {payer_name}, {payer_address}</strong></td>
         </tr>
         <tr>
-          <td>Р”РѕРіРѕРІРѕСЂ</td>
+          <td>Договор</td>
           <td><strong>{contract_note}</strong></td>
         </tr>
       </table>
 
-      <div class="alert-line">Р’РЅРёРјР°РЅРёРµ! Р’ РЅР°Р·РЅР°С‡РµРЅРёРµ РїР»Р°С‚РµР¶Р° СЃРєРѕРїРёСЂСѓР№С‚Рµ РґР°РЅРЅС‹Рµ, СѓРєР°Р·Р°РЅРЅС‹Рµ РЅРёР¶Рµ.</div>
+      <div class="alert-line">Внимание! В назначение платежа скопируйте данные, указанные ниже.</div>
       <div class="warning">{description}</div>
       <div class="alert-line">
-        Р•СЃР»Рё РЅР°Р·РЅР°С‡РµРЅРёРµ РїР»Р°С‚РµР¶Р° Р±СѓРґРµС‚ СѓРєР°Р·Р°РЅРѕ РЅРµРєРѕСЂСЂРµРєС‚РЅРѕ, РїР»Р°С‚РµР¶ РјРѕР¶РµС‚ Р±С‹С‚СЊ РІРѕР·РІСЂР°С‰РµРЅ РєР°Рє РѕС€РёР±РѕС‡РЅС‹Р№ Р»РёР±Рѕ РІСЂРµРјСЏ РїРѕСЃС‚СѓРїР»РµРЅРёСЏ РґРµРЅРµРі РЅР° СЃС‡РµС‚ РјРѕР¶РµС‚ Р·Р°РЅСЏС‚СЊ РґРѕ 3-С… СЂР°Р±РѕС‡РёС… РґРЅРµР№
+        Если назначение платежа будет указано некорректно, платеж может быть возвращен как ошибочный либо время поступления денег на счет может занять до 3-х рабочих дней
       </div>
 
       <table>
         <thead>
           <tr>
-            <th class="center">в„–</th>
-            <th>РќР°РёРјРµРЅРѕРІР°РЅРёРµ</th>
-            <th class="center">Р•Рґ.</th>
-            <th class="center">РљРѕР»-РІРѕ</th>
-            <th class="right nowrap">Р¦РµРЅР°</th>
-            <th class="right nowrap">РЎСѓРјРјР°</th>
+            <th class="center">№</th>
+            <th>Наименование</th>
+            <th class="center">Ед.</th>
+            <th class="center">Кол-во</th>
+            <th class="right nowrap">Цена</th>
+            <th class="right nowrap">Сумма</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td class="center">1</td>
             <td>{description}</td>
-            <td class="center">СѓСЃР»СѓРіР°</td>
+            <td class="center">услуга</td>
             <td class="center">1</td>
             <td class="right nowrap">{amount}</td>
             <td class="right nowrap">{amount}</td>
@@ -1862,13 +1862,13 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
 
       <table class="no-border">
         <tr>
-          <td class="right"><strong>РС‚РѕРіРѕ:</strong></td>
+          <td class="right"><strong>Итого:</strong></td>
           <td class="right nowrap" style="width:160px;"><strong>{amount}</strong></td>
         </tr>
       </table>
 
-      <p class="small">Р’СЃРµРіРѕ РЅР°РёРјРµРЅРѕРІР°РЅРёР№ 1, РЅР° СЃСѓРјРјСѓ {amount} {currency}</p>
-      <p class="small"><strong>Р’СЃРµРіРѕ Рє РѕРїР»Р°С‚Рµ:</strong> {amount_words}. РЈСЃР»СѓРіРё РСЃРїРѕР»РЅРёС‚РµР»СЏ РќР”РЎ РЅРµ РѕР±Р»Р°РіР°СЋС‚СЃСЏ (Рї.Рї. 46 СЃС‚.394 РќР°Р»РѕРіРѕРІРѕРіРѕ РєРѕРґРµРєСЃР° РљР°Р·Р°С…СЃС‚Р°РЅР°).</p>
+      <p class="small">Всего наименований 1, на сумму {amount} {currency}</p>
+      <p class="small"><strong>Всего к оплате:</strong> {amount_words}. Услуги Исполнителя НДС не облагаются (п.п. 46 ст.394 Налогового кодекса Казахстана).</p>
     </div>
   </body>
 </html>
@@ -1895,7 +1895,7 @@ def _invoice_html(payload: Dict[str, object]) -> str:
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>РЎС‡РµС‚ РЅР° РѕРїР»Р°С‚Сѓ {payload["number"]}</title>
+    <title>Счет на оплату {payload["number"]}</title>
     <style>
       body {{
         font-family: "Times New Roman", serif;
@@ -1957,77 +1957,77 @@ def _invoice_html(payload: Dict[str, object]) -> str:
     </style>
   </head>
   <body>
-    <div class="sheet">
-      <table class="bank-table">
-        <tr>
-          <td rowspan="2">
-            Р‘Р°РЅРє РїРѕР»СѓС‡Р°С‚РµР»СЏ<br />
-            {payload["beneficiary_bank"]}
-          </td>
-          <td>Р‘РРљ</td>
-          <td>{payload["beneficiary_bic"]}</td>
-        </tr>
-        <tr>
-          <td>РРРљ</td>
-          <td>{payload["beneficiary_iban"]}</td>
-        </tr>
-        <tr>
-          <td>
-            Р‘РµРЅРµС„РёС†РёР°СЂ<br />
-            {payload["beneficiary_name"]}
-          </td>
-          <td>Р‘РРќ</td>
-          <td>{payload["beneficiary_bin"]}</td>
-        </tr>
-        <tr>
-          <td>РљР‘Рµ</td>
-          <td colspan="2">{payload["beneficiary_kbe"]}</td>
-        </tr>
-      </table>
+      <div class="sheet">
+        <table class="bank-table">
+          <tr>
+            <td rowspan="2">
+              Банк получателя<br />
+              {payload["beneficiary_bank"]}
+            </td>
+            <td>БИК</td>
+            <td>{payload["beneficiary_bic"]}</td>
+          </tr>
+          <tr>
+            <td>ИИК</td>
+            <td>{payload["beneficiary_iban"]}</td>
+          </tr>
+          <tr>
+            <td>
+              Бенефициар<br />
+              {payload["beneficiary_name"]}
+            </td>
+            <td>БИН</td>
+            <td>{payload["beneficiary_bin"]}</td>
+          </tr>
+          <tr>
+            <td>КБе</td>
+            <td colspan="2">{payload["beneficiary_kbe"]}</td>
+          </tr>
+        </table>
 
-      <h1>РЎС‡РµС‚ РЅР° РѕРїР»Р°С‚Сѓ в„– {payload["number"]} РѕС‚ {payload["date"]}</h1>
+        <h1>Счет на оплату № {payload["number"]} от {payload["date"]}</h1>
 
-      <div class="section">
-        <strong>РџРѕСЃС‚Р°РІС‰РёРє:</strong> {payload["beneficiary_name"]}, РРРќ/Р‘РРќ {payload["beneficiary_bin"]}
+        <div class="section">
+          <strong>Поставщик:</strong> {payload["beneficiary_name"]}, ИИН/БИН {payload["beneficiary_bin"]}
+        </div>
+        <div class="section">
+          <strong>Покупатель:</strong> {payload["payer_name"]}, {payload["payer_bin"]}, {payload["payer_address"]}
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>№</th>
+              <th>Наименование</th>
+              <th>Кол-во</th>
+              <th>Ед.</th>
+              <th>Цена</th>
+              <th>Сумма</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items_html}
+            <tr>
+              <td colspan="5" class="right"><strong>Итого</strong></td>
+              <td class="right"><strong>{payload["amount"]} {payload["currency"]}</strong></td>
+            </tr>
+            <tr>
+              <td colspan="5" class="right">НДС</td>
+              <td class="right">Без НДС</td>
+            </tr>
+            <tr>
+              <td colspan="5" class="right"><strong>Всего к оплате</strong></td>
+              <td class="right"><strong>{payload["amount"]} {payload["currency"]}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="section">
+          Всего наименований {payload["items_count"]}, на сумму {payload["amount"]} {payload["currency"]}.
+        </div>
       </div>
-      <div class="section">
-        <strong>РџРѕРєСѓРїР°С‚РµР»СЊ:</strong> {payload["payer_name"]}, {payload["payer_bin"]}, {payload["payer_address"]}
-      </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>в„–</th>
-            <th>РќР°РёРјРµРЅРѕРІР°РЅРёРµ</th>
-            <th>РљРѕР»-РІРѕ</th>
-            <th>Р•Рґ.</th>
-            <th>Р¦РµРЅР°</th>
-            <th>РЎСѓРјРјР°</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items_html}
-          <tr>
-            <td colspan="5" class="right"><strong>РС‚РѕРіРѕ</strong></td>
-            <td class="right"><strong>{payload["amount"]} {payload["currency"]}</strong></td>
-          </tr>
-          <tr>
-            <td colspan="5" class="right">РќР”РЎ</td>
-            <td class="right">Р‘РµР· РќР”РЎ</td>
-          </tr>
-          <tr>
-            <td colspan="5" class="right"><strong>Р’СЃРµРіРѕ Рє РѕРїР»Р°С‚Рµ</strong></td>
-            <td class="right"><strong>{payload["amount"]} {payload["currency"]}</strong></td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div class="section">
-        Р’СЃРµРіРѕ РЅР°РёРјРµРЅРѕРІР°РЅРёР№ {payload["items_count"]}, РЅР° СЃСѓРјРјСѓ {payload["amount"]} {payload["currency"]}.
-      </div>
-    </div>
-  </body>
-</html>
+    </body>
+  </html>
 """
 
 
@@ -2964,20 +2964,20 @@ def _format_ru_date(date_str: str) -> str:
     except Exception:
         return date_str
     months = [
-        "СЏРЅРІР°СЂСЏ",
-        "С„РµРІСЂР°Р»СЏ",
-        "РјР°СЂС‚Р°",
-        "Р°РїСЂРµР»СЏ",
-        "РјР°СЏ",
-        "РёСЋРЅСЏ",
-        "РёСЋР»СЏ",
-        "Р°РІРіСѓСЃС‚Р°",
-        "СЃРµРЅС‚СЏР±СЂСЏ",
-        "РѕРєС‚СЏР±СЂСЏ",
-        "РЅРѕСЏР±СЂСЏ",
-        "РґРµРєР°Р±СЂСЏ",
+        "января",
+        "февраля",
+        "марта",
+        "апреля",
+        "мая",
+        "июня",
+        "июля",
+        "августа",
+        "сентября",
+        "октября",
+        "ноября",
+        "декабря",
     ]
-    return f"{dt.day} {months[dt.month - 1]} {dt.year} Рі."
+    return f"{dt.day} {months[dt.month - 1]} {dt.year} г."
 
 
 def _wallet_invoice_page_html(
@@ -2992,22 +2992,22 @@ def _wallet_invoice_page_html(
     currency = request_row.get("currency") or "KZT"
     amount_words = _amount_to_words_ru(amount_val)
     date_ru = _format_ru_date(invoice_date)
-    company_name = company.get("name") or "вЂ”"
-    company_bin = company.get("bin") or "вЂ”"
+    company_name = company.get("name") or "—"
+    company_bin = company.get("bin") or "—"
     company_iin = company.get("iin") or ""
     company_address = company.get("legal_address") or company.get("factual_address") or ""
-    company_bank = company.get("bank") or "вЂ”"
-    company_iban = company.get("iban") or "вЂ”"
-    company_bic = company.get("bic") or "вЂ”"
-    company_kbe = company.get("kbe") or "вЂ”"
+    company_bank = company.get("bank") or "—"
+    company_iban = company.get("iban") or "—"
+    company_bic = company.get("bic") or "—"
+    company_kbe = company.get("kbe") or "—"
 
-    customer_name = customer.get("name") or "вЂ”"
-    customer_bin = customer.get("bin") or "вЂ”"
-    customer_address = customer.get("address") or "вЂ”"
+    customer_name = customer.get("name") or "—"
+    customer_bin = customer.get("bin") or "—"
+    customer_address = customer.get("address") or "—"
 
     purpose = (
-        f"Р—Р° СѓСЃР»СѓРіРё РїРѕ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЋ РџСЂРѕРіСЂР°РјРјРЅРѕРіРѕ РѕР±РµСЃРїРµС‡РµРЅРёСЏ РСЃРїРѕР»РЅРёС‚РµР»СЏ \"{company_name}\" "
-        f"РїРѕ СЃС‡РµС‚Сѓ {invoice_number} РѕС‚ {date_ru}, СЃРѕРіР»Р°СЃРЅРѕ РџСѓР±Р»РёС‡РЅРѕРјСѓ РґРѕРіРѕРІРѕСЂСѓ РІРѕР·РјРµР·РґРЅРѕРіРѕ РѕРєР°Р·Р°РЅРёСЏ СѓСЃР»СѓРі РѕС‚ 25.07.2023 Рі."
+        f"За услуги по использованию Программного обеспечения Исполнителя \"{company_name}\" "
+        f"по счету {invoice_number} от {date_ru}, согласно Публичному договору возмездного оказания услуг от 22.04.2025 г."
     )
 
     return f"""
@@ -3016,7 +3016,7 @@ def _wallet_invoice_page_html(
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>РЎС‡РµС‚ РЅР° РѕРїР»Р°С‚Сѓ</title>
+    <title>Счет на оплату</title>
     <style>
       body {{
         font-family: "Arial", sans-serif;
@@ -3100,57 +3100,57 @@ def _wallet_invoice_page_html(
   </head>
   <body>
     <div class="page">
-      <div class="header">РћР±СЂР°Р·РµС† РїР»Р°С‚РµР¶РЅРѕРіРѕ РїРѕСЂСѓС‡РµРЅРёСЏ</div>
+      <div class="header">Образец платежного поручения</div>
       <table class="bank-table">
         <tr>
           <td rowspan="2">
-            Р‘РµРЅРµС„РёС†РёР°СЂ:<br />
+            Бенефициар:<br />
             {company_name}<br />
-            Р‘РРќ: {company_bin}
+            БИН: {company_bin}
           </td>
-          <td>РРРљ<br />{company_iban}</td>
-          <td>РљР±Рµ<br />{company_kbe}</td>
+          <td>ИИК<br />{company_iban}</td>
+          <td>КБе<br />{company_kbe}</td>
         </tr>
         <tr>
-          <td>Р‘РРљ<br />{company_bic}</td>
-          <td>РљРѕРґ РЅР°Р·РЅР°С‡РµРЅРёСЏ РїР»Р°С‚РµР¶Р°<br />853</td>
+          <td>БИК<br />{company_bic}</td>
+          <td>Код назначения платежа<br />853</td>
         </tr>
         <tr>
-          <td colspan="3">Р‘Р°РЅРє Р±РµРЅРµС„РёС†РёР°СЂР°: {company_bank}</td>
+          <td colspan="3">Банк бенефициара: {company_bank}</td>
         </tr>
       </table>
 
-      <div class="subline">РЎС‡РµС‚ РґРµР№СЃС‚РІРёС‚РµР»РµРЅ РІ С‚РµС‡РµРЅРёРµ 5 СЂР°Р±РѕС‡РёС… РґРЅРµР№</div>
+      <div class="subline">Счет действителен в течение 5 рабочих дней</div>
 
-      <div class="section-title">РЎС‡РµС‚ РЅР° РѕРїР»Р°С‚Сѓ в„– {invoice_number} РѕС‚ {date_ru}</div>
+      <div class="section-title">Счет на оплату № {invoice_number} от {date_ru}</div>
 
       <div class="subline">
-        РСЃРїРѕР»РЅРёС‚РµР»СЊ: Р‘РРќ / РРРќ {company_bin}{f", {company_iin}" if company_iin else ""}, {company_name}, {company_address}
+        Исполнитель: БИН / ИИН {company_bin}{f", {company_iin}" if company_iin else ""}, {company_name}, {company_address}
       </div>
       <div class="subline">
-        Р—Р°РєР°Р·С‡РёРє: Р‘РРќ / РРРќ {customer_bin}, {customer_name}, {customer_address}
+        Заказчик: БИН / ИИН {customer_bin}, {customer_name}, {customer_address}
       </div>
-      <div class="subline">Р”РѕРіРѕРІРѕСЂ: РџСѓР±Р»РёС‡РЅС‹Р№ РґРѕРіРѕРІРѕСЂ РІРѕР·РјРµР·РґРЅРѕРіРѕ РѕРєР°Р·Р°РЅРёСЏ СѓСЃР»СѓРі РѕС‚ 25.07.2023 Рі.</div>
+      <div class="subline">Договор: Публичный договор возмездного оказания услуг от 22.04.2025 г.</div>
 
-      <div class="alert">Р’РЅРёРјР°РЅРёРµ! Р’ РЅР°Р·РЅР°С‡РµРЅРёРµ РїР»Р°С‚РµР¶Р° СЃРєРѕРїРёСЂСѓР№С‚Рµ РґР°РЅРЅС‹Рµ, СѓРєР°Р·Р°РЅРЅС‹Рµ РЅРёР¶Рµ.</div>
+      <div class="alert">Внимание! В назначение платежа скопируйте данные, указанные ниже.</div>
       <div class="purpose">{purpose}</div>
 
       <table class="items">
         <thead>
           <tr>
-            <th>в„–</th>
-            <th>РќР°РёРјРµРЅРѕРІР°РЅРёРµ</th>
-            <th>Р•Рґ.</th>
-            <th>РљРѕР»-РІРѕ</th>
-            <th>Р¦РµРЅР°</th>
-            <th>РЎСѓРјРјР°</th>
+            <th>№</th>
+            <th>Наименование</th>
+            <th>Ед.</th>
+            <th>Кол-во</th>
+            <th>Цена</th>
+            <th>Сумма</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>1</td>
-            <td>Р—Р° СѓСЃР»СѓРіРё РїРѕ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЋ РџСЂРѕРіСЂР°РјРјРЅРѕРіРѕ РѕР±РµСЃРїРµС‡РµРЅРёСЏ РСЃРїРѕР»РЅРёС‚РµР»СЏ "{company_name}"</td>
-            <td>СѓСЃР»СѓРіР°</td>
+            <td>За услуги по использованию Программного обеспечения Исполнителя "{company_name}"</td>
+            <td>услуга</td>
             <td>1</td>
             <td>{amount}</td>
             <td>{amount}</td>
@@ -3158,11 +3158,11 @@ def _wallet_invoice_page_html(
         </tbody>
       </table>
 
-      <div class="total">РС‚РѕРіРѕ: {amount} {currency}</div>
+      <div class="total">Итого: {amount} {currency}</div>
 
       <div class="footnote">
-        Р’СЃРµРіРѕ РЅР°РёРјРµРЅРѕРІР°РЅРёР№ 1, РЅР° СЃСѓРјРјСѓ {amount} {currency}<br />
-        Р’СЃРµРіРѕ Рє РѕРїР»Р°С‚Рµ: {amount_words} {currency}. РЈСЃР»СѓРіРё РСЃРїРѕР»РЅРёС‚РµР»СЏ РќР”РЎ РЅРµ РѕР±Р»Р°РіР°СЋС‚СЃСЏ (Рї.Рї. 46 СЃС‚. 394 РќР°Р»РѕРіРѕРІРѕРіРѕ РєРѕРґРµРєСЃР° РљР°Р·Р°С…СЃС‚Р°РЅР°).
+        Всего наименований 1, на сумму {amount} {currency}<br />
+        Всего к оплате: {amount_words} {currency}. Услуги Исполнителя НДС не облагаются (п.п. 46 ст. 394 Налогового кодекса Казахстана).
       </div>
 
       <div class="sign"></div>
@@ -4439,7 +4439,7 @@ def wallet_topup_invoice_page(
             "payer_bin": req.get("client_bin") or "РРРќ/Р‘РРќ РЅРµ СѓРєР°Р·Р°РЅ",
             "payer_address": req.get("client_address") or "РђРґСЂРµСЃ РЅРµ СѓРєР°Р·Р°РЅ",
             "description": description,
-            "contract_note": "РџСѓР±Р»РёС‡РЅС‹Р№ РґРѕРіРѕРІРѕСЂ РІРѕР·РјРµР·РґРЅРѕРіРѕ РѕРєР°Р·Р°РЅРёСЏ СѓСЃР»СѓРі РѕС‚ 25.07.2023 Рі.",
+            "contract_note": "Публичный договор возмездного оказания услуг от 22.04.2025 г.",
             "amount": amount,
             "currency": currency,
             "amount_words": amount_words,
@@ -4547,7 +4547,7 @@ def wallet_topup_invoice_generated_pdf(
             "payer_bin": req.get("client_bin") or "РРРќ/Р‘РРќ РЅРµ СѓРєР°Р·Р°РЅ",
             "payer_address": req.get("client_address") or "РђРґСЂРµСЃ РЅРµ СѓРєР°Р·Р°РЅ",
             "description": description,
-            "contract_note": "РџСѓР±Р»РёС‡РЅС‹Р№ РґРѕРіРѕРІРѕСЂ РІРѕР·РјРµР·РґРЅРѕРіРѕ РѕРєР°Р·Р°РЅРёСЏ СѓСЃР»СѓРі РѕС‚ 25.07.2023 Рі.",
+            "contract_note": "Публичный договор возмездного оказания услуг от 22.04.2025 г.",
             "amount": amount,
             "currency": currency,
             "amount_words": amount_words,
@@ -5774,5 +5774,3 @@ def invoice_by_topup(
 
 
 # Local run: uvicorn app.main:app --reload
-
-
