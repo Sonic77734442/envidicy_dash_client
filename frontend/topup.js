@@ -76,6 +76,11 @@ const createModal = {
   title: document.getElementById('create-modal-title'),
   stepMcc: document.getElementById('create-step-mcc'),
   stepTiktokInfo: document.getElementById('create-step-tiktok-info'),
+  stepMetaInfo: document.getElementById('create-step-meta-info'),
+  stepGoogleInfo: document.getElementById('create-step-google-info'),
+  stepYandexInfo: document.getElementById('create-step-yandex-info'),
+  stepTelegramInfo: document.getElementById('create-step-telegram-info'),
+  stepMonochromeInfo: document.getElementById('create-step-monochrome-info'),
   stepAccount: document.getElementById('create-step-account'),
   actions: document.getElementById('create-modal-actions'),
   mccEmail: document.getElementById('create-mcc-email'),
@@ -366,6 +371,11 @@ function setCreateStep(step) {
   createState.step = step
   createModal.stepMcc.hidden = step !== 'mcc'
   createModal.stepTiktokInfo.hidden = step !== 'tiktok-info'
+  createModal.stepMetaInfo.hidden = true
+  createModal.stepGoogleInfo.hidden = true
+  createModal.stepYandexInfo.hidden = true
+  createModal.stepTelegramInfo.hidden = true
+  createModal.stepMonochromeInfo.hidden = true
   createModal.stepAccount.hidden = step !== 'account'
   createModal.actions.style.display = step === 'account' ? 'flex' : 'none'
   const platformKey = createModal.el.dataset.platform || 'google'
@@ -385,13 +395,19 @@ function updateCreatePlatformUI(platformKey) {
   const isTiktok = platformKey === 'tiktok'
   const isYandex = platformKey === 'yandex'
   const isTelegram = platformKey === 'telegram'
+  const isMonochrome = platformKey === 'monochrome'
   createModal.metaFields.hidden = !isMeta
   createModal.accessBlock.hidden = !isGoogle
   createModal.tiktokFields.hidden = !isTiktok
   createModal.yandexFields.hidden = !isYandex
   createModal.telegramFields.hidden = !isTelegram
   createModal.stepMcc.hidden = !isGoogle && createState.step !== 'mcc'
-  createModal.stepTiktokInfo.hidden = !isTiktok && createState.step !== 'tiktok-info'
+  createModal.stepTiktokInfo.hidden = !isTiktok || createState.step !== 'tiktok-info'
+  createModal.stepMetaInfo.hidden = !isMeta || createState.step !== 'account'
+  createModal.stepGoogleInfo.hidden = !isGoogle || createState.step !== 'account'
+  createModal.stepYandexInfo.hidden = !isYandex || createState.step !== 'account'
+  createModal.stepTelegramInfo.hidden = !isTelegram || createState.step !== 'account'
+  createModal.stepMonochromeInfo.hidden = !isMonochrome || createState.step !== 'account'
   createModal.nameLabel.textContent = isMeta ? 'Название кабинета' : 'Введите название аккаунта'
   if (!isMeta) {
     createState.metaStage = 'primary'
@@ -492,6 +508,7 @@ function bindModal() {
     renderTiktokIds()
   })
   document.getElementById('create-modal-submit').onclick = async () => {
+    if (window.showGlobalLoading) window.showGlobalLoading('Отправляем заявку...')
     const platform = createModal.el.dataset.platform
     const name = createModal.name.value.trim()
     const website = createModal.website.value.trim()
@@ -603,12 +620,15 @@ function bindModal() {
       closeCreateModal()
     } catch (e) {
       alert('Ошибка отправки. Попробуйте снова.')
+    } finally {
+      if (window.hideGlobalLoading) window.hideGlobalLoading()
     }
   }
 
   document.getElementById('topup-close').onclick = closeTopupModal
   document.getElementById('topup-cancel').onclick = closeTopupModal
   document.getElementById('topup-submit').onclick = async () => {
+    if (window.showGlobalLoading) window.showGlobalLoading('Создаем заявку на пополнение...')
     if (!topupModal.account.value) {
       alert('Выберите аккаунт для пополнения.')
       return
@@ -648,6 +668,8 @@ function bindModal() {
       closeTopupModal()
     } catch (e) {
       alert('Ошибка отправки. Попробуйте снова.')
+    } finally {
+      if (window.hideGlobalLoading) window.hideGlobalLoading()
     }
   }
 
@@ -770,5 +792,3 @@ function normalizeRequestStatus(status) {
   if (status === 'rejected') return 'Отклонен'
   return 'Новая'
 }
-
-

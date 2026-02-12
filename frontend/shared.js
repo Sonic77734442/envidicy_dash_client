@@ -255,6 +255,44 @@ function closeAllPopovers() {
   helpPopover?.classList.remove('show')
 }
 
+let globalLoadingTimer = null
+function ensureGlobalLoading() {
+  let el = document.getElementById('global-loading')
+  if (el) return el
+  el = document.createElement('div')
+  el.id = 'global-loading'
+  el.className = 'global-loading'
+  el.innerHTML = `
+    <div class="global-loading-card">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="global-loading-text" id="global-loading-text">Загрузка...</div>
+    </div>
+  `
+  document.body.appendChild(el)
+  return el
+}
+
+function showGlobalLoading(message) {
+  const el = ensureGlobalLoading()
+  const text = document.getElementById('global-loading-text')
+  if (text) text.textContent = message || 'Загрузка...'
+  el.classList.add('show')
+  if (globalLoadingTimer) clearTimeout(globalLoadingTimer)
+  globalLoadingTimer = setTimeout(() => {
+    el.classList.remove('show')
+  }, 60000)
+}
+
+function hideGlobalLoading() {
+  const el = document.getElementById('global-loading')
+  if (el) el.classList.remove('show')
+  if (globalLoadingTimer) clearTimeout(globalLoadingTimer)
+  globalLoadingTimer = null
+}
+
+window.showGlobalLoading = showGlobalLoading
+window.hideGlobalLoading = hideGlobalLoading
+
 async function loadHeaderProfile() {
   const nameEl = document.getElementById('header-name')
   const emailEl = document.getElementById('header-email')

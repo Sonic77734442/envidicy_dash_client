@@ -826,17 +826,32 @@ function normalizeGoogleDevice(value) {
   return str
 }
 
-if (metaLoad) metaLoad.addEventListener('click', loadMetaInsights)
-if (googleLoad) googleLoad.addEventListener('click', loadGoogleInsights)
-if (tiktokLoad) tiktokLoad.addEventListener('click', loadTiktokInsights)
-if (reportLoad) reportLoad.addEventListener('click', loadOverview)
+const withGlobalLoading = async (message, fn) => {
+  if (window.showGlobalLoading) window.showGlobalLoading(message)
+  try {
+    await fn()
+  } finally {
+    if (window.hideGlobalLoading) window.hideGlobalLoading()
+  }
+}
+
+if (metaLoad) metaLoad.addEventListener('click', () => withGlobalLoading('Загружаем данные...', loadMetaInsights))
+if (googleLoad) googleLoad.addEventListener('click', () => withGlobalLoading('Загружаем данные...', loadGoogleInsights))
+if (tiktokLoad) tiktokLoad.addEventListener('click', () => withGlobalLoading('Загружаем данные...', loadTiktokInsights))
+if (reportLoad) reportLoad.addEventListener('click', () => withGlobalLoading('Загружаем отчет...', loadOverview))
 if (reportExport) reportExport.addEventListener('click', () => window.print())
 if (audienceAgeLoad)
-  audienceAgeLoad.addEventListener('click', async () => renderAudienceRows(audienceAgeBody, await loadAudience('age_gender')))
+  audienceAgeLoad.addEventListener('click', () =>
+    withGlobalLoading('Загружаем данные...', async () => renderAudienceRows(audienceAgeBody, await loadAudience('age_gender')))
+  )
 if (audienceGeoLoad)
-  audienceGeoLoad.addEventListener('click', async () => renderAudienceRows(audienceGeoBody, await loadAudience('geo')))
+  audienceGeoLoad.addEventListener('click', () =>
+    withGlobalLoading('Загружаем данные...', async () => renderAudienceRows(audienceGeoBody, await loadAudience('geo')))
+  )
 if (audienceDeviceLoad)
-  audienceDeviceLoad.addEventListener('click', async () => renderAudienceRows(audienceDeviceBody, await loadAudience('device')))
+  audienceDeviceLoad.addEventListener('click', () =>
+    withGlobalLoading('Загружаем данные...', async () => renderAudienceRows(audienceDeviceBody, await loadAudience('device')))
+  )
 initMetaDates()
 loadMetaAccounts()
 
@@ -851,3 +866,4 @@ function formatMoney(value) {
 function formatPct(value) {
   return `${(value * 100).toFixed(2)}%`
 }
+

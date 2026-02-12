@@ -22,8 +22,36 @@ if (form && statusEl) {
     }
 
     statusEl.textContent = 'Создаем аккаунт...'
+    const showLoading =
+      window.showGlobalLoading ||
+      function (message) {
+        let el = document.getElementById('global-loading')
+        if (!el) {
+          el = document.createElement('div')
+          el.id = 'global-loading'
+          el.className = 'global-loading show'
+          el.innerHTML = `
+            <div class="global-loading-card">
+              <div class="spinner" aria-hidden="true"></div>
+              <div class="global-loading-text" id="global-loading-text">${message || 'Загрузка...'}</div>
+            </div>
+          `
+          document.body.appendChild(el)
+          return
+        }
+        const text = document.getElementById('global-loading-text')
+        if (text) text.textContent = message || 'Загрузка...'
+        el.classList.add('show')
+      }
+    const hideLoading =
+      window.hideGlobalLoading ||
+      function () {
+        const el = document.getElementById('global-loading')
+        if (el) el.classList.remove('show')
+      }
+    showLoading('Создаем аккаунт...')
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000)
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
     try {
       const res = await fetch(`${apiBase}/auth/register`, {
         method: 'POST',
@@ -58,6 +86,7 @@ if (form && statusEl) {
       }
       console.error('Register failed', e)
     } finally {
+      hideLoading()
       clearTimeout(timeoutId)
     }
   })

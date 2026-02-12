@@ -1575,6 +1575,51 @@ h1 {
 .icon-btn.refresh {
   color: #f59e0b;
 }
+
+.global-loading {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(7, 10, 20, 0.75);
+  z-index: 7000;
+}
+
+.global-loading.show {
+  display: flex;
+}
+
+.global-loading-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.global-loading-text {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .status {
   padding: 4px 8px;
   border-radius: 999px;
