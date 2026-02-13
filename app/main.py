@@ -1654,7 +1654,7 @@ def _amount_to_words_ru(amount: float) -> str:
     words = " ".join(p for p in parts if p).strip()
     if words:
         words = words[0].upper() + words[1:]
-    return f"{words} С‚РµРЅРіРµ {kop:02d} С‚РёС‹РЅ"
+    return f"{words} тенге {kop:02d} тиын"
 
 
 def _invoice_1c_html(payload: Dict[str, object]) -> str:
