@@ -1431,7 +1431,7 @@ h1 {
   gap: 10px;
   margin-bottom: 12px;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
   max-height: 65vh;
 }
 
