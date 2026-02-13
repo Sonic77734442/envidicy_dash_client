@@ -116,7 +116,7 @@ body {
 .nav-drawer-links {
   display: grid;
   gap: 8px;
-  overflow: auto;
+  overflow: visible;
 }
 
 .nav-drawer-footer {
@@ -1114,7 +1114,7 @@ h1 {
 }
 
 .table-wrapper {
-  overflow: auto;
+  overflow: visible;
   border: 1px solid var(--line);
   border-radius: 12px;
 }
@@ -1149,7 +1149,7 @@ h1 {
 }
 
 .month-grid {
-  overflow: auto;
+  overflow: visible;
   border: 1px solid var(--line);
   border-radius: 12px;
 }
@@ -1430,9 +1430,7 @@ h1 {
   grid-template-columns: 1fr;
   gap: 10px;
   margin-bottom: 12px;
-  overflow-y: auto;
-  overflow-x: auto;
-  max-height: 65vh;
+  overflow: visible;
 }
 
 .modal-step {

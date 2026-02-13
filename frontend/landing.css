@@ -594,7 +594,7 @@ details p {
 
   .nav {
     width: 100%;
-    overflow: auto;
+    overflow: visible;
   }
 
   .card-footer {
