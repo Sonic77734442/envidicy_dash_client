@@ -80,7 +80,7 @@ if (form && statusEl) {
       window.location.href = '/plan'
     } catch (e) {
       if (e.name === 'AbortError') {
-        statusEl.textContent = 'Сервер не отвечает. Проверьте что API запущен на :8000.'
+        statusEl.textContent = 'Сервер не отвечает. Проверьте доступность API.'
       } else {
         statusEl.textContent = 'Не удалось создать аккаунт. Проверьте данные.'
       }

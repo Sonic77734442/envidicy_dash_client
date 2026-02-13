@@ -315,7 +315,7 @@ rate_cards: Dict[PlatformKey, RateCard] = {
     "google_display_cpm": RateCard(
         key="google_display_cpm",
         name="Google Display В· CPM",
-        tagline="Р‘Р°РЅРЅРµСЂРЅР°СЏ СЃРµС‚СЊ (РїРѕРєР°Р·С‹)",
+        tagline="Баннерная сеть (показы)",
         cpm=2.8,
         cpc=0.45,
         cpv=0.03,
@@ -329,7 +329,7 @@ rate_cards: Dict[PlatformKey, RateCard] = {
     "google_display_cpc": RateCard(
         key="google_display_cpc",
         name="Google Display В· CPC",
-        tagline="Р‘Р°РЅРЅРµСЂРЅР°СЏ СЃРµС‚СЊ (РєР»РёРєРё)",
+        tagline="Баннерная сеть (клики)",
         cpm=3.1,
         cpc=0.28,
         cpv=0.03,
@@ -342,8 +342,8 @@ rate_cards: Dict[PlatformKey, RateCard] = {
     ),
     "google_search": RateCard(
         key="google_search",
-        name="Google Search В· РљРѕРЅС‚РµРєСЃС‚",
-        tagline="РџРѕРёСЃРє СЃ РЅР°РјРµСЂРµРЅРёРµРј",
+        name="Google Search · Контекст",
+        tagline="Поиск с намерением",
         cpm=4.2,
         cpc=0.55,
         cpv=0.04,
@@ -357,7 +357,7 @@ rate_cards: Dict[PlatformKey, RateCard] = {
     "google_shopping": RateCard(
         key="google_shopping",
         name="Google Shopping",
-        tagline="РўРѕРІР°СЂРЅС‹Рµ РєР°РјРїР°РЅРёРё",
+        tagline="Товарные кампании",
         cpm=3.6,
         cpc=0.42,
         cpv=0.04,
@@ -371,7 +371,7 @@ rate_cards: Dict[PlatformKey, RateCard] = {
     "youtube": RateCard(
         key="youtube",
         name="YouTube (Generic)",
-        tagline="Р’РёРґРµРѕ Рё Р±СЂРµРЅРґ",
+        tagline="Видео и бренд",
         cpm=2.4,
         cpc=0.48,
         cpv=0.015,
@@ -385,7 +385,7 @@ rate_cards: Dict[PlatformKey, RateCard] = {
     "youtube_6s": RateCard(
         key="youtube_6s",
         name="YouTube 6s Bumper",
-        tagline="РљРѕСЂРѕС‚РєРѕРµ РІРёРґРµРѕ (6s)",
+        tagline="Короткое видео (6s)",
         cpm=2.0,
         cpc=0.52,
         cpv=0.011,
@@ -399,7 +399,7 @@ rate_cards: Dict[PlatformKey, RateCard] = {
     "youtube_15s": RateCard(
         key="youtube_15s",
         name="YouTube 15s",
-        tagline="РЎСЂРµРґРЅСЏСЏ РґР»РёС‚РµР»СЊРЅРѕСЃС‚СЊ (15s)",
+        tagline="Средняя длительность (15s)",
         cpm=2.3,
         cpc=0.5,
         cpv=0.013,
@@ -413,7 +413,7 @@ rate_cards: Dict[PlatformKey, RateCard] = {
     "youtube_30s": RateCard(
         key="youtube_30s",
         name="YouTube 30s",
-        tagline="Р”Р»РёРЅРЅРѕРµ РІРёРґРµРѕ (30s)",
+        tagline="Длинное видео (30s)",
         cpm=2.6,
         cpc=0.46,
         cpv=0.017,
@@ -427,7 +427,7 @@ rate_cards: Dict[PlatformKey, RateCard] = {
     "tiktok": RateCard(
         key="tiktok",
         name="TikTok",
-        tagline="UGC Рё РІРѕРІР»РµС‡РµРЅРёРµ",
+        tagline="UGC и вовлечение",
         cpm=1.9,
         cpc=0.3,
         cpv=0.01,
@@ -441,7 +441,7 @@ rate_cards: Dict[PlatformKey, RateCard] = {
     "telegrad_channels": RateCard(
         key="telegrad_channels",
         name="Telegrad В· Channels",
-        tagline="Р РµРєР»Р°РјР° РІ РєР°РЅР°Р»Р°С…",
+        tagline="Реклама в каналах",
         cpm=0.12,
         cpc=0.32,
         cpv=0.0,
@@ -455,7 +455,7 @@ rate_cards: Dict[PlatformKey, RateCard] = {
     "telegrad_users": RateCard(
         key="telegrad_users",
         name="Telegrad В· Users",
-        tagline="Р РµРєР»Р°РјР° РЅР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ",
+        tagline="Реклама на пользователя",
         cpm=0.12,
         cpc=0.32,
         cpv=0.0,
@@ -469,7 +469,7 @@ rate_cards: Dict[PlatformKey, RateCard] = {
     "telegrad_bots": RateCard(
         key="telegrad_bots",
         name="Telegrad В· Bots",
-        tagline="Р‘РѕС‚С‹ / CPA-like",
+        tagline="Боты / CPA-like",
         cpm=0.10,
         cpc=0.3,
         cpv=0.0,
@@ -483,7 +483,7 @@ rate_cards: Dict[PlatformKey, RateCard] = {
     "telegrad_search": RateCard(
         key="telegrad_search",
         name="Telegrad В· Search",
-        tagline="РџРѕРёСЃРє РІ РјРµСЃСЃРµРЅРґР¶РµСЂРµ",
+        tagline="Поиск в мессенджере",
         cpm=0.08,
         cpc=0.28,
         cpv=0.0,
@@ -496,8 +496,8 @@ rate_cards: Dict[PlatformKey, RateCard] = {
     ),
     "yandex_search": RateCard(
         key="yandex_search",
-        name="РЇРЅРґРµРєСЃ РџРѕРёСЃРє",
-        tagline="РљРѕРЅС‚РµРєСЃС‚, Р РЎРЇ/РџРѕРёСЃРє",
+        name="Яндекс Поиск",
+        tagline="Контекст, РСЯ/Поиск",
         cpm=3.9,
         cpc=0.5,
         cpv=0.0,
@@ -510,8 +510,8 @@ rate_cards: Dict[PlatformKey, RateCard] = {
     ),
     "yandex_display": RateCard(
         key="yandex_display",
-        name="РЇРЅРґРµРєСЃ Р”РёСЂРµРєС‚ В· Р РЎРЇ",
-        tagline="Р‘Р°РЅРЅРµСЂС‹/СЃРјР°СЂС‚-Р±Р°РЅРЅРµСЂС‹",
+        name="Яндекс Директ · РСЯ",
+        tagline="Баннеры/смарт-баннеры",
         cpm=2.6,
         cpc=0.36,
         cpv=0.0,
@@ -627,30 +627,30 @@ def smart_media_mix(goal: Goal, business_type: Optional[BusinessType]) -> Tuple[
             platforms = ["meta", "google_search", "google_display_cpc"]
             split = {"meta": 0.5, "google_search": 0.3, "google_display_cpc": 0.2}
             rationale = {
-                "meta": "РўСЂР°С„РёРє + РґРѕРіСЂРµРІ",
-                "google_search": "РџРµСЂРµС…РІР°С‚ РіРѕСЂСЏС‡РµРіРѕ СЃРїСЂРѕСЃР°",
-                "google_display_cpc": "Р РµРјР°СЂРєРµС‚РёРЅРі Рё РґРѕР±РѕСЂ",
+                "meta": "Трафик + догрев",
+                "google_search": "Перехват горячего спроса",
+                "google_display_cpc": "Ремаркетинг и добор",
             }
             return platforms, split, rationale
         platforms = ["meta", "google_search"]
         split = {"meta": 0.6, "google_search": 0.4}
-        rationale = {"meta": "Р“РµРЅРµСЂР°С†РёСЏ СЃРїСЂРѕСЃР°", "google_search": "РџРµСЂРµС…РІР°С‚ СЃРїСЂРѕСЃР°"}
+        rationale = {"meta": "Генерация спроса", "google_search": "Перехват спроса"}
         return platforms, split, rationale
     if goal == "traffic":
         platforms = ["meta", "telegrad_channels"]
         split = {"meta": 0.6, "telegrad_channels": 0.4}
-        rationale = {"meta": "Р”РµС€РµРІС‹Р№ РѕС…РІР°С‚ Рё РєР»РёРєРё", "telegrad_channels": "Р”РѕРї. С‚СЂР°С„РёРє Рё РєР»РёРєРё"}
+        rationale = {"meta": "Дешевый охват и клики", "telegrad_channels": "Доп. трафик и клики"}
         return platforms, split, rationale
     # leads / default
     platforms = ["meta", "google_search"]
     split = {"meta": 0.6, "google_search": 0.4}
-    rationale = {"meta": "Р“РµРЅРµСЂР°С†РёСЏ СЃРїСЂРѕСЃР°", "google_search": "РџРµСЂРµС…РІР°С‚ СЃРїСЂРѕСЃР°"}
+    rationale = {"meta": "Генерация спроса", "google_search": "Перехват спроса"}
     if bt in {"local", "services"}:
-        rationale["meta"] = "Р“РµРЅРµСЂР°С†РёСЏ Р·Р°СЏРІРѕРє"
-        rationale["google_search"] = "Р“РѕСЂСЏС‡РёР№ СЃРїСЂРѕСЃ"
+        rationale["meta"] = "Генерация заявок"
+        rationale["google_search"] = "Горячий спрос"
     if bt == "b2b":
-        rationale["meta"] = "РЈР·РєР°СЏ Р°СѓРґРёС‚РѕСЂРёСЏ + РІРѕРІР»РµС‡РµРЅРёРµ"
-        rationale["google_search"] = "РЎРїСЂРѕСЃ РїРѕ Р·Р°РїСЂРѕСЃР°Рј"
+        rationale["meta"] = "Узкая аудитория + вовлечение"
+        rationale["google_search"] = "Спрос по запросам"
     return platforms, split, rationale
 
 
@@ -754,14 +754,14 @@ def aggregate_weekly(plan: PlanResponse, facts: List[FactRow], strategy: str = "
 
 
 def estimate_audience_size(req: PlanRequest, platform: PlatformKey) -> Optional[float]:
-    """Fallback РѕС†РµРЅРєР° РѕР±СЉС‘РјР° Р¦Рђ (reach cap) РІ СѓСЃР»РѕРІРёСЏС… РѕС‚СЃСѓС‚СЃС‚РІРёСЏ API."""
+    """Fallback оценка объёма ЦА (reach cap) в условиях отсутствия API."""
     if req.country == "kz":
         base_population = 10_000_000
     elif req.country == "uz":
         base_population = 18_000_000
     else:
         base_population = 35_000_000
-    age_span = 52  # 65-13 Р±Р°Р·РѕРІС‹Р№ РґРёР°РїР°Р·РѕРЅ
+    age_span = 52  # 65-13 базовый диапазон
     age_min = req.age_min or 18
     age_max = req.age_max or 55
     age_factor = max(0.1, min(1.0, (age_max - age_min) / age_span))
@@ -1085,7 +1085,7 @@ def plan_to_workbook(
         ["KPI type", req.kpi_type if req else ""],
         ["KPI target", req.kpi_target if req and req.kpi_target else ""],
         ["UTM template", req.utm_template if req and req.utm_template else ""],
-        ["Pixels configured", "Р”Р°" if req and req.pixels_configured else "РќРµС‚"],
+        ["Pixels configured", "Да" if req and req.pixels_configured else "Нет"],
         ["Channel overrides", json.dumps(req.channel_inputs, ensure_ascii=False) if req and req.channel_inputs else ""],
         ["Prepared by", author],
     ]
@@ -1100,42 +1100,42 @@ def plan_to_workbook(
     vat = (req.vat_percent or 0) / 100 if req else 0
 
     headers = [
-        "РџР»Р°С‚С„РѕСЂРјР°",
-        "Р”РѕР»СЏ, %",
-        "Р‘СЋРґР¶РµС‚ РїР»Р°РЅ, $",
-        "Р‘СЋРґР¶РµС‚ С„Р°РєС‚, $",
-        "РћС…РІР°С‚ РїР»Р°РЅ",
-        "РћС…РІР°С‚ С„Р°РєС‚",
-        "РџРѕРєР°Р·С‹ РїР»Р°РЅ",
-        "РџРѕРєР°Р·С‹ С„Р°РєС‚",
-        "РљР»РёРєРё РїР»Р°РЅ",
-        "РљР»РёРєРё С„Р°РєС‚",
-        "Р›РёРґС‹ РїР»Р°РЅ",
-        "Р›РёРґС‹ С„Р°РєС‚",
-        "РљРѕРЅРІРµСЂСЃРёРё РїР»Р°РЅ",
-        "РљРѕРЅРІРµСЂСЃРёРё С„Р°РєС‚",
-        "РџСЂРѕСЃРјРѕС‚СЂС‹ РїР»Р°РЅ",
-        "РџСЂРѕСЃРјРѕС‚СЂС‹ С„Р°РєС‚",
-        "Viewable РїР»Р°РЅ",
-        "Viewable С„Р°РєС‚",
-        "CPM РїР»Р°РЅ, $",
-        "CPM С„Р°РєС‚, $",
-        "CPC РїР»Р°РЅ, $",
-        "CPC С„Р°РєС‚, $",
-        "CPV РїР»Р°РЅ, $",
-        "CPV С„Р°РєС‚, $",
-        "CTR РїР»Р°РЅ",
-        "CTR С„Р°РєС‚",
-        "CVR РїР»Р°РЅ",
-        "CVR С„Р°РєС‚",
-        "Post-click РїР»Р°РЅ",
-        "Post-click С„Р°РєС‚",
-        "VTR РїР»Р°РЅ",
-        "VTR С„Р°РєС‚",
-        "LTV РїР»Р°РЅ",
-        "LTV С„Р°РєС‚",
-        "Р”РЅРµР№ РѕС‚РєСЂСѓС‚РєРё",
-        "РџРѕРїРѕР»РЅРµРЅРёРµ (gross), $",
+        "Платформа",
+        "Доля, %",
+        "Бюджет план, $",
+        "Бюджет факт, $",
+        "Охват план",
+        "Охват факт",
+        "Показы план",
+        "Показы факт",
+        "Клики план",
+        "Клики факт",
+        "Лиды план",
+        "Лиды факт",
+        "Конверсии план",
+        "Конверсии факт",
+        "Просмотры план",
+        "Просмотры факт",
+        "Viewable план",
+        "Viewable факт",
+        "CPM план, $",
+        "CPM факт, $",
+        "CPC план, $",
+        "CPC факт, $",
+        "CPV план, $",
+        "CPV факт, $",
+        "CTR план",
+        "CTR факт",
+        "CVR план",
+        "CVR факт",
+        "Post-click план",
+        "Post-click факт",
+        "VTR план",
+        "VTR факт",
+        "LTV план",
+        "LTV факт",
+        "Дней открутки",
+        "Пополнение (gross), $",
     ]
     totals = plan.totals
     total_overhead = totals.budget * (fee + vat)
@@ -1151,20 +1151,20 @@ def plan_to_workbook(
     elif req:
         flight = f"{req.period_days} days"
     summary_rows = [
-        ["Budget (net/client)", totals.budget, "Р“Р°СЂР°РЅС‚РёСЏ"],
-        ["РљРѕРјРёСЃСЃРёСЏ/VAT", total_overhead, "Р“Р°СЂР°РЅС‚РёСЏ"],
-        ["Budget (gross)", total_gross, "Р“Р°СЂР°РЅС‚РёСЏ"],
-        ["CPM", cpm, "РџСЂРѕРіРЅРѕР·"],
-        ["CPC", cpc, "РџСЂРѕРіРЅРѕР·"],
-        ["CPL", cpl, "РџСЂРѕРіРЅРѕР·"],
-        ["CPA", cpa, "РџСЂРѕРіРЅРѕР·"],
-        ["Impressions", totals.impressions, "РџСЂРѕРіРЅРѕР·"],
-        ["Reach", totals.reach, "РџСЂРѕРіРЅРѕР·"],
-        ["Clicks", totals.clicks, "РџСЂРѕРіРЅРѕР·"],
-        ["Leads", totals.leads, "РџСЂРѕРіРЅРѕР·"],
-        ["Purchases", totals.conversions, "РџСЂРѕРіРЅРѕР·"],
-        ["Frequency", round(freq, 2) if freq else None, "РџСЂРѕРіРЅРѕР·"],
-        ["Flight", flight, "РџСЂРѕРіРЅРѕР·"],
+        ["Budget (net/client)", totals.budget, "Гарантия"],
+        ["Комиссия/VAT", total_overhead, "Гарантия"],
+        ["Budget (gross)", total_gross, "Гарантия"],
+        ["CPM", cpm, "Прогноз"],
+        ["CPC", cpc, "Прогноз"],
+        ["CPL", cpl, "Прогноз"],
+        ["CPA", cpa, "Прогноз"],
+        ["Impressions", totals.impressions, "Прогноз"],
+        ["Reach", totals.reach, "Прогноз"],
+        ["Clicks", totals.clicks, "Прогноз"],
+        ["Leads", totals.leads, "Прогноз"],
+        ["Purchases", totals.conversions, "Прогноз"],
+        ["Frequency", round(freq, 2) if freq else None, "Прогноз"],
+        ["Flight", flight, "Прогноз"],
     ]
     outputs.append(["Outputs (standard)", "Value", "Type"])
     for row in summary_rows:
@@ -1220,7 +1220,7 @@ def plan_to_workbook(
                 round(line.budget * (1 + fee + vat), 2),  # Top-up with fee/VAT
             ]
         )
-        # Excel formulas so values РѕР±РЅРѕРІР»СЏСЋС‚СЃСЏ С†РµРїРѕС‡РєРѕР№ РІРЅСѓС‚СЂРё С„Р°Р№Р»Р°
+        # Excel formulas so values обновляются цепочкой внутри файла
         # Column mapping for readability:
         # C budget plan, D budget fact, E reach plan, F reach fact, G impr plan, H impr fact,
         # I clicks plan, J clicks fact, K leads plan, L leads fact, M conv plan, N conv fact,
@@ -1247,7 +1247,7 @@ def plan_to_workbook(
         last_data_row = start_row + len(plan.lines) - 1
         outputs.append(
             [
-                "РС‚РѕРіРѕ",
+                "Итого",
                 "",
                 f"=SUM(C{start_row}:C{last_data_row})",
                 f"=SUM(D{start_row}:D{last_data_row})",
@@ -1283,15 +1283,15 @@ def plan_to_workbook(
     # KPI block
     current_row = start_row + len(plan.lines) + 3
     if req and req.kpi_type and req.kpi_target:
-        outputs.cell(row=current_row, column=1, value="KPI РєРѕРЅС‚СЂРѕР»СЊ")
+        outputs.cell(row=current_row, column=1, value="KPI контроль")
         kpi_label = req.kpi_type.upper()
-        outputs.cell(row=current_row, column=2, value="РўРёРї")
+        outputs.cell(row=current_row, column=2, value="Тип")
         outputs.cell(row=current_row, column=3, value=kpi_label)
         outputs.cell(row=current_row + 1, column=2, value="РџР»Р°РЅ")
         outputs.cell(row=current_row + 1, column=3, value=plan.planned_kpi)
-        outputs.cell(row=current_row + 2, column=2, value="Р¦РµР»СЊ")
+        outputs.cell(row=current_row + 2, column=2, value="Цель")
         outputs.cell(row=current_row + 2, column=3, value=req.kpi_target)
-        outputs.cell(row=current_row + 3, column=2, value="РћС‚РєР»РѕРЅРµРЅРёРµ")
+        outputs.cell(row=current_row + 3, column=2, value="Отклонение")
         if plan.planned_kpi:
             outputs.cell(row=current_row + 3, column=3, value=plan.planned_kpi - req.kpi_target)
         current_row += 5
@@ -1324,9 +1324,9 @@ def plan_to_workbook(
         week_to_month.append(m_idx)
         weeks_in_month[m_idx] += 1
 
-    flight.append(["РњРµСЃСЏС‡РЅС‹Р№ СЃРїР»РёС‚ РїРѕ РїР»Р°С‚С„РѕСЂРјР°Рј"])
+    flight.append(["Месячный сплит по платформам"])
     flight.append([])
-    monthly_header = ["РџР»Р°С‚С„РѕСЂРјР°"] + [f"M{i+1}" for i in range(months)]
+    monthly_header = ["Платформа"] + [f"M{i+1}" for i in range(months)]
     flight.append(monthly_header)
     for line in plan.lines:
         weights = month_weights(line.key)
@@ -1334,8 +1334,8 @@ def plan_to_workbook(
         flight.append(row)
 
     flight.append([])
-    flight.append(["РќРµРґРµР»СЊРЅС‹Р№ СЃРїР»РёС‚ РїРѕ РїР»Р°С‚С„РѕСЂРјР°Рј"])
-    weekly_header = ["РџР»Р°С‚С„РѕСЂРјР°"] + [f"W{i+1}" for i in range(weeks)]
+    flight.append(["Недельный сплит по платформам"])
+    weekly_header = ["Платформа"] + [f"W{i+1}" for i in range(weeks)]
     flight.append(weekly_header)
     for line in plan.lines:
         weights = month_weights(line.key)
@@ -1350,18 +1350,18 @@ def plan_to_workbook(
 
     total_gross = sum(l.budget * (1 + fee + vat) for l in plan.lines)
     flight.append([])
-    flight.append(["РС‚РѕРіРѕ Рє РѕРїР»Р°С‚Рµ (СЃ РќР”РЎ/РєРѕРј.)", round(total_gross, 2), f"{total_days} РґРЅРµР№"])
+    flight.append(["Итого к оплате (с НДС/ком.)", round(total_gross, 2), f"{total_days} дней"])
 
     # Creatives sheet
     creatives = wb.create_sheet("Creatives")
-    creatives.append(["РџР»Р°С‚С„РѕСЂРјР°", "Р¤РѕСЂРјР°С‚С‹ / СЂР°Р·РјРµСЂС‹", "РўРµРєСЃС‚", "Р¤Р°Р№Р»С‹ / РїСЂРёРјРµС‡Р°РЅРёСЏ"])
-    creatives.append(["Meta (FB/IG) Feed", "1080x1080 (1:1), 1080x1350 (4:5), 1200x628 (1.91:1)", "Р—Р°РіРѕР»РѕРІРѕРє 25вЂ“40 Р·РЅР°РєРѕРІ, С‚РµРєСЃС‚ РґРѕ 125", "PNG/JPG; С‚РµРєСЃС‚ РЅР° РёР·РѕР±СЂР°Р¶РµРЅРёРё <=20%"])
-    creatives.append(["Meta (FB/IG) Reels/Stories", "1080x1920 (9:16)", "РљРѕСЂРѕС‚РєРёР№ С‚РµРєСЃС‚", "Р’РёРґРµРѕ 9:16 РёР»Рё 4:5, MP4/MOV, РґРѕ 4 Р“Р‘"])
-    creatives.append(["Google Ads РљРњРЎ", "1200x628, 1200x1200, 300x250, 728x90", "Р—Р°РіРѕР»РѕРІРѕРє РґРѕ 30, РѕРїРёСЃР°РЅРёРµ РґРѕ 90", "PNG/JPG; РІС‹СЃРѕРєРѕРµ СЂР°Р·СЂРµС€РµРЅРёРµ"])
-    creatives.append(["Google Ads YouTube", "16:9", "РљРѕСЂРѕС‚РєРёР№ Р·Р°РіРѕР»РѕРІРѕРє", "Р’РёРґРµРѕ MP4, 16:9"])
-    creatives.append(["РЇРЅРґРµРєСЃ Р”РёСЂРµРєС‚ (Р РЎРЇ)", "16:9 РѕС‚ 450x257 РґРѕ 1080x607; 1:1 РѕС‚ 450x450 РґРѕ 1080x1080; 2:3", "Р—Р°РіРѕР»РѕРІРѕРє РґРѕ 56, С‚РµРєСЃС‚ РґРѕ 81", "PNG/JPG"])
-    creatives.append(["TikTok Ads", "9:16 (720x1280 РёР»Рё 1080x1920), 1:1, 16:9", "Р—Р°РіРѕР»РѕРІРѕРє РґРѕ 100", "Р’РёРґРµРѕ MP4/MOV; СЂРµРєРѕРјРµРЅРґ. 9:16"])
-    creatives.append(["Telegram Ads", "РўРѕР»СЊРєРѕ С‚РµРєСЃС‚ + СЃСЃС‹Р»РєР°", "Р—Р°РіРѕР»РѕРІРѕРє РґРѕ 160, С‚РµРєСЃС‚ РґРѕ 160", "Р‘РµР· Р±Р°РЅРЅРµСЂРѕРІ"])
+    creatives.append(["Платформа", "Форматы / размеры", "Текст", "Файлы / примечания"])
+    creatives.append(["Meta (FB/IG) Feed", "1080x1080 (1:1), 1080x1350 (4:5), 1200x628 (1.91:1)", "Заголовок 25–40 знаков, текст до 125", "PNG/JPG; текст на изображении <=20%"])
+    creatives.append(["Meta (FB/IG) Reels/Stories", "1080x1920 (9:16)", "Короткий текст", "Видео 9:16 или 4:5, MP4/MOV, до 4 ГБ"])
+    creatives.append(["Google Ads КМС", "1200x628, 1200x1200, 300x250, 728x90", "Заголовок до 30, описание до 90", "PNG/JPG; высокое разрешение"])
+    creatives.append(["Google Ads YouTube", "16:9", "Короткий заголовок", "Видео MP4, 16:9"])
+    creatives.append(["Яндекс Директ (РСЯ)", "16:9 от 450x257 до 1080x607; 1:1 от 450x450 до 1080x1080; 2:3", "Заголовок до 56, текст до 81", "PNG/JPG"])
+    creatives.append(["TikTok Ads", "9:16 (720x1280 или 1080x1920), 1:1, 16:9", "Заголовок до 100", "Видео MP4/MOV; рекоменд. 9:16"])
+    creatives.append(["Telegram Ads", "Только текст + ссылка", "Заголовок до 160, текст до 160", "Без баннеров"])
 
     # Brand Metrics sheet removed
     # Scenarios sheet removed
@@ -1524,18 +1524,18 @@ BENEFICIARY = {
 def _format_date_ru(dt: datetime) -> str:
     return (
         dt.strftime("%d %B %Y")
-        .replace("January", "СЏРЅРІР°СЂСЏ")
-        .replace("February", "С„РµРІСЂР°Р»СЏ")
+        .replace("January", "января")
+        .replace("February", "февраля")
         .replace("March", "РјР°СЂС‚Р°")
-        .replace("April", "Р°РїСЂРµР»СЏ")
-        .replace("May", "РјР°СЏ")
-        .replace("June", "РёСЋРЅСЏ")
-        .replace("July", "РёСЋР»СЏ")
-        .replace("August", "Р°РІРіСѓСЃС‚Р°")
-        .replace("September", "СЃРµРЅС‚СЏР±СЂСЏ")
-        .replace("October", "РѕРєС‚СЏР±СЂСЏ")
-        .replace("November", "РЅРѕСЏР±СЂСЏ")
-        .replace("December", "РґРµРєР°Р±СЂСЏ")
+        .replace("April", "апреля")
+        .replace("May", "мая")
+        .replace("June", "июня")
+        .replace("July", "июля")
+        .replace("August", "августа")
+        .replace("September", "сентября")
+        .replace("October", "октября")
+        .replace("November", "ноября")
+        .replace("December", "декабря")
     )
 
 
@@ -1598,22 +1598,22 @@ def _format_amount(amount: float) -> str:
 
 def _amount_to_words_ru(amount: float) -> str:
     def _triad_to_words(n: int, feminine: bool = False) -> str:
-        units_m = ["", "РѕРґРёРЅ", "РґРІР°", "С‚СЂРё", "С‡РµС‚С‹СЂРµ", "РїСЏС‚СЊ", "С€РµСЃС‚СЊ", "СЃРµРјСЊ", "РІРѕСЃРµРјСЊ", "РґРµРІСЏС‚СЊ"]
-        units_f = ["", "РѕРґРЅР°", "РґРІРµ", "С‚СЂРё", "С‡РµС‚С‹СЂРµ", "РїСЏС‚СЊ", "С€РµСЃС‚СЊ", "СЃРµРјСЊ", "РІРѕСЃРµРјСЊ", "РґРµРІСЏС‚СЊ"]
+        units_m = ["", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"]
+        units_f = ["", "одна", "две", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"]
         teens = [
-            "РґРµСЃСЏС‚СЊ",
-            "РѕРґРёРЅРЅР°РґС†Р°С‚СЊ",
-            "РґРІРµРЅР°РґС†Р°С‚СЊ",
-            "С‚СЂРёРЅР°РґС†Р°С‚СЊ",
-            "С‡РµС‚С‹СЂРЅР°РґС†Р°С‚СЊ",
-            "РїСЏС‚РЅР°РґС†Р°С‚СЊ",
-            "С€РµСЃС‚РЅР°РґС†Р°С‚СЊ",
-            "СЃРµРјРЅР°РґС†Р°С‚СЊ",
-            "РІРѕСЃРµРјРЅР°РґС†Р°С‚СЊ",
-            "РґРµРІСЏС‚РЅР°РґС†Р°С‚СЊ",
+            "десять",
+            "одиннадцать",
+            "двенадцать",
+            "тринадцать",
+            "четырнадцать",
+            "пятнадцать",
+            "шестнадцать",
+            "семнадцать",
+            "восемнадцать",
+            "девятнадцать",
         ]
-        tens = ["", "", "РґРІР°РґС†Р°С‚СЊ", "С‚СЂРёРґС†Р°С‚СЊ", "СЃРѕСЂРѕРє", "РїСЏС‚СЊРґРµСЃСЏС‚", "С€РµСЃС‚СЊРґРµСЃСЏС‚", "СЃРµРјСЊРґРµСЃСЏС‚", "РІРѕСЃРµРјСЊРґРµСЃСЏС‚", "РґРµРІСЏРЅРѕСЃС‚Рѕ"]
-        hundreds = ["", "СЃС‚Рѕ", "РґРІРµСЃС‚Рё", "С‚СЂРёСЃС‚Р°", "С‡РµС‚С‹СЂРµСЃС‚Р°", "РїСЏС‚СЊСЃРѕС‚", "С€РµСЃС‚СЊСЃРѕС‚", "СЃРµРјСЊСЃРѕС‚", "РІРѕСЃРµРјСЊСЃРѕС‚", "РґРµРІСЏС‚СЊСЃРѕС‚"]
+        tens = ["", "", "двадцать", "тридцать", "сорок", "пятьдесят", "шестьдесят", "семьдесят", "восемьдесят", "девяносто"]
+        hundreds = ["", "сто", "двести", "триста", "четыреста", "пятьсот", "шестьсот", "семьсот", "восемьсот", "девятьсот"]
         words = []
         words.append(hundreds[n // 100])
         n = n % 100
@@ -1645,10 +1645,10 @@ def _amount_to_words_ru(amount: float) -> str:
     remainder = rub % 1_000
     if millions:
         parts.append(_triad_to_words(millions))
-        parts.append(_group_word(millions, ("РјРёР»Р»РёРѕРЅ", "РјРёР»Р»РёРѕРЅР°", "РјРёР»Р»РёРѕРЅРѕРІ")))
+        parts.append(_group_word(millions, ("миллион", "миллиона", "миллионов")))
     if thousands:
         parts.append(_triad_to_words(thousands, feminine=True))
-        parts.append(_group_word(thousands, ("С‚С‹СЃСЏС‡Р°", "С‚С‹СЃСЏС‡Рё", "С‚С‹СЃСЏС‡")))
+        parts.append(_group_word(thousands, ("тысяча", "тысячи", "тысяч")))
     if remainder or not parts:
         parts.append(_triad_to_words(remainder))
     words = " ".join(p for p in parts if p).strip()
@@ -3486,7 +3486,7 @@ def admin_notifications(admin_user=Depends(get_admin_user)):
                 "type": "account_request",
                 "id": row["id"],
                 "created_at": row["created_at"],
-                "title": "РќРѕРІР°СЏ Р·Р°СЏРІРєР°",
+                "title": "Новая заявка",
                 "status": row["status"],
                 "platform": row["platform"],
                 "name": row["name"],
@@ -3499,7 +3499,7 @@ def admin_notifications(admin_user=Depends(get_admin_user)):
                 "type": "topup",
                 "id": row["id"],
                 "created_at": row["created_at"],
-                "title": "РќРѕРІР°СЏ Р·Р°СЏРІРєР° РЅР° РїРѕРїРѕР»РЅРµРЅРёРµ",
+                "title": "Новая заявка на пополнение",
                 "status": row["status"],
                 "amount": row["amount_net"] or row["amount_input"],
                 "currency": row["currency"],
@@ -4419,8 +4419,8 @@ def wallet_topup_invoice_page(
         company = _get_company_profile(conn)
         company_name = company.get("name") or BENEFICIARY["name"]
         description = (
-            f"Р—Р° СѓСЃР»СѓРіРё РїРѕ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЋ РџСЂРѕРіСЂР°РјРјРЅРѕРіРѕ РѕР±РµСЃРїРµС‡РµРЅРёСЏ РСЃРїРѕР»РЅРёС‚РµР»СЏ "
-            f"\"{company_name}\" РїРѕ СЃС‡РµС‚Сѓ {number} РѕС‚ {dt.strftime('%d.%m.%Y')} Рі."
+            f"За услуги по использованию Программного обеспечения Исполнителя "
+            f"\"{company_name}\" по счету {number} от {dt.strftime('%d.%m.%Y')} г."
         )
         beneficiary_bin = company.get("bin") or company.get("iin") or BENEFICIARY["bin"]
         payload = {
@@ -4435,9 +4435,9 @@ def wallet_topup_invoice_page(
             "beneficiary_kbe": company.get("kbe") or BENEFICIARY["kbe"],
             "beneficiary_address": company.get("legal_address") or company.get("factual_address") or "",
             "payment_code": "853",
-            "payer_name": req.get("client_name") or "РџР»Р°С‚РµР»СЊС‰РёРє РЅРµ СѓРєР°Р·Р°РЅ",
-            "payer_bin": req.get("client_bin") or "РРРќ/Р‘РРќ РЅРµ СѓРєР°Р·Р°РЅ",
-            "payer_address": req.get("client_address") or "РђРґСЂРµСЃ РЅРµ СѓРєР°Р·Р°РЅ",
+            "payer_name": req.get("client_name") or "Плательщик не указан",
+            "payer_bin": req.get("client_bin") or "ИИН/БИН не указан",
+            "payer_address": req.get("client_address") or "Адрес не указан",
             "description": description,
             "contract_note": "Публичный договор возмездного оказания услуг от 22.04.2025 г.",
             "amount": amount,
@@ -4528,8 +4528,8 @@ def wallet_topup_invoice_generated_pdf(
         company = _get_company_profile(conn)
         beneficiary_bin = company.get("bin") or company.get("iin") or BENEFICIARY["bin"]
         description = (
-            f"Р—Р° СѓСЃР»СѓРіРё РїРѕ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЋ РџСЂРѕРіСЂР°РјРјРЅРѕРіРѕ РѕР±РµСЃРїРµС‡РµРЅРёСЏ РСЃРїРѕР»РЅРёС‚РµР»СЏ "
-            f"\"{company.get('name') or BENEFICIARY['name']}\" РїРѕ СЃС‡РµС‚Сѓ {number} РѕС‚ {dt.strftime('%d.%m.%Y')} Рі."
+            f"За услуги по использованию Программного обеспечения Исполнителя "
+            f"\"{company.get('name') or BENEFICIARY['name']}\" по счету {number} от {dt.strftime('%d.%m.%Y')} г."
         )
         payload = {
             "request_id": request_id,
@@ -4543,9 +4543,9 @@ def wallet_topup_invoice_generated_pdf(
             "beneficiary_kbe": company.get("kbe") or BENEFICIARY["kbe"],
             "beneficiary_address": company.get("legal_address") or company.get("factual_address") or "",
             "payment_code": "853",
-            "payer_name": req.get("client_name") or "РџР»Р°С‚РµР»СЊС‰РёРє РЅРµ СѓРєР°Р·Р°РЅ",
-            "payer_bin": req.get("client_bin") or "РРРќ/Р‘РРќ РЅРµ СѓРєР°Р·Р°РЅ",
-            "payer_address": req.get("client_address") or "РђРґСЂРµСЃ РЅРµ СѓРєР°Р·Р°РЅ",
+            "payer_name": req.get("client_name") or "Плательщик не указан",
+            "payer_bin": req.get("client_bin") or "ИИН/БИН не указан",
+            "payer_address": req.get("client_address") or "Адрес не указан",
             "description": description,
             "contract_note": "Публичный договор возмездного оказания услуг от 22.04.2025 г.",
             "amount": amount,
@@ -5225,7 +5225,7 @@ def admin_export_requests(admin_user=Depends(get_admin_user)):
     wb = Workbook()
     ws = wb.active
     ws.title = "Account Requests"
-    ws.append(["Р”Р°С‚Р°", "РљР»РёРµРЅС‚", "РџР»Р°С‚С„РѕСЂРјР°", "РќР°Р·РІР°РЅРёРµ", "РЎС‚Р°С‚СѓСЃ", "РњРµРЅРµРґР¶РµСЂ"])
+    ws.append(["Дата", "Клиент", "Платформа", "Название", "Статус", "Менеджер"])
     with get_conn() as conn:
         rows = conn.execute(
             """
@@ -5264,7 +5264,7 @@ def admin_export_accounts(admin_user=Depends(get_admin_user)):
     wb = Workbook()
     ws = wb.active
     ws.title = "Accounts"
-    ws.append(["Р”Р°С‚Р°", "РљР»РёРµРЅС‚", "РџР»Р°С‚С„РѕСЂРјР°", "РќР°Р·РІР°РЅРёРµ", "Р”РѕРіРѕРІРѕСЂ/РєРѕРґ", "External ID"])
+    ws.append(["Дата", "Клиент", "Платформа", "Название", "Договор/код", "External ID"])
     with get_conn() as conn:
         rows = conn.execute(
             """
@@ -5307,14 +5307,14 @@ def admin_export_topups(admin_user=Depends(get_admin_user)):
         [
             "Р”Р°С‚Р°",
             "РљР»РёРµРЅС‚",
-            "РџР»Р°С‚С„РѕСЂРјР°",
-            "РђРєРєР°СѓРЅС‚",
-            "РЎСѓРјРјР°",
-            "РљРѕРјРёСЃСЃРёСЏ",
-            "РќР”РЎ",
-            "Рљ РѕРїР»Р°С‚Рµ",
-            "Р’Р°Р»СЋС‚Р°",
-            "РЎС‚Р°С‚СѓСЃ",
+            "Платформа",
+            "Аккаунт",
+            "Сумма",
+            "Комиссия",
+            "НДС",
+            "К оплате",
+            "Валюта",
+            "Статус",
         ]
     )
     with get_conn() as conn:
@@ -5576,16 +5576,16 @@ def invoice_preview():
         "beneficiary_bic": company.get("bic") or BENEFICIARY["bic"],
         "beneficiary_kbe": company.get("kbe") or BENEFICIARY["kbe"],
         "payer_name": "РћРћРћ РљР»РёРµРЅС‚",
-        "payer_bin": "РРРќ/Р‘РРќ РЅРµ СѓРєР°Р·Р°РЅ",
-        "payer_address": "РђРґСЂРµСЃ РЅРµ СѓРєР°Р·Р°РЅ",
-        "description": "РџРѕРїРѕР»РЅРµРЅРёРµ СЂРµРєР»Р°РјРЅРѕРіРѕ Р°РєРєР°СѓРЅС‚Р°",
+        "payer_bin": "ИИН/БИН не указан",
+        "payer_address": "Адрес не указан",
+        "description": "Пополнение рекламного аккаунта",
         "amount": _format_amount(150000),
         "currency": company.get("currency") or BENEFICIARY["currency"],
         "items": [
             {
-                "description": "РџРѕРїРѕР»РЅРµРЅРёРµ СЂРµРєР»Р°РјРЅРѕРіРѕ Р°РєРєР°СѓРЅС‚Р°",
+                "description": "Пополнение рекламного аккаунта",
                 "qty": "1",
-                "unit": "СѓСЃР».",
+                "unit": "усл.",
                 "price": _format_amount(150000),
                 "amount": _format_amount(150000),
             }
@@ -5753,17 +5753,17 @@ def invoice_by_topup(
             "beneficiary_iban": company.get("iban") or BENEFICIARY["iban"],
             "beneficiary_bic": company.get("bic") or BENEFICIARY["bic"],
             "beneficiary_kbe": company.get("kbe") or BENEFICIARY["kbe"],
-            "payer_name": "РџР»Р°С‚РµР»СЊС‰РёРє РЅРµ СѓРєР°Р·Р°РЅ",
-            "payer_bin": "РРРќ/Р‘РРќ РЅРµ СѓРєР°Р·Р°РЅ",
-            "payer_address": "РђРґСЂРµСЃ РЅРµ СѓРєР°Р·Р°РЅ",
-            "description": f"РџРѕРїРѕР»РЅРµРЅРёРµ Р°РєРєР°СѓРЅС‚Р° {row['account_name']}",
+            "payer_name": "Плательщик не указан",
+            "payer_bin": "ИИН/БИН не указан",
+            "payer_address": "Адрес не указан",
+            "description": f"Пополнение аккаунта {row['account_name']}",
             "amount": _format_amount(row["amount_input"]),
             "currency": company.get("currency") or BENEFICIARY["currency"],
             "items": [
                 {
-                    "description": f"РџРѕРїРѕР»РЅРµРЅРёРµ Р°РєРєР°СѓРЅС‚Р° {row['account_name']}",
+                    "description": f"Пополнение аккаунта {row['account_name']}",
                     "qty": "1",
-                    "unit": "СѓСЃР».",
+                    "unit": "усл.",
                     "price": _format_amount(row["amount_input"]),
                     "amount": _format_amount(row["amount_input"]),
                 }
