@@ -5538,7 +5538,7 @@ def admin_update_topup_status(topup_id: int, status: TopUpStatus, admin_user=Dep
             gross_amount = (row["amount_input"] or 0) + fee_amount + vat_amount
             wallet = _get_or_create_wallet(conn, row["user_id"])
             if float(wallet["balance"]) < gross_amount:
-                raise HTTPException(status_code=400, detail="Insufficient wallet balance")
+                raise HTTPException(status_code=400, detail="Недостаточно средств на кошельке для завершения пополнения")
             new_balance = float(wallet["balance"]) - gross_amount
             conn.execute(
                 "UPDATE wallets SET balance=?, updated_at=CURRENT_TIMESTAMP WHERE user_id=?",
@@ -5575,6 +5575,45 @@ def admin_update_topup_status(topup_id: int, status: TopUpStatus, admin_user=Dep
             )
         conn.commit()
         return {"id": topup_id, "status": status.value}
+
+
+@app.get("/admin/topups/profit-summary")
+def admin_topups_profit_summary(admin_user=Depends(get_admin_user)):
+    if not get_conn:
+        return {"overall": {}, "by_platform": []}
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT
+              a.platform as platform,
+              t.currency as currency,
+              COUNT(*) as completed_count,
+              COALESCE(SUM(t.amount_input), 0) as amount_input_total,
+              COALESCE(SUM((t.amount_input * t.fee_percent) / 100.0), 0) as fee_total
+            FROM topups t
+            JOIN ad_accounts a ON a.id = t.account_id
+            WHERE t.status='completed'
+            GROUP BY a.platform, t.currency
+            ORDER BY fee_total DESC
+            """
+        ).fetchall()
+        by_platform = [dict(row) for row in rows]
+
+        overall_rows = conn.execute(
+            """
+            SELECT
+              t.currency as currency,
+              COUNT(*) as completed_count,
+              COALESCE(SUM(t.amount_input), 0) as amount_input_total,
+              COALESCE(SUM((t.amount_input * t.fee_percent) / 100.0), 0) as fee_total
+            FROM topups t
+            WHERE t.status='completed'
+            GROUP BY t.currency
+            ORDER BY fee_total DESC
+            """
+        ).fetchall()
+        overall = [dict(row) for row in overall_rows]
+        return {"overall": overall, "by_platform": by_platform}
 
 
 @app.patch("/admin/topups/{topup_id}")
@@ -5881,9 +5920,9 @@ def create_topup(payload: TopupCreatePayload, current_user=Depends(get_current_u
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    f"Insufficient wallet balance: required {gross_amount:.2f} {currency}, "
-                    f"available {wallet_balance:.2f} {currency}. "
-                    f"Max topup amount is {max_input:.2f} {currency} for current fees."
+                    f"Недостаточно средств на кошельке: требуется {gross_amount:.2f} {currency}, "
+                    f"доступно {wallet_balance:.2f} {currency}. "
+                    f"Максимальная сумма пополнения при текущей комиссии: {max_input:.2f} {currency}."
                 ),
             )
         amount_net = amount_input

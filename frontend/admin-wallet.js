@@ -13,6 +13,9 @@ const walletsLowBody = document.getElementById('admin-wallets-low')
 const walletsLowStatus = document.getElementById('admin-wallets-low-status')
 const walletTxBody = document.getElementById('admin-wallet-transactions')
 const walletTxStatus = document.getElementById('admin-wallet-transactions-status')
+const profitBody = document.getElementById('admin-profit-body')
+const profitStatus = document.getElementById('admin-profit-status')
+const profitOverall = document.getElementById('admin-profit-overall')
 const walletEmail = document.getElementById('wallet-email')
 const walletAmount = document.getElementById('wallet-amount')
 const walletNote = document.getElementById('wallet-note')
@@ -65,6 +68,18 @@ async function fetchWalletTransactions() {
     renderWalletTransactions(data)
   } catch (e) {
     if (walletTxStatus) walletTxStatus.textContent = 'Ошибка загрузки истории.'
+  }
+}
+
+async function fetchProfitSummary() {
+  try {
+    const res = await fetch(`${apiBase}/admin/topups/profit-summary`, { headers: authHeadersSafe() })
+    if (handleAuthFailure(res)) return
+    if (!res.ok) throw new Error('Failed to load profit summary')
+    const data = await res.json()
+    renderProfitSummary(data)
+  } catch (e) {
+    if (profitStatus) profitStatus.textContent = 'Ошибка загрузки сводки по комиссии.'
   }
 }
 
@@ -122,6 +137,39 @@ function renderWalletTransactions(rows) {
     .join('')
 }
 
+function renderProfitSummary(data) {
+  const byPlatform = Array.isArray(data?.by_platform) ? data.by_platform : []
+  const overall = Array.isArray(data?.overall) ? data.overall : []
+  if (profitBody) {
+    if (!byPlatform.length) {
+      profitBody.innerHTML = '<tr><td colspan="5">Нет данных.</td></tr>'
+    } else {
+      profitBody.innerHTML = byPlatform
+        .map(
+          (row) => `
+            <tr>
+              <td>${row.platform || '—'}</td>
+              <td>${row.currency || '—'}</td>
+              <td>${row.completed_count || 0}</td>
+              <td>${formatMoney(row.amount_input_total)} ${row.currency || ''}</td>
+              <td>${formatMoney(row.fee_total)} ${row.currency || ''}</td>
+            </tr>
+          `
+        )
+        .join('')
+    }
+  }
+  if (profitOverall) {
+    profitOverall.innerHTML = ''
+    overall.forEach((row) => {
+      const chip = document.createElement('span')
+      chip.className = 'chip chip-ghost'
+      chip.textContent = `${row.currency}: ${formatMoney(row.fee_total)}`
+      profitOverall.appendChild(chip)
+    })
+  }
+}
+
 async function adjustWallet(sign) {
   if (!walletEmail || !walletAmount) return
   const email = walletEmail.value?.trim()
@@ -163,3 +211,4 @@ function formatMoney(value) {
 fetchWallets()
 fetchWalletsLow()
 fetchWalletTransactions()
+fetchProfitSummary()

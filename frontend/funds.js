@@ -2,6 +2,7 @@
 let funds = []
 let legalEntities = []
 let invoices = []
+let topups = []
 
 renderHeader({
   eyebrow: 'Envidicy · Billing Desk',
@@ -161,6 +162,8 @@ function renderTable(rows) {
       <td>${r.account}</td>
       <td>${r.type}</td>
       <td>${fmtAmt(r.amount, r.currency)}</td>
+      <td>${r.acqPercent != null ? `${Number(r.acqPercent).toFixed(2)}%` : '—'}</td>
+      <td>${r.acqAmount != null ? fmtAmt(r.acqAmount, r.currency) : '—'}</td>
       <td>${r.fx ?? '-'}</td>
       <td>${r.currency}</td>
       <td>${r.note || ''}</td>
@@ -244,6 +247,13 @@ function renderSummary(rows) {
   const chips = [
     { label: 'USD итого', value: fmtAmt(totalUsd, 'USD') },
     { label: 'KZT итого', value: fmtAmt(totalKzt, 'KZT') },
+    {
+      label: 'Эквайринг удержано',
+      value: fmtAmt(
+        rows.reduce((acc, r) => acc + Number(r.acqAmount || 0), 0),
+        'KZT'
+      ),
+    },
   ]
   chips.forEach((c) => {
     const span = document.createElement('span')
@@ -287,7 +297,38 @@ async function fetchFunds() {
     return
   }
   const data = await res.json()
+  const feeMap = new Map()
+  topups
+    .filter((t) => t.status === 'completed')
+    .forEach((t) => {
+      const fee = Number(t.amount_input || 0) * (Number(t.fee_percent || 0) / 100)
+      const vat = Number(t.amount_input || 0) * (Number(t.vat_percent || 0) / 100)
+      const gross = Number(t.amount_input || 0) + fee + vat
+      const key = `${t.account_id}:${gross.toFixed(2)}`
+      const current = feeMap.get(key) || []
+      current.push({
+        feePercent: Number(t.fee_percent || 0),
+        feeAmount: fee,
+        createdAt: t.created_at || '',
+      })
+      feeMap.set(key, current)
+    })
   funds = data.map((row) => ({
+    ...(function () {
+      if (row.type !== 'topup' || Number(row.amount || 0) >= 0) return { acqPercent: null, acqAmount: null }
+      const key = `${row.account_id}:${Math.abs(Number(row.amount || 0)).toFixed(2)}`
+      const bucket = feeMap.get(key) || []
+      let match = null
+      if (bucket.length) {
+        bucket.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+        match = bucket.shift()
+        feeMap.set(key, bucket)
+      }
+      return {
+        acqPercent: match ? match.feePercent : null,
+        acqAmount: match ? match.feeAmount : null,
+      }
+    })(),
     date: formatDate(row.created_at),
     platform: row.account_platform || '',
     account: row.account_name || '—',
@@ -298,6 +339,20 @@ async function fetchFunds() {
     note: row.note || '',
   }))
   applyFilters()
+}
+
+async function fetchTopups() {
+  try {
+    const res = await fetch(`${apiBase}/topups`, { headers: authHeaders() })
+    if (res.status === 401) {
+      window.location.href = '/login'
+      return
+    }
+    if (!res.ok) throw new Error('Failed to load topups')
+    topups = await res.json()
+  } catch (e) {
+    topups = []
+  }
 }
 
 async function fetchInvoices() {
@@ -325,7 +380,7 @@ async function fetchInvoices() {
 function init() {
   bind()
   initTabs()
-  fetchFunds()
+  fetchTopups().then(fetchFunds)
   fetchInvoices()
   fetchLegalEntities()
   if (walletTopup.open) walletTopup.open.addEventListener('click', openWalletTopupModal)
@@ -362,4 +417,3 @@ function init() {
 }
 
 init()
-
