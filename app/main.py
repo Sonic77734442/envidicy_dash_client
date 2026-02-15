@@ -5870,6 +5870,22 @@ def create_topup(payload: TopupCreatePayload, current_user=Depends(get_current_u
         if platform_fee is None:
             raise HTTPException(status_code=400, detail="Commission is not set for this platform")
         fee_percent = float(platform_fee)
+        wallet = _get_or_create_wallet(conn, resolved_user_id)
+        wallet_balance = float(wallet["balance"] or 0)
+        fee_amount = amount_input * (fee_percent / 100.0)
+        vat_amount = amount_input * (vat_percent / 100.0)
+        gross_amount = amount_input + fee_amount + vat_amount
+        if gross_amount > wallet_balance:
+            denom = 1.0 + (fee_percent / 100.0) + (vat_percent / 100.0)
+            max_input = (wallet_balance / denom) if denom > 0 else 0.0
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Insufficient wallet balance: required {gross_amount:.2f} {currency}, "
+                    f"available {wallet_balance:.2f} {currency}. "
+                    f"Max topup amount is {max_input:.2f} {currency} for current fees."
+                ),
+            )
         amount_net = amount_input
         cur = conn.execute(
             """
