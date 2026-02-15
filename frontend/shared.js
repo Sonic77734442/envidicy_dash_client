@@ -215,15 +215,36 @@ function loadWalletBalance() {
     el.textContent = 'Баланс: —'
     return
   }
-  fetch(`${window.API_BASE || 'https://envidicy-dash-client.onrender.com'}/wallet`, { headers: authHeaders() })
-    .then((res) => (res.ok ? res.json() : null))
-    .then((data) => {
-      if (!data) return
-      const balance = Number(data.balance || 0).toLocaleString('ru-RU', {
+  const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
+  const markup = 10
+  Promise.all([
+    fetch(`${apiBase}/wallet`, { headers: authHeaders() }).then((res) => (res.ok ? res.json() : null)),
+    fetch(`${apiBase}/rates/bcc`).then((res) => (res.ok ? res.json() : null)).catch(() => null),
+  ])
+    .then(([wallet, ratesData]) => {
+      if (!wallet) return
+      const balanceKzt = Number(wallet.balance || 0)
+      const kztText = balanceKzt.toLocaleString('ru-RU', {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       })
-      el.textContent = `Баланс: ₸${balance}`
+      const usdSell = Number(ratesData?.rates?.USD?.sell)
+      const eurSell = Number(ratesData?.rates?.EUR?.sell)
+      const usdRate = Number.isFinite(usdSell) ? usdSell + markup : null
+      const eurRate = Number.isFinite(eurSell) ? eurSell + markup : null
+      const usdText =
+        usdRate && usdRate > 0
+          ? (balanceKzt / usdRate).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          : null
+      const eurText =
+        eurRate && eurRate > 0
+          ? (balanceKzt / eurRate).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          : null
+      if (usdText && eurText) {
+        el.textContent = `Баланс: ₸${kztText} · $${usdText} · €${eurText}`
+      } else {
+        el.textContent = `Баланс: ₸${kztText}`
+      }
     })
     .catch(() => {
       el.textContent = 'Баланс: —'
