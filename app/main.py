@@ -223,6 +223,31 @@ def _r2_upload_fileobj(key: str, fileobj, content_type: str = "application/pdf")
         pass
     client.upload_fileobj(fileobj, bucket_name, key, ExtraArgs={"ContentType": content_type})
     return f"r2://{bucket_name}/{key}"
+
+
+def _send_telegram_alert(text: str) -> None:
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return
+    thread_id = os.getenv("TELEGRAM_MESSAGE_THREAD_ID")
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload: Dict[str, object] = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True,
+    }
+    if thread_id:
+        try:
+            payload["message_thread_id"] = int(thread_id)
+        except ValueError:
+            pass
+    try:
+        httpx.post(url, json=payload, timeout=8)
+    except Exception:
+        # Telegram notifications should not break business flow.
+        pass
 Goal = Literal["reach", "traffic", "leads", "conversions"]
 PlatformKey = Literal[
     "meta",
@@ -4964,8 +4989,20 @@ def create_account_request(payload: AccountRequestCreate, current_user=Depends(g
             (current_user["id"], payload.platform, payload.name, json.dumps(payload.payload, ensure_ascii=False), "new"),
         )
         conn.commit()
+        request_id = cur.lastrowid
+        _send_telegram_alert(
+            "\n".join(
+                [
+                    "🆕 <b>Заявка на открытие аккаунта</b>",
+                    f"ID: <code>{request_id}</code>",
+                    f"Пользователь: <code>{current_user['email']}</code> (id={current_user['id']})",
+                    f"Платформа: <b>{payload.platform}</b>",
+                    f"Название: <b>{payload.name}</b>",
+                ]
+            )
+        )
         return {
-            "id": cur.lastrowid,
+            "id": request_id,
             "user_id": current_user["id"],
             "platform": payload.platform,
             "name": payload.name,
@@ -5799,8 +5836,23 @@ def create_topup(payload: TopupCreatePayload, current_user=Depends(get_current_u
             (account_id, resolved_user_id, amount_input, fee_percent, vat_percent, amount_net, currency, fx_rate, "pending", 0),
         )
         conn.commit()
+        topup_id = cur.lastrowid
+        account_name = conn.execute("SELECT name FROM ad_accounts WHERE id=?", (account_id,)).fetchone()
+        _send_telegram_alert(
+            "\n".join(
+                [
+                    "💳 <b>Новая заявка на пополнение</b>",
+                    f"ID: <code>{topup_id}</code>",
+                    f"Пользователь: <code>{current_user['email']}</code> (id={resolved_user_id})",
+                    f"Платформа: <b>{acc['platform']}</b>",
+                    f"Аккаунт: <b>{account_name['name'] if account_name else account_id}</b> (id={account_id})",
+                    f"Сумма: <b>{amount_input:.2f} {currency}</b>",
+                    f"Комиссия: <b>{fee_percent:.2f}%</b>",
+                ]
+            )
+        )
         return {
-            "id": cur.lastrowid,
+            "id": topup_id,
             "account_id": account_id,
             "user_id": resolved_user_id,
             "amount_input": amount_input,
