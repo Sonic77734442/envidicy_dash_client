@@ -131,11 +131,12 @@ const topupModal = {
   account: document.getElementById('topup-account'),
   accountName: document.getElementById('topup-target-account'),
   clientName: document.getElementById('topup-client-account'),
+  clientCard: document.getElementById('topup-client-card'),
   clientBalanceKzt: document.getElementById('topup-client-balance-kzt'),
   clientBalanceFx: document.getElementById('topup-client-balance-fx'),
+  accountCard: document.getElementById('topup-account-card'),
   targetBalanceFx: document.getElementById('topup-target-balance-fx'),
   targetBalanceKzt: document.getElementById('topup-target-balance-kzt'),
-  statusDot: document.getElementById('topup-account-status-dot'),
   budgetFx: document.getElementById('topup-budget-fx'),
   budget: document.getElementById('topup-budget'),
   rateHint: document.getElementById('topup-rate-hint'),
@@ -301,9 +302,8 @@ function updateTopupHeader() {
   if (topupModal.targetBalanceKzt) {
     topupModal.targetBalanceKzt.innerHTML = '<span>USD: 0.00</span><span>EUR: 0.00</span>'
   }
-  if (topupModal.statusDot) {
-    topupModal.statusDot.classList.remove('ok', 'fail')
-  }
+  topupModal.clientCard?.classList.remove('is-active', 'is-ok', 'is-fail')
+  topupModal.accountCard?.classList.remove('is-active', 'is-ok', 'is-fail')
   if (topupModal.rateHint) {
     topupModal.rateHint.textContent = 'Сумма к зачислению на рекламный аккаунт'
   }
@@ -885,10 +885,14 @@ function updateFee() {
     topupModal.targetBalanceKzt.innerHTML = `<span>${targetLines.usdText}</span><span>${targetLines.eurText}</span>`
   }
   const walletBalance = Number(state.walletBalanceKzt || 0)
-  if (topupModal.statusDot) {
-    topupModal.statusDot.classList.remove('ok', 'fail')
+  topupModal.clientCard?.classList.remove('is-active', 'is-ok', 'is-fail')
+  topupModal.accountCard?.classList.remove('is-active', 'is-ok', 'is-fail')
+  if (amt > 0) {
+    topupModal.clientCard?.classList.add('is-active')
+    topupModal.accountCard?.classList.add('is-active')
     if (state.walletBalanceKzt != null) {
-      topupModal.statusDot.classList.add(gross <= walletBalance ? 'ok' : 'fail')
+      topupModal.clientCard?.classList.add(gross <= walletBalance ? 'is-ok' : 'is-fail')
+      topupModal.accountCard?.classList.add(gross <= walletBalance ? 'is-ok' : 'is-fail')
     }
   }
 }

@@ -230,7 +230,7 @@
           <div class="modal-body topup-modal-body">
             <input id="topup-account" type="hidden" />
             <div class="topup-balance-grid">
-              <div class="topup-balance-card">
+              <div class="topup-balance-card" id="topup-client-card">
                 <div class="topup-card-label">Клиент</div>
                 <div class="topup-card-name" id="topup-client-account">—</div>
                 <div class="topup-card-amount-main" id="topup-client-balance-kzt">0.00 ₸</div>
@@ -238,10 +238,9 @@
                 <div class="topup-card-amount-sub" id="topup-client-balance-fx">0.00 $</div>
               </div>
               <div class="topup-transfer-arrow">→</div>
-              <div class="topup-balance-card">
-                <div class="topup-card-label topup-card-label-with-dot">
+              <div class="topup-balance-card" id="topup-account-card">
+                <div class="topup-card-label">
                   <span id="topup-badge">Аккаунт</span>
-                  <span id="topup-account-status-dot" class="topup-status-dot"></span>
                 </div>
                 <div class="topup-card-name" id="topup-target-account">—</div>
                 <div class="topup-card-amount-main" id="topup-target-balance-fx">0.00 $</div>
