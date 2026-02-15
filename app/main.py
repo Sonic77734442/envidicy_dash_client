@@ -225,12 +225,17 @@ def _r2_upload_fileobj(key: str, fileobj, content_type: str = "application/pdf")
     return f"r2://{bucket_name}/{key}"
 
 
-def _send_telegram_alert(text: str) -> None:
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+def _send_telegram_alert(text: str, channel: str = "ops") -> None:
+    if channel == "reg":
+        token = os.getenv("TELEGRAM_REG_BOT_TOKEN")
+        chat_id = os.getenv("TELEGRAM_REG_CHAT_ID")
+        thread_id = os.getenv("TELEGRAM_REG_MESSAGE_THREAD_ID")
+    else:
+        token = os.getenv("TELEGRAM_BOT_TOKEN")
+        chat_id = os.getenv("TELEGRAM_CHAT_ID")
+        thread_id = os.getenv("TELEGRAM_MESSAGE_THREAD_ID")
     if not token or not chat_id:
         return
-    thread_id = os.getenv("TELEGRAM_MESSAGE_THREAD_ID")
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload: Dict[str, object] = {
         "chat_id": chat_id,
@@ -2597,7 +2602,18 @@ def register(payload: AuthPayload):
         token = secrets.token_hex(24)
         conn.execute("INSERT INTO user_tokens (user_id, token) VALUES (?, ?)", (cur.lastrowid, token))
         conn.commit()
-        return {"id": cur.lastrowid, "email": email, "token": token}
+        user_id = cur.lastrowid
+        _send_telegram_alert(
+            "\n".join(
+                [
+                    "👤 <b>Новая регистрация</b>",
+                    f"ID: <code>{user_id}</code>",
+                    f"Email: <code>{email}</code>",
+                ]
+            ),
+            channel="reg",
+        )
+        return {"id": user_id, "email": email, "token": token}
 
 
 @app.post("/auth/login")
@@ -4453,6 +4469,19 @@ def create_wallet_topup_request(payload: WalletTopupRequestPayload, current_user
                 )
             except Exception:
                 pass
+        _send_telegram_alert(
+            "\n".join(
+                [
+                    "🧾 <b>Запрос на пополнение кошелька</b>",
+                    f"ID: <code>{request_id}</code>",
+                    f"Пользователь: <code>{current_user['email']}</code> (id={current_user['id']})",
+                    f"Сумма: <b>{payload.amount:.2f} {payload.currency}</b>",
+                    f"Контрагент: <b>{client_name or '—'}</b>",
+                    f"БИН/ИИН: <code>{client_bin or '—'}</code>",
+                    f"Order Ref: <code>{payload.order_ref or '—'}</code>",
+                ]
+            )
+        )
         return {
             "id": request_id,
             "status": "requested",
@@ -5530,6 +5559,20 @@ def admin_update_topup_status(topup_id: int, status: TopUpStatus, admin_user=Dep
                 (new_total, row["account_id"]),
             )
             conn.execute("UPDATE users SET is_client=1 WHERE id=?", (row["user_id"],))
+            user_row = conn.execute("SELECT email FROM users WHERE id=?", (row["user_id"],)).fetchone()
+            account_row = conn.execute("SELECT platform, name FROM ad_accounts WHERE id=?", (row["account_id"],)).fetchone()
+            _send_telegram_alert(
+                "\n".join(
+                    [
+                        "✅ <b>Пополнение оплачено/завершено</b>",
+                        f"Topup ID: <code>{topup_id}</code>",
+                        f"Пользователь: <code>{user_row['email'] if user_row else row['user_id']}</code>",
+                        f"Платформа: <b>{account_row['platform'] if account_row else '—'}</b>",
+                        f"Аккаунт: <b>{account_row['name'] if account_row else row['account_id']}</b>",
+                        f"Сумма: <b>{(row['amount_net'] or row['amount_input'] or 0):.2f} {row['currency']}</b>",
+                    ]
+                )
+            )
         conn.commit()
         return {"id": topup_id, "status": status.value}
 
