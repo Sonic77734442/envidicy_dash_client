@@ -32,6 +32,7 @@ const state = {
 let accounts = { meta: [], google: [], tiktok: [], yandex: [], telegram: [], monochrome: [] }
 let bccRatesCache = { ts: 0, data: null }
 const BCC_DEFAULT_MARKUP = 3
+const SIDEBAR_RATES_PANEL_ID = 'sidebar-rates-panel'
 
 const platforms = [
   {
@@ -140,7 +141,6 @@ const topupModal = {
   feeLabel: document.getElementById('fee-percent'),
   net: document.getElementById('net-amount'),
   accountAmount: document.getElementById('account-amount'),
-  rate: document.getElementById('bcc-rate'),
   feePercent: 10,
   vatPercent: 0,
   lastEdited: 'kzt',
@@ -199,6 +199,12 @@ function withDefaultMarkup(rate) {
   return Number(rate) + BCC_DEFAULT_MARKUP
 }
 
+function getMarkedRateByCode(code) {
+  const rates = bccRatesCache.data?.rates
+  if (!rates) return null
+  return withDefaultMarkup(rates[String(code || '').toUpperCase()]?.sell)
+}
+
 function getAccountById(accountId) {
   return (state.accountsFull || []).find((acc) => String(acc.id) === String(accountId)) || null
 }
@@ -212,27 +218,56 @@ function getAccountRate(account) {
 
 function getEffectiveRate(account) {
   const row = getAccountRate(account)
-  return withDefaultMarkup(row?.buy)
+  return withDefaultMarkup(row?.sell)
 }
 
-function updateBccRateLabel() {
-  if (!topupModal.rate) return
+function formatFxPairFromKzt(kztAmount) {
+  const usdRate = getMarkedRateByCode('USD')
+  const eurRate = getMarkedRateByCode('EUR')
+  const usd = usdRate ? Number(kztAmount || 0) / usdRate : null
+  const eur = eurRate ? Number(kztAmount || 0) / eurRate : null
+  const usdText = usd == null ? '— $' : `${formatMoneyAmount(usd)} $`
+  const eurText = eur == null ? '— €' : `${formatMoneyAmount(eur)} €`
+  return `${usdText} · ${eurText}`
+}
+
+function ensureSidebarRatesPanel() {
+  const sidebar = document.querySelector('.sidebar')
+  if (!sidebar) return null
+  let panel = document.getElementById(SIDEBAR_RATES_PANEL_ID)
+  if (panel) return panel
+  panel = document.createElement('section')
+  panel.id = SIDEBAR_RATES_PANEL_ID
+  panel.className = 'sidebar-rates-panel'
+  panel.innerHTML = `
+    <div class="sidebar-rates-title">Курс пополнения</div>
+    <div class="sidebar-rates-note">Расчет: курс продажи BCC + ${BCC_DEFAULT_MARKUP}</div>
+    <div class="sidebar-rate-row" id="sidebar-rate-usd">USD: —</div>
+    <div class="sidebar-rate-row" id="sidebar-rate-eur">EUR: —</div>
+  `
+  const nav = sidebar.querySelector('.nav')
+  if (nav) nav.insertAdjacentElement('afterend', panel)
+  else sidebar.appendChild(panel)
+  return panel
+}
+
+function updateSidebarRatesPanel() {
   const data = bccRatesCache.data
-  if (!data || !data.rates) {
-    topupModal.rate.textContent = 'Курс BCC: —'
+  const panel = ensureSidebarRatesPanel()
+  if (!panel) return
+  const usdRow = panel.querySelector('#sidebar-rate-usd')
+  const eurRow = panel.querySelector('#sidebar-rate-eur')
+  if (!data || !data.rates || !usdRow || !eurRow) {
+    if (usdRow) usdRow.textContent = 'USD: —'
+    if (eurRow) eurRow.textContent = 'EUR: —'
     return
   }
   const usd = data.rates.USD
   const eur = data.rates.EUR
-  const usdMarked = usd ? withDefaultMarkup(usd.buy) : null
-  const eurMarked = eur ? withDefaultMarkup(eur.buy) : null
-  const usdText = usd
-    ? `USD покупка ${formatRateValue(usd.buy)} ₸ / продажа ${formatRateValue(usd.sell)} ₸ / курс+${BCC_DEFAULT_MARKUP} ${formatRateValue(usdMarked)} ₸`
-    : 'USD —'
-  const eurText = eur
-    ? `EUR покупка ${formatRateValue(eur.buy)} ₸ / продажа ${formatRateValue(eur.sell)} ₸ / курс+${BCC_DEFAULT_MARKUP} ${formatRateValue(eurMarked)} ₸`
-    : 'EUR —'
-  topupModal.rate.textContent = `Курс BCC (приложение): ${usdText}, ${eurText}`
+  const usdMarked = usd ? withDefaultMarkup(usd.sell) : null
+  const eurMarked = eur ? withDefaultMarkup(eur.sell) : null
+  usdRow.textContent = usdMarked == null ? 'USD: —' : `USD: ${formatRateValue(usdMarked)} ₸`
+  eurRow.textContent = eurMarked == null ? 'EUR: —' : `EUR: ${formatRateValue(eurMarked)} ₸`
 }
 
 function updateTopupHeader() {
@@ -240,25 +275,27 @@ function updateTopupHeader() {
   const currency = String(acc?.currency || 'USD').toUpperCase()
   const symbol = currency === 'EUR' ? '€' : '$'
   const rate = getEffectiveRate(acc)
-  const rateText = rate ? formatMoneyAmount(rate) : '—'
   const balanceFx = Number(acc?.budget_total || 0)
   const balanceKzt = rate ? balanceFx * rate : 0
+  const balancePair = formatFxPairFromKzt(balanceKzt)
   if (topupModal.badge) topupModal.badge.textContent = 'Аккаунт'
   if (topupModal.accountName) topupModal.accountName.textContent = acc?.name || acc?.external_id || '—'
   if (topupModal.clientName) topupModal.clientName.textContent = 'ENVIDICY GROUP'
   if (topupModal.clientBalanceKzt) topupModal.clientBalanceKzt.textContent = `${formatMoneyAmount(balanceKzt)} ₸`
-  if (topupModal.clientBalanceFx) topupModal.clientBalanceFx.textContent = `${formatMoneyAmount(balanceFx)} ${symbol}`
+  if (topupModal.clientBalanceFx) topupModal.clientBalanceFx.textContent = balancePair
   if (topupModal.targetBalanceFx) topupModal.targetBalanceFx.textContent = `${formatMoneyAmount(balanceFx)} ${symbol}`
-  if (topupModal.targetBalanceKzt) topupModal.targetBalanceKzt.textContent = `${formatMoneyAmount(balanceKzt)} ₸`
+  if (topupModal.targetBalanceKzt) topupModal.targetBalanceKzt.textContent = balancePair
   if (topupModal.rateHint) {
-    topupModal.rateHint.textContent = `Сумма к зачислению на рекламный аккаунт (1 ${symbol} = ${rateText} ₸)`
+    topupModal.rateHint.textContent = 'Сумма к зачислению на рекламный аккаунт'
   }
 }
 
 async function loadBccRates() {
   const now = Date.now()
   if (bccRatesCache.data && now - bccRatesCache.ts < 15 * 60 * 1000) {
-    updateBccRateLabel()
+    updateSidebarRatesPanel()
+    updateTopupHeader()
+    updateFee()
     return
   }
   try {
@@ -269,7 +306,7 @@ async function loadBccRates() {
   } catch (e) {
     bccRatesCache = { ts: now, data: null }
   }
-  updateBccRateLabel()
+  updateSidebarRatesPanel()
   updateTopupHeader()
   updateFee()
 }
@@ -812,7 +849,7 @@ function updateFee() {
   const feeFx = rate ? fee / rate : 0
   const grossFx = rate ? gross / rate : 0
   if (topupModal.feeLabel) {
-    topupModal.feeLabel.textContent = topupModal.feePercent == null ? '�' : String(feePct)
+    topupModal.feeLabel.textContent = topupModal.feePercent == null ? '—' : String(feePct)
   }
   topupModal.fee.textContent = `${formatMoneyAmount(feeFx)} ${symbol} (${formatMoneyAmount(fee)} ₸)`
   topupModal.net.textContent = `${formatMoneyAmount(grossFx)} ${symbol} (${formatMoneyAmount(gross)} ₸)`
@@ -820,9 +857,11 @@ function updateFee() {
 }
 
 function init() {
+  ensureSidebarRatesPanel()
   renderCards()
   renderOpenAccounts()
   bindModal()
+  loadBccRates()
   fetchFees()
   fetchAccounts()
   fetchTopups()
