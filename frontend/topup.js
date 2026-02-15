@@ -30,6 +30,7 @@ const state = {
 }
 
 let accounts = { meta: [], google: [], tiktok: [], yandex: [], telegram: [], monochrome: [] }
+let bccRatesCache = { ts: 0, data: null }
 
 const platforms = [
   {
@@ -130,6 +131,7 @@ const topupModal = {
   feeLabel: document.getElementById('fee-percent'),
   net: document.getElementById('net-amount'),
   accountAmount: document.getElementById('account-amount'),
+  rate: document.getElementById('bcc-rate'),
   feePercent: 10,
   vatPercent: 0,
 }
@@ -170,6 +172,42 @@ function renderCards() {
     const btn = e.target.closest('button[data-platform]')
     if (btn) openCreateModal(btn.dataset.platform)
   })
+}
+
+function formatRateValue(value) {
+  if (value == null || Number.isNaN(value)) return '—'
+  return Number(value).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function updateBccRateLabel() {
+  if (!topupModal.rate) return
+  const data = bccRatesCache.data
+  if (!data || !data.rates) {
+    topupModal.rate.textContent = 'Курс BCC: —'
+    return
+  }
+  const usd = data.rates.USD
+  const eur = data.rates.EUR
+  const usdText = usd ? `USD ${formatRateValue(usd.buy)} ₸` : 'USD —'
+  const eurText = eur ? `EUR ${formatRateValue(eur.buy)} ₸` : 'EUR —'
+  topupModal.rate.textContent = `Курс BCC (приложение): ${usdText}, ${eurText}`
+}
+
+async function loadBccRates() {
+  const now = Date.now()
+  if (bccRatesCache.data && now - bccRatesCache.ts < 15 * 60 * 1000) {
+    updateBccRateLabel()
+    return
+  }
+  try {
+    const res = await fetch(`${apiBase}/rates/bcc`)
+    if (!res.ok) throw new Error('rate fetch failed')
+    const data = await res.json()
+    bccRatesCache = { ts: now, data }
+  } catch (e) {
+    bccRatesCache = { ts: now, data: null }
+  }
+  updateBccRateLabel()
 }
 
 function renderOpenAccounts() {
@@ -349,6 +387,7 @@ function openTopupModal(platformKey, accountId) {
   topupModal.el.classList.add('show')
   topupModal.el.dataset.platform = platformKey
   updateFee()
+  loadBccRates()
 }
 
 function closeTopupModal() {

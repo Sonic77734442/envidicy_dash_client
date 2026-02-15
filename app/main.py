@@ -6,6 +6,8 @@ from enum import Enum
 from fastapi import Depends, FastAPI, Header, HTTPException, Form, Request
 import logging
 import traceback
+import time
+import base64
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse, HTMLResponse, FileResponse, RedirectResponse
@@ -31,6 +33,9 @@ from app.db import get_conn
 load_dotenv()
 
 _R2_CLIENT = None
+_BCC_RATES_CACHE = {"ts": 0.0, "data": None}
+_BCC_RATES_TTL_SEC = 900
+_BCC_TOKEN_CACHE = {"token": None, "expires_at": 0.0}
 
 
 def _default_fee_config() -> Dict[str, Optional[float]]:
@@ -119,6 +124,94 @@ def _r2_upload_bytes(key: str, data: bytes, content_type: str = "application/pdf
     bucket_name = _r2_bucket()
     client.put_object(Bucket=bucket_name, Key=key, Body=data, ContentType=content_type)
     return f"r2://{bucket_name}/{key}"
+
+
+def _fetch_bcc_rates() -> Dict[str, object]:
+    now = time.time()
+    cached = _BCC_RATES_CACHE.get("data")
+    if cached and now - _BCC_RATES_CACHE.get("ts", 0) < _BCC_RATES_TTL_SEC:
+        return cached
+    rates_url = os.getenv("BCC_RATES_URL", "https://api.bcc.kz/bcc/production/v1/public/rates")
+    token_url = os.getenv("BCC_TOKEN_URL", "https://api.bcc.kz/bcc/production/v2/oauth/token")
+    client_id = os.getenv("BCC_CLIENT_ID")
+    client_secret = os.getenv("BCC_CLIENT_SECRET")
+    scope = os.getenv("BCC_SCOPE", "bcc.application.informational.api")
+
+    auth_header = None
+    if client_id and client_secret:
+        cached_token = _BCC_TOKEN_CACHE.get("token")
+        token_exp = float(_BCC_TOKEN_CACHE.get("expires_at", 0.0))
+        if cached_token and token_exp - now > 30:
+            auth_header = f"Bearer {cached_token}"
+        else:
+            basic_raw = f"{client_id}:{client_secret}".encode("utf-8")
+            basic = base64.b64encode(basic_raw).decode("ascii")
+            token_resp = httpx.post(
+                token_url,
+                headers={
+                    "Authorization": f"Basic {basic}",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                data={"grant_type": "client_credentials", "scope": scope},
+                timeout=15,
+            )
+            if token_resp.status_code != 200:
+                raise HTTPException(status_code=502, detail="Failed to fetch BCC OAuth token")
+            token_payload = token_resp.json()
+            access_token = token_payload.get("access_token")
+            if not access_token:
+                raise HTTPException(status_code=502, detail="BCC OAuth token is empty")
+            expires_in = int(token_payload.get("expires_in") or 3600)
+            _BCC_TOKEN_CACHE["token"] = access_token
+            _BCC_TOKEN_CACHE["expires_at"] = now + max(60, expires_in)
+            auth_header = f"Bearer {access_token}"
+
+    headers = {"Accept": "application/json"}
+    if auth_header:
+        headers["Authorization"] = auth_header
+    resp = httpx.get(rates_url, headers=headers, timeout=15)
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail="Failed to fetch BCC rates from API")
+
+    payload = resp.json()
+    rates_list = payload.get("Rates") if isinstance(payload, dict) else None
+    if rates_list is None and isinstance(payload, list):
+        rates_list = payload
+    if not isinstance(rates_list, list):
+        raise HTTPException(status_code=502, detail="Unexpected BCC rates payload")
+
+    rates: Dict[str, Optional[Dict[str, float]]] = {"USD": None, "EUR": None}
+    updated_at = None
+    for item in rates_list:
+        if not isinstance(item, dict):
+            continue
+        code = str(item.get("currency") or "").upper()
+        if code not in rates:
+            continue
+        purchase = item.get("purchase")
+        sell = item.get("sell")
+        try:
+            buy_value = float(purchase) if purchase is not None else None
+            sell_value = float(sell) if sell is not None else None
+        except (TypeError, ValueError):
+            continue
+        rates[code] = {"sell": sell_value, "buy": buy_value}
+        dt = item.get("dateTime")
+        if isinstance(dt, str) and dt:
+            if updated_at is None or dt > updated_at:
+                updated_at = dt
+
+    data = {
+        "source": "bcc_api",
+        "section": "public",
+        "url": rates_url,
+        "rates": rates,
+        "fetched_at": datetime.utcnow().isoformat() + "Z",
+        "dateTime": updated_at,
+    }
+    _BCC_RATES_CACHE["ts"] = now
+    _BCC_RATES_CACHE["data"] = data
+    return data
 
 
 def _r2_upload_fileobj(key: str, fileobj, content_type: str = "application/pdf") -> str:
@@ -2034,6 +2127,11 @@ def _invoice_html(payload: Dict[str, object]) -> str:
 @app.get("/health")
 def health() -> Dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/rates/bcc")
+def bcc_rates() -> Dict[str, object]:
+    return _fetch_bcc_rates()
 
 
 @app.get("/rate-cards", response_model=List[RateCard])
