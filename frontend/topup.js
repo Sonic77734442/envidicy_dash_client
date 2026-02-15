@@ -546,7 +546,7 @@ function updateCreatePlatformUI(platformKey) {
   createModal.tiktokFields.hidden = !isTiktok
   createModal.yandexFields.hidden = !isYandex
   createModal.telegramFields.hidden = !isTelegram
-  createModal.stepMcc.hidden = !isGoogle && createState.step !== 'mcc'
+  createModal.stepMcc.hidden = !(isGoogle && createState.step === 'mcc')
   createModal.stepTiktokInfo.hidden = !isTiktok || createState.step !== 'tiktok-info'
   createModal.stepMetaInfo.hidden = !isMeta || createState.step !== 'account'
   createModal.stepGoogleInfo.hidden = !isGoogle || createState.step !== 'account'

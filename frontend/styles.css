@@ -1469,6 +1469,10 @@ h1 {
   gap: 10px;
 }
 
+.modal-step[hidden] {
+  display: none !important;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
