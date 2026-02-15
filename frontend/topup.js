@@ -31,7 +31,7 @@ const state = {
 
 let accounts = { meta: [], google: [], tiktok: [], yandex: [], telegram: [], monochrome: [] }
 let bccRatesCache = { ts: 0, data: null }
-const BCC_DEFAULT_MARKUP = 3
+const BCC_DEFAULT_MARKUP = 10
 const SIDEBAR_RATES_PANEL_ID = 'sidebar-rates-panel'
 
 const platforms = [
@@ -221,14 +221,15 @@ function getEffectiveRate(account) {
   return withDefaultMarkup(row?.sell)
 }
 
-function formatFxPairFromKzt(kztAmount) {
+function formatFxLinesFromKzt(kztAmount) {
   const usdRate = getMarkedRateByCode('USD')
   const eurRate = getMarkedRateByCode('EUR')
   const usd = usdRate ? Number(kztAmount || 0) / usdRate : null
   const eur = eurRate ? Number(kztAmount || 0) / eurRate : null
-  const usdText = usd == null ? '— $' : `${formatMoneyAmount(usd)} $`
-  const eurText = eur == null ? '— €' : `${formatMoneyAmount(eur)} €`
-  return `${usdText} · ${eurText}`
+  return {
+    usdText: usd == null ? 'USD: —' : `USD: ${formatMoneyAmount(usd)}`,
+    eurText: eur == null ? 'EUR: —' : `EUR: ${formatMoneyAmount(eur)}`,
+  }
 }
 
 function ensureSidebarRatesPanel() {
@@ -241,7 +242,6 @@ function ensureSidebarRatesPanel() {
   panel.className = 'sidebar-rates-panel'
   panel.innerHTML = `
     <div class="sidebar-rates-title">Курс пополнения</div>
-    <div class="sidebar-rates-note">Расчет: курс продажи BCC + ${BCC_DEFAULT_MARKUP}</div>
     <div class="sidebar-rate-row" id="sidebar-rate-usd">USD: —</div>
     <div class="sidebar-rate-row" id="sidebar-rate-eur">EUR: —</div>
   `
@@ -277,14 +277,18 @@ function updateTopupHeader() {
   const rate = getEffectiveRate(acc)
   const balanceFx = Number(acc?.budget_total || 0)
   const balanceKzt = rate ? balanceFx * rate : 0
-  const balancePair = formatFxPairFromKzt(balanceKzt)
+  const balanceLines = formatFxLinesFromKzt(balanceKzt)
   if (topupModal.badge) topupModal.badge.textContent = 'Аккаунт'
   if (topupModal.accountName) topupModal.accountName.textContent = acc?.name || acc?.external_id || '—'
   if (topupModal.clientName) topupModal.clientName.textContent = 'ENVIDICY GROUP'
   if (topupModal.clientBalanceKzt) topupModal.clientBalanceKzt.textContent = `${formatMoneyAmount(balanceKzt)} ₸`
-  if (topupModal.clientBalanceFx) topupModal.clientBalanceFx.textContent = balancePair
+  if (topupModal.clientBalanceFx) {
+    topupModal.clientBalanceFx.innerHTML = `<span>${balanceLines.usdText}</span><span>${balanceLines.eurText}</span>`
+  }
   if (topupModal.targetBalanceFx) topupModal.targetBalanceFx.textContent = `${formatMoneyAmount(balanceFx)} ${symbol}`
-  if (topupModal.targetBalanceKzt) topupModal.targetBalanceKzt.textContent = balancePair
+  if (topupModal.targetBalanceKzt) {
+    topupModal.targetBalanceKzt.innerHTML = `<span>${balanceLines.usdText}</span><span>${balanceLines.eurText}</span>`
+  }
   if (topupModal.rateHint) {
     topupModal.rateHint.textContent = 'Сумма к зачислению на рекламный аккаунт'
   }

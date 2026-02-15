@@ -194,11 +194,6 @@ body {
   color: var(--text);
 }
 
-.sidebar-rates-note {
-  font-size: 11px;
-  color: var(--muted);
-}
-
 .sidebar-rate-row {
   font-size: 13px;
   color: var(--text);
@@ -1691,6 +1686,11 @@ h1 {
   color: var(--text);
   font-size: 14px;
   font-weight: 500;
+}
+
+.topup-card-amount-sub span {
+  display: block;
+  line-height: 1.35;
 }
 
 .topup-transfer-arrow {
