@@ -222,32 +222,59 @@
       </div>
 
       <div id="topup-modal" class="modal">
-        <div class="modal-dialog">
-          <div class="modal-head">
-            <div class="platform-chip" id="topup-badge">Meta</div>
-            <button class="btn ghost small" id="topup-close">Закрыть</button>
+        <div class="modal-dialog topup-modal-dialog">
+          <div class="topup-modal-head">
+            <h3>Пополнение рекламного аккаунта</h3>
+            <button class="topup-close" id="topup-close" type="button" aria-label="Закрыть">×</button>
           </div>
-          <div class="modal-body">
-            <label class="field">
-              <span>Аккаунт</span>
-              <select id="topup-account"></select>
-            </label>
-            <label class="field">
-              <span>Бюджет пополнения, ₸</span>
-              <input id="topup-budget" type="number" min="0" step="10" placeholder="1000" />
-            </label>
-            <div class="fee-row">
-              <div class="fee-note">Комиссия <span id="fee-percent">—</span>%: <span id="fee-amount">₸0</span></div>
-              <div class="fee-strong">К оплате (с комиссией): <span id="net-amount">₸0</span></div>
+          <div class="modal-body topup-modal-body">
+            <input id="topup-account" type="hidden" />
+            <div class="topup-balance-grid">
+              <div class="topup-balance-card">
+                <div class="topup-card-label">Клиент</div>
+                <div class="topup-card-name" id="topup-client-account">—</div>
+                <div class="topup-card-amount-main" id="topup-client-balance-kzt">0.00 ₸</div>
+                <div class="topup-card-sub">Баланс</div>
+                <div class="topup-card-amount-sub" id="topup-client-balance-fx">0.00 $</div>
+              </div>
+              <div class="topup-transfer-arrow">→</div>
+              <div class="topup-balance-card">
+                <div class="topup-card-label" id="topup-badge">Аккаунт</div>
+                <div class="topup-card-name" id="topup-target-account">—</div>
+                <div class="topup-card-amount-main" id="topup-target-balance-fx">0.00 $</div>
+                <div class="topup-card-sub">Баланс</div>
+                <div class="topup-card-amount-sub" id="topup-target-balance-kzt">0.00 ₸</div>
+              </div>
             </div>
-            <p class="muted small" id="bcc-rate">Курс BCC: —</p>
-            <p class="muted small">На аккаунт сядет: <span id="account-amount">₸0</span></p>
+            <div class="topup-autopay">Рекомендуем настроить <strong>Автопополнение</strong></div>
+            <div class="topup-rate-block">
+              <div class="topup-rate-title" id="topup-rate-hint">Сумма к зачислению на рекламный аккаунт</div>
+              <p class="muted small" id="bcc-rate">Курс BCC: —</p>
+              <div class="topup-amount-row">
+                <label class="topup-currency-input">
+                  <input id="topup-budget-fx" type="number" min="0" step="0.01" placeholder="0.00" />
+                  <span>$</span>
+                </label>
+                <label class="topup-currency-input">
+                  <input id="topup-budget" type="number" min="0" step="1" placeholder="0.00" />
+                  <span>₸</span>
+                </label>
+              </div>
+            </div>
+            <div class="topup-summary-row">
+              <div>Комиссия <span id="fee-percent">—</span>%</div>
+              <div id="fee-amount">0.00 $ (0.00 ₸)</div>
+            </div>
+            <div class="topup-total-row">
+              <div>Итоговая сумма</div>
+              <div id="net-amount">0.00 $ (0.00 ₸)</div>
+            </div>
+            <p class="muted small">На аккаунт сядет: <span id="account-amount">0.00 $ (0.00 ₸)</span></p>
           </div>
-          <div class="modal-actions">
+          <div class="modal-actions topup-modal-actions">
             <button class="btn ghost" id="topup-cancel">Отмена</button>
-            <button class="btn primary" id="topup-submit">Пополнить</button>
+            <button class="btn primary topup-submit" id="topup-submit">Пополнить</button>
           </div>
-          <p class="muted small">Мы снимем 10% за эквайринг. На аккаунт упадёт сумма к зачислению.</p>
         </div>
       </div>
     </div>

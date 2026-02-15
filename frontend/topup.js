@@ -31,6 +31,7 @@ const state = {
 
 let accounts = { meta: [], google: [], tiktok: [], yandex: [], telegram: [], monochrome: [] }
 let bccRatesCache = { ts: 0, data: null }
+const BCC_DEFAULT_MARKUP = 3
 
 const platforms = [
   {
@@ -126,7 +127,15 @@ const topupModal = {
   el: document.getElementById('topup-modal'),
   badge: document.getElementById('topup-badge'),
   account: document.getElementById('topup-account'),
+  accountName: document.getElementById('topup-target-account'),
+  clientName: document.getElementById('topup-client-account'),
+  clientBalanceKzt: document.getElementById('topup-client-balance-kzt'),
+  clientBalanceFx: document.getElementById('topup-client-balance-fx'),
+  targetBalanceFx: document.getElementById('topup-target-balance-fx'),
+  targetBalanceKzt: document.getElementById('topup-target-balance-kzt'),
+  budgetFx: document.getElementById('topup-budget-fx'),
   budget: document.getElementById('topup-budget'),
+  rateHint: document.getElementById('topup-rate-hint'),
   fee: document.getElementById('fee-amount'),
   feeLabel: document.getElementById('fee-percent'),
   net: document.getElementById('net-amount'),
@@ -134,6 +143,7 @@ const topupModal = {
   rate: document.getElementById('bcc-rate'),
   feePercent: 10,
   vatPercent: 0,
+  lastEdited: 'kzt',
 }
 
 const createState = {
@@ -179,6 +189,32 @@ function formatRateValue(value) {
   return Number(value).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+function formatMoneyAmount(value) {
+  const n = Number(value || 0)
+  return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function withDefaultMarkup(rate) {
+  if (rate == null || Number.isNaN(Number(rate))) return null
+  return Number(rate) + BCC_DEFAULT_MARKUP
+}
+
+function getAccountById(accountId) {
+  return (state.accountsFull || []).find((acc) => String(acc.id) === String(accountId)) || null
+}
+
+function getAccountRate(account) {
+  const rates = bccRatesCache.data?.rates
+  if (!rates) return null
+  const code = String(account?.currency || 'USD').toUpperCase()
+  return rates[code] || rates.USD || null
+}
+
+function getEffectiveRate(account) {
+  const row = getAccountRate(account)
+  return withDefaultMarkup(row?.buy)
+}
+
 function updateBccRateLabel() {
   if (!topupModal.rate) return
   const data = bccRatesCache.data
@@ -188,9 +224,35 @@ function updateBccRateLabel() {
   }
   const usd = data.rates.USD
   const eur = data.rates.EUR
-  const usdText = usd ? `USD ${formatRateValue(usd.buy)} ₸` : 'USD —'
-  const eurText = eur ? `EUR ${formatRateValue(eur.buy)} ₸` : 'EUR —'
+  const usdMarked = usd ? withDefaultMarkup(usd.buy) : null
+  const eurMarked = eur ? withDefaultMarkup(eur.buy) : null
+  const usdText = usd
+    ? `USD покупка ${formatRateValue(usd.buy)} ₸ / продажа ${formatRateValue(usd.sell)} ₸ / курс+${BCC_DEFAULT_MARKUP} ${formatRateValue(usdMarked)} ₸`
+    : 'USD —'
+  const eurText = eur
+    ? `EUR покупка ${formatRateValue(eur.buy)} ₸ / продажа ${formatRateValue(eur.sell)} ₸ / курс+${BCC_DEFAULT_MARKUP} ${formatRateValue(eurMarked)} ₸`
+    : 'EUR —'
   topupModal.rate.textContent = `Курс BCC (приложение): ${usdText}, ${eurText}`
+}
+
+function updateTopupHeader() {
+  const acc = getAccountById(topupModal.account.value)
+  const currency = String(acc?.currency || 'USD').toUpperCase()
+  const symbol = currency === 'EUR' ? '€' : '$'
+  const rate = getEffectiveRate(acc)
+  const rateText = rate ? formatMoneyAmount(rate) : '—'
+  const balanceFx = Number(acc?.budget_total || 0)
+  const balanceKzt = rate ? balanceFx * rate : 0
+  if (topupModal.badge) topupModal.badge.textContent = 'Аккаунт'
+  if (topupModal.accountName) topupModal.accountName.textContent = acc?.name || acc?.external_id || '—'
+  if (topupModal.clientName) topupModal.clientName.textContent = 'ENVIDICY GROUP'
+  if (topupModal.clientBalanceKzt) topupModal.clientBalanceKzt.textContent = `${formatMoneyAmount(balanceKzt)} ₸`
+  if (topupModal.clientBalanceFx) topupModal.clientBalanceFx.textContent = `${formatMoneyAmount(balanceFx)} ${symbol}`
+  if (topupModal.targetBalanceFx) topupModal.targetBalanceFx.textContent = `${formatMoneyAmount(balanceFx)} ${symbol}`
+  if (topupModal.targetBalanceKzt) topupModal.targetBalanceKzt.textContent = `${formatMoneyAmount(balanceKzt)} ₸`
+  if (topupModal.rateHint) {
+    topupModal.rateHint.textContent = `Сумма к зачислению на рекламный аккаунт (1 ${symbol} = ${rateText} ₸)`
+  }
 }
 
 async function loadBccRates() {
@@ -208,6 +270,8 @@ async function loadBccRates() {
     bccRatesCache = { ts: now, data: null }
   }
   updateBccRateLabel()
+  updateTopupHeader()
+  updateFee()
 }
 
 function renderOpenAccounts() {
@@ -379,13 +443,13 @@ function openTopupModal(platformKey, accountId) {
   }
   const feeVal = state.fees ? state.fees[platformKey] : null
   topupModal.feePercent = feeVal == null ? null : Number(feeVal)
-  topupModal.badge.textContent = platformLabel(platformKey)
-  topupModal.account.innerHTML = accounts[platformKey]
-    .map((a) => `<option value="${a.id}">${a.name}</option>`)
-    .join('')
-  if (accountId) topupModal.account.value = accountId
+  const list = accounts[platformKey]
+  const selected = accountId || (list[0] ? list[0].id : '')
+  topupModal.account.value = selected
+  topupModal.lastEdited = 'kzt'
   topupModal.el.classList.add('show')
   topupModal.el.dataset.platform = platformKey
+  updateTopupHeader()
   updateFee()
   loadBccRates()
 }
@@ -393,6 +457,7 @@ function openTopupModal(platformKey, accountId) {
 function closeTopupModal() {
   topupModal.el.classList.remove('show')
   topupModal.budget.value = ''
+  if (topupModal.budgetFx) topupModal.budgetFx.value = ''
   updateFee()
 }
 
@@ -712,21 +777,46 @@ function bindModal() {
     }
   }
 
-  topupModal.budget.addEventListener('input', updateFee)
+  topupModal.budget.addEventListener('input', () => {
+    topupModal.lastEdited = 'kzt'
+    updateFee()
+  })
+  if (topupModal.budgetFx) {
+    topupModal.budgetFx.addEventListener('input', () => {
+      topupModal.lastEdited = 'fx'
+      updateFee()
+    })
+  }
 }
 
 function updateFee() {
-  const amt = topupModal.budget.value ? Number(topupModal.budget.value) : 0
+  const acc = getAccountById(topupModal.account.value)
+  const currency = String(acc?.currency || 'USD').toUpperCase()
+  const symbol = currency === 'EUR' ? '€' : '$'
+  const rate = getEffectiveRate(acc)
+  let amt = topupModal.budget.value ? Number(topupModal.budget.value) : 0
+  let fxAmt = topupModal.budgetFx && topupModal.budgetFx.value ? Number(topupModal.budgetFx.value) : 0
+  if (rate) {
+    if (topupModal.lastEdited === 'fx') {
+      amt = fxAmt * rate
+      topupModal.budget.value = amt > 0 ? amt.toFixed(2) : ''
+    } else {
+      fxAmt = amt / rate
+      if (topupModal.budgetFx) topupModal.budgetFx.value = fxAmt > 0 ? fxAmt.toFixed(2) : ''
+    }
+  }
   const feePct = topupModal.feePercent == null ? 0 : topupModal.feePercent
   const fee = amt * (feePct / 100)
   const vat = amt * (topupModal.vatPercent / 100)
   const gross = amt + fee + vat
+  const feeFx = rate ? fee / rate : 0
+  const grossFx = rate ? gross / rate : 0
   if (topupModal.feeLabel) {
     topupModal.feeLabel.textContent = topupModal.feePercent == null ? '�' : String(feePct)
   }
-  topupModal.fee.textContent = `₸${fee.toFixed(2)}`
-  topupModal.net.textContent = `₸${gross.toFixed(2)}`
-  topupModal.accountAmount.textContent = `₸${amt.toFixed(2)}`
+  topupModal.fee.textContent = `${formatMoneyAmount(feeFx)} ${symbol} (${formatMoneyAmount(fee)} ₸)`
+  topupModal.net.textContent = `${formatMoneyAmount(grossFx)} ${symbol} (${formatMoneyAmount(gross)} ₸)`
+  topupModal.accountAmount.textContent = `${formatMoneyAmount(fxAmt)} ${symbol} (${formatMoneyAmount(amt)} ₸)`
 }
 
 function init() {
@@ -750,12 +840,19 @@ async function fetchAccounts() {
     state.accountsFull = data
     accounts = { meta: [], google: [], tiktok: [], yandex: [], telegram: [], monochrome: [] }
     data.forEach((acc) => {
-      if (acc.platform === 'meta') accounts.meta.push({ id: acc.id, name: acc.name })
-      if (acc.platform === 'google') accounts.google.push({ id: acc.id, name: acc.name })
-      if (acc.platform === 'tiktok') accounts.tiktok.push({ id: acc.id, name: acc.name })
-      if (acc.platform === 'yandex') accounts.yandex.push({ id: acc.id, name: acc.name })
-      if (acc.platform === 'telegram') accounts.telegram.push({ id: acc.id, name: acc.name })
-      if (acc.platform === 'monochrome') accounts.monochrome.push({ id: acc.id, name: acc.name })
+      const row = {
+        id: acc.id,
+        name: acc.name,
+        currency: acc.currency || (acc.platform === 'telegram' ? 'EUR' : 'USD'),
+        budget_total: acc.budget_total || 0,
+        external_id: acc.external_id || null,
+      }
+      if (acc.platform === 'meta') accounts.meta.push(row)
+      if (acc.platform === 'google') accounts.google.push(row)
+      if (acc.platform === 'tiktok') accounts.tiktok.push(row)
+      if (acc.platform === 'yandex') accounts.yandex.push(row)
+      if (acc.platform === 'telegram') accounts.telegram.push(row)
+      if (acc.platform === 'monochrome') accounts.monochrome.push(row)
     })
     await fetchAccountRequests()
     syncOpenAccounts()

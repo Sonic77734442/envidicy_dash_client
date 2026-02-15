@@ -1559,6 +1559,237 @@ h1 {
   font-weight: 700;
 }
 
+.topup-modal-dialog {
+  width: min(720px, 94vw);
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+
+.topup-modal-body {
+  gap: 14px;
+}
+
+.topup-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.topup-modal-head h3 {
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 28px;
+  letter-spacing: 0.2px;
+  color: var(--text);
+}
+
+.topup-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.topup-balance-grid {
+  display: grid;
+  grid-template-columns: 1fr 36px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.topup-balance-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.topup-card-label {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  margin-top: 12px;
+  color: var(--text);
+}
+
+.topup-card-name {
+  text-align: center;
+  color: var(--muted);
+  margin: 2px 10px 0;
+  min-height: 24px;
+}
+
+.topup-card-amount-main {
+  text-align: center;
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 8px 10px 12px;
+}
+
+.topup-card-sub {
+  text-align: center;
+  background: rgba(106, 227, 255, 0.08);
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 18px;
+  padding: 10px 8px 4px;
+}
+
+.topup-card-amount-sub {
+  text-align: center;
+  background: rgba(106, 227, 255, 0.08);
+  padding: 0 8px 12px;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.topup-transfer-arrow {
+  text-align: center;
+  font-size: 36px;
+  color: var(--muted);
+}
+
+.topup-autopay {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.topup-rate-block {
+  display: grid;
+  gap: 8px;
+}
+
+.topup-rate-title {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.topup-rate-block .muted.small {
+  color: var(--muted);
+  margin: 0;
+}
+
+.topup-amount-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.topup-currency-input {
+  position: relative;
+  display: block;
+}
+
+.topup-currency-input input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 8px;
+  padding: 10px 44px 10px 12px;
+  font-size: 28px;
+  color: var(--text);
+}
+
+.topup-currency-input span {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 28px;
+}
+
+.topup-summary-row,
+.topup-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.topup-total-row {
+  border-top: 1px solid var(--line);
+  margin-top: 2px;
+  padding-top: 10px;
+}
+
+.topup-total-row #net-amount {
+  color: var(--accent-2);
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.topup-modal-dialog .muted.small {
+  color: var(--muted);
+}
+
+.topup-modal-actions {
+  justify-content: space-between;
+}
+
+.topup-submit.btn.primary {
+  color: #0a1020;
+}
+
+@media (max-width: 800px) {
+  .topup-modal-head h3 {
+    font-size: 24px;
+  }
+
+  .topup-balance-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .topup-transfer-arrow {
+    display: none;
+  }
+
+  .topup-card-label {
+    font-size: 18px;
+  }
+
+  .topup-card-amount-main {
+    font-size: 28px;
+  }
+
+  .topup-card-sub {
+    font-size: 16px;
+  }
+
+  .topup-card-amount-sub {
+    font-size: 14px;
+  }
+
+  .topup-currency-input input {
+    font-size: 22px;
+  }
+
+  .topup-currency-input span {
+    font-size: 22px;
+  }
+
+  .topup-total-row #net-amount {
+    font-size: 22px;
+  }
+}
+
 .icon-btn {
   background: transparent;
   border: 1px solid var(--line);
