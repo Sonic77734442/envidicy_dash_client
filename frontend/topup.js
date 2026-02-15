@@ -27,6 +27,7 @@ const state = {
   topups: [],
   accountsFull: [],
   fees: null,
+  walletBalanceKzt: null,
 }
 
 let accounts = { meta: [], google: [], tiktok: [], yandex: [], telegram: [], monochrome: [] }
@@ -134,6 +135,7 @@ const topupModal = {
   clientBalanceFx: document.getElementById('topup-client-balance-fx'),
   targetBalanceFx: document.getElementById('topup-target-balance-fx'),
   targetBalanceKzt: document.getElementById('topup-target-balance-kzt'),
+  statusDot: document.getElementById('topup-account-status-dot'),
   budgetFx: document.getElementById('topup-budget-fx'),
   budget: document.getElementById('topup-budget'),
   rateHint: document.getElementById('topup-rate-hint'),
@@ -141,6 +143,7 @@ const topupModal = {
   feeLabel: document.getElementById('fee-percent'),
   net: document.getElementById('net-amount'),
   accountAmount: document.getElementById('account-amount'),
+  error: document.getElementById('topup-error'),
   feePercent: 10,
   vatPercent: 0,
   lastEdited: 'kzt',
@@ -221,6 +224,17 @@ function getEffectiveRate(account) {
   return withDefaultMarkup(row?.sell)
 }
 
+function setTopupError(message) {
+  if (!topupModal.error) return
+  if (!message) {
+    topupModal.error.hidden = true
+    topupModal.error.textContent = ''
+    return
+  }
+  topupModal.error.hidden = false
+  topupModal.error.textContent = message
+}
+
 function formatFxLinesFromKzt(kztAmount) {
   const usdRate = getMarkedRateByCode('USD')
   const eurRate = getMarkedRateByCode('EUR')
@@ -274,20 +288,21 @@ function updateTopupHeader() {
   const acc = getAccountById(topupModal.account.value)
   const currency = String(acc?.currency || 'USD').toUpperCase()
   const symbol = currency === 'EUR' ? '€' : '$'
-  const rate = getEffectiveRate(acc)
-  const balanceFx = Number(acc?.budget_total || 0)
-  const balanceKzt = rate ? balanceFx * rate : 0
-  const balanceLines = formatFxLinesFromKzt(balanceKzt)
+  const walletBalance = Number(state.walletBalanceKzt || 0)
+  const balanceLines = formatFxLinesFromKzt(walletBalance)
   if (topupModal.badge) topupModal.badge.textContent = 'Аккаунт'
   if (topupModal.accountName) topupModal.accountName.textContent = acc?.name || acc?.external_id || '—'
   if (topupModal.clientName) topupModal.clientName.textContent = 'ENVIDICY GROUP'
-  if (topupModal.clientBalanceKzt) topupModal.clientBalanceKzt.textContent = `${formatMoneyAmount(balanceKzt)} ₸`
+  if (topupModal.clientBalanceKzt) topupModal.clientBalanceKzt.textContent = `${formatMoneyAmount(walletBalance)} ₸`
   if (topupModal.clientBalanceFx) {
     topupModal.clientBalanceFx.innerHTML = `<span>${balanceLines.usdText}</span><span>${balanceLines.eurText}</span>`
   }
-  if (topupModal.targetBalanceFx) topupModal.targetBalanceFx.textContent = `${formatMoneyAmount(balanceFx)} ${symbol}`
+  if (topupModal.targetBalanceFx) topupModal.targetBalanceFx.textContent = `0.00 ${symbol}`
   if (topupModal.targetBalanceKzt) {
-    topupModal.targetBalanceKzt.innerHTML = `<span>${balanceLines.usdText}</span><span>${balanceLines.eurText}</span>`
+    topupModal.targetBalanceKzt.innerHTML = '<span>USD: 0.00</span><span>EUR: 0.00</span>'
+  }
+  if (topupModal.statusDot) {
+    topupModal.statusDot.classList.remove('ok', 'fail')
   }
   if (topupModal.rateHint) {
     topupModal.rateHint.textContent = 'Сумма к зачислению на рекламный аккаунт'
@@ -488,17 +503,20 @@ function openTopupModal(platformKey, accountId) {
   const selected = accountId || (list[0] ? list[0].id : '')
   topupModal.account.value = selected
   topupModal.lastEdited = 'kzt'
+  setTopupError('')
   topupModal.el.classList.add('show')
   topupModal.el.dataset.platform = platformKey
   updateTopupHeader()
   updateFee()
   loadBccRates()
+  loadTopupWalletBalance()
 }
 
 function closeTopupModal() {
   topupModal.el.classList.remove('show')
   topupModal.budget.value = ''
   if (topupModal.budgetFx) topupModal.budgetFx.value = ''
+  setTopupError('')
   updateFee()
 }
 
@@ -775,13 +793,14 @@ function bindModal() {
   document.getElementById('topup-submit').onclick = async () => {
     if (window.showGlobalLoading) window.showGlobalLoading('Создаем заявку на пополнение...')
     if (!topupModal.account.value) {
-      alert('Выберите аккаунт для пополнения.')
+      setTopupError('Выберите аккаунт для пополнения.')
       return
     }
     if (topupModal.feePercent == null) {
-      alert('Комиссия для этой платформы не задана. Обратитесь к администратору.')
+      setTopupError('Комиссия для этой платформы не задана. Обратитесь к администратору.')
       return
     }
+    setTopupError('')
     const payload = {
       platform: topupModal.el.dataset.platform,
       account_id: topupModal.account.value,
@@ -804,15 +823,15 @@ function bindModal() {
         } catch (e) {
           // ignore parse error
         }
-        alert(message)
+        setTopupError(message)
         return
       }
       const data = await res.json()
       await fetchTopups()
-      alert('Пополнение отправлено на обработку.')
+      setTopupError('')
       closeTopupModal()
     } catch (e) {
-      alert('Ошибка отправки. Попробуйте снова.')
+      setTopupError('Ошибка отправки. Попробуйте снова.')
     } finally {
       if (window.hideGlobalLoading) window.hideGlobalLoading()
     }
@@ -820,11 +839,13 @@ function bindModal() {
 
   topupModal.budget.addEventListener('input', () => {
     topupModal.lastEdited = 'kzt'
+    setTopupError('')
     updateFee()
   })
   if (topupModal.budgetFx) {
     topupModal.budgetFx.addEventListener('input', () => {
       topupModal.lastEdited = 'fx'
+      setTopupError('')
       updateFee()
     })
   }
@@ -852,12 +873,24 @@ function updateFee() {
   const gross = amt + fee + vat
   const feeFx = rate ? fee / rate : 0
   const grossFx = rate ? gross / rate : 0
+  const targetLines = formatFxLinesFromKzt(amt)
   if (topupModal.feeLabel) {
     topupModal.feeLabel.textContent = topupModal.feePercent == null ? '—' : String(feePct)
   }
   topupModal.fee.textContent = `${formatMoneyAmount(feeFx)} ${symbol} (${formatMoneyAmount(fee)} ₸)`
   topupModal.net.textContent = `${formatMoneyAmount(grossFx)} ${symbol} (${formatMoneyAmount(gross)} ₸)`
   topupModal.accountAmount.textContent = `${formatMoneyAmount(fxAmt)} ${symbol} (${formatMoneyAmount(amt)} ₸)`
+  if (topupModal.targetBalanceFx) topupModal.targetBalanceFx.textContent = `${formatMoneyAmount(fxAmt)} ${symbol}`
+  if (topupModal.targetBalanceKzt) {
+    topupModal.targetBalanceKzt.innerHTML = `<span>${targetLines.usdText}</span><span>${targetLines.eurText}</span>`
+  }
+  const walletBalance = Number(state.walletBalanceKzt || 0)
+  if (topupModal.statusDot) {
+    topupModal.statusDot.classList.remove('ok', 'fail')
+    if (state.walletBalanceKzt != null) {
+      topupModal.statusDot.classList.add(gross <= walletBalance ? 'ok' : 'fail')
+    }
+  }
 }
 
 function init() {
@@ -870,6 +903,7 @@ function init() {
   fetchAccounts()
   fetchTopups()
   fetchAccountRequests()
+  loadTopupWalletBalance()
 }
 
 init()
@@ -962,6 +996,21 @@ async function fetchFees() {
     state.fees = await res.json()
   } catch (e) {
     state.fees = null
+  }
+}
+
+async function loadTopupWalletBalance() {
+  try {
+    const res = await fetch(`${apiBase}/wallet`, { headers: { ...authHeadersSafe() } })
+    if (handleAuthFailure(res)) return
+    if (!res.ok) throw new Error('Failed to load wallet')
+    const data = await res.json()
+    state.walletBalanceKzt = Number(data.balance || 0)
+  } catch (e) {
+    state.walletBalanceKzt = null
+  } finally {
+    updateTopupHeader()
+    updateFee()
   }
 }
 

@@ -239,10 +239,13 @@
               </div>
               <div class="topup-transfer-arrow">→</div>
               <div class="topup-balance-card">
-                <div class="topup-card-label" id="topup-badge">Аккаунт</div>
+                <div class="topup-card-label topup-card-label-with-dot">
+                  <span id="topup-badge">Аккаунт</span>
+                  <span id="topup-account-status-dot" class="topup-status-dot"></span>
+                </div>
                 <div class="topup-card-name" id="topup-target-account">—</div>
                 <div class="topup-card-amount-main" id="topup-target-balance-fx">0.00 $</div>
-                <div class="topup-card-sub">Баланс</div>
+                <div class="topup-card-sub">К зачислению</div>
                 <div class="topup-card-amount-sub" id="topup-target-balance-kzt">0.00 ₸</div>
               </div>
             </div>
@@ -269,6 +272,7 @@
               <div>Итоговая сумма</div>
               <div id="net-amount">0.00 $ (0.00 ₸)</div>
             </div>
+            <div id="topup-error" class="notice error" hidden></div>
             <p class="muted small">На аккаунт сядет: <span id="account-amount">0.00 $ (0.00 ₸)</span></p>
           </div>
           <div class="modal-actions topup-modal-actions">
