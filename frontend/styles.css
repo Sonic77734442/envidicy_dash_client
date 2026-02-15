@@ -1146,6 +1146,7 @@ h1 {
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 12px;
+  max-width: 100%;
 }
 
 .table {
@@ -1161,6 +1162,25 @@ h1 {
   text-align: left;
   font-size: 13px;
   white-space: nowrap;
+}
+
+.table-wrapper-tight {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.table-funds-transactions {
+  min-width: 0;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.table-funds-transactions th,
+.table-funds-transactions td {
+  white-space: normal;
+  word-break: break-word;
+  font-size: 12px;
+  padding: 8px 10px;
 }
 
 .collapse {
