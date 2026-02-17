@@ -37,3 +37,32 @@ uvicorn app.main:app --reload
 ```bash
 pytest
 ```
+
+## BigQuery Sync (MVP)
+
+Syncs core operational tables from app DB to BigQuery:
+- `users`
+- `ad_accounts`
+- `topups`
+- `wallet_transactions`
+- `account_requests`
+- `wallet_topup_requests`
+
+### Env
+
+```bash
+BQ_PROJECT_ID=your-gcp-project
+BQ_DATASET=envidicy_raw
+BQ_LOCATION=US
+BQ_SYNC_DAYS=7
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+```
+
+### Run
+
+```bash
+python scripts/bq_sync.py --dry-run
+python scripts/bq_sync.py --days 7
+```
+
+Recommended cron (Render Cron Job): `python scripts/bq_sync.py --days 2`

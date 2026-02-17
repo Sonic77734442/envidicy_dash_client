@@ -11,3 +11,4 @@ weasyprint==60.2
 pydyf==0.8.0
 psycopg[binary]==3.2.5
 boto3==1.34.149
+google-cloud-bigquery==3.30.0
