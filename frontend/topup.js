@@ -341,9 +341,10 @@ function renderOpenAccounts() {
       row.budget == null
         ? '—'
         : `${Number(row.budget).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${row.currency || 'USD'}`
+    const accountLabel = row.account_ref ? `${row.account_id}<div class="muted small">ID: ${row.account_ref}</div>` : row.account_id
     tr.innerHTML = `
       <td>${platformLabel(row.platform)}</td>
-      <td>${row.account_id}</td>
+      <td>${accountLabel}</td>
       <td>${row.company}</td>
       <td>${row.email}</td>
       <td>${budgetLabel}</td>
@@ -413,6 +414,7 @@ function syncOpenAccounts() {
     return {
       platform: acc.platform,
       account_id: acc.name || acc.external_id || `Аккаунт #${acc.id}`,
+      account_ref: acc.external_id || acc.account_code || acc.id,
       account_db_id: acc.id,
       company: '',
       email: '—',
@@ -428,6 +430,7 @@ function syncOpenAccounts() {
       return {
         platform: req.platform,
         account_id: req.name || `Заявка #${req.id}`,
+        account_ref: req.external_id || req.account_code || null,
         account_db_id: accountDbId,
         company: '',
         email: req.email || '—',
