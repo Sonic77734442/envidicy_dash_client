@@ -22,6 +22,7 @@ const accountExternal = document.getElementById('account-external')
 const accountCode = document.getElementById('account-code')
 const accountCurrency = document.getElementById('account-currency')
 const accountStatus = document.getElementById('account-status')
+let cachedAccountUsers = []
 
 function authHeadersSafe() {
   const token = localStorage.getItem('auth_token')
@@ -85,6 +86,7 @@ function renderAccounts(rows) {
           <button class="btn ghost small" data-edit="1"
             data-id="${row.id}"
             data-user-id="${row.user_id}"
+            data-user-email="${row.user_email || ''}"
             data-platform="${row.platform || ''}"
             data-name="${row.name || ''}"
             data-external="${row.external_id || ''}"
@@ -102,20 +104,40 @@ function renderAccounts(rows) {
 async function fetchClients() {
   if (!accountUser) return
   try {
-    const res = await fetch(`${apiBase}/admin/clients`, { headers: authHeadersSafe() })
-    if (handleAuthFailure(res)) return
-    if (!res.ok) throw new Error('Failed to load clients')
-    const data = await res.json()
-    accountUser.innerHTML = data
-      .map((row) => `<option value="${row.id}">${row.email}</option>`)
-      .join('')
+    const [clientsRes, usersRes] = await Promise.all([
+      fetch(`${apiBase}/admin/clients`, { headers: authHeadersSafe() }),
+      fetch(`${apiBase}/admin/users`, { headers: authHeadersSafe() }),
+    ])
+    if (handleAuthFailure(clientsRes) || handleAuthFailure(usersRes)) return
+    if (!clientsRes.ok || !usersRes.ok) throw new Error('Failed to load users')
+    const [clients, users] = await Promise.all([clientsRes.json(), usersRes.json()])
+    const merged = [...(Array.isArray(clients) ? clients : []), ...(Array.isArray(users) ? users : [])]
+    const unique = new Map()
+    merged.forEach((row) => {
+      if (row?.id != null && row?.email) unique.set(String(row.id), { id: row.id, email: row.email })
+    })
+    cachedAccountUsers = Array.from(unique.values()).sort((a, b) => String(a.email).localeCompare(String(b.email), 'ru'))
+    accountUser.innerHTML = cachedAccountUsers.map((row) => `<option value="${row.id}">${row.email}</option>`).join('')
   } catch (e) {
     if (bindStatus) bindStatus.textContent = 'Ошибка загрузки клиентов.'
   }
 }
 
+function ensureAccountUserOption(userId, userEmail) {
+  if (!accountUser || !userId) return
+  const normalizedId = String(userId)
+  const exists = Array.from(accountUser.options).some((option) => option.value === normalizedId)
+  if (exists) return
+  const option = document.createElement('option')
+  option.value = normalizedId
+  option.textContent = userEmail || `User #${normalizedId}`
+  accountUser.appendChild(option)
+}
+
 function resetBindForm() {
   if (accountIdInput) accountIdInput.value = ''
+  if (accountUser && accountUser.options.length) accountUser.selectedIndex = 0
+  if (accountPlatform) accountPlatform.value = 'meta'
   if (accountName) accountName.value = ''
   if (accountExternal) accountExternal.value = ''
   if (accountCode) accountCode.value = ''
@@ -187,6 +209,7 @@ if (accountsBody) {
     const btn = event.target.closest('button[data-edit]')
     if (!btn) return
     if (accountIdInput) accountIdInput.value = btn.dataset.id || ''
+    ensureAccountUserOption(btn.dataset.userId, btn.dataset.userEmail)
     if (accountUser) accountUser.value = btn.dataset.userId || ''
     if (accountPlatform) accountPlatform.value = btn.dataset.platform || 'meta'
     if (accountName) accountName.value = btn.dataset.name || ''
