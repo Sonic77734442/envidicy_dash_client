@@ -390,15 +390,9 @@ function formatLiveBillingCell(liveBilling, fallbackCurrency) {
   if (!liveBilling) return '—'
   if (liveBilling.error) return '<span class="muted small">Ошибка API</span>'
   const currency = liveBilling.currency || fallbackCurrency || ''
-  const balance = liveBilling.balance
   const spend = liveBilling.spend
-  const limit = liveBilling.limit
-  if (balance == null && spend == null && limit == null) return '<span class="muted small">Нет данных</span>'
-  const lines = []
-  lines.push(balance == null ? '—' : `${formatMoneyAmount(balance)} ${currency}`)
-  if (spend != null) lines.push(`<div class="muted small">Потрачено: ${formatMoneyAmount(spend)} ${currency}</div>`)
-  if (limit != null) lines.push(`<div class="muted small">Лимит: ${formatMoneyAmount(limit)} ${currency}</div>`)
-  return lines.join('')
+  if (spend == null) return '<span class="muted small">Нет данных</span>'
+  return `${formatMoneyAmount(spend)} ${currency}`
 }
 
 function normalizeAccountStatus(status) {

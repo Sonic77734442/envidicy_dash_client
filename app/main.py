@@ -2855,8 +2855,8 @@ def _meta_fetch_account_billing(account_external_id: str) -> Dict[str, object]:
         "provider": "meta",
         "currency": currency,
         "spend": spend,
-        "limit": spend_cap,
-        "balance": max(spend_cap - spend, 0.0) if spend_cap is not None else None,
+        "limit": None,
+        "balance": None,
         "source": "meta_api",
         "updated_at": datetime.utcnow().isoformat() + "Z",
     }
@@ -2979,8 +2979,8 @@ def _google_fetch_account_billing(customer_id: str) -> Dict[str, object]:
         "provider": "google",
         "currency": currency,
         "spend": spend,
-        "limit": limit,
-        "balance": max(limit - spend, 0.0) if limit is not None else None,
+        "limit": None,
+        "balance": None,
         "source": "google_ads_api",
         "updated_at": datetime.utcnow().isoformat() + "Z",
     }
