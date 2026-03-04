@@ -154,11 +154,36 @@ async function fetchClientFees(userId) {
   return res.json()
 }
 
+function getTopupAccountAmount(row) {
+  const amountInput = Number(row?.amount_input || 0)
+  const amountNetRaw = row?.amount_net
+  const amountNet = amountNetRaw != null ? Number(amountNetRaw) : null
+  const fxRate = row?.fx_rate != null ? Number(row.fx_rate) : null
+  const accountCurrency = String(row?.account_currency || row?.currency || 'USD').toUpperCase()
+  const inputCurrency = String(row?.currency || '').toUpperCase()
+
+  if (accountCurrency === inputCurrency) {
+    return amountNet != null ? amountNet : amountInput
+  }
+
+  if (fxRate && fxRate > 0) {
+    const calculated = amountInput / fxRate
+    if (amountNet == null) return calculated
+    if (amountNet > amountInput * 0.95) return calculated
+    return amountNet
+  }
+
+  return amountNet
+}
+
 function renderClientSummary(userId, email, requests, topups, accounts, profile) {
   if (!clientSummary) return
   const pendingCount = Array.isArray(requests) ? requests.length : 0
   const completedTotal = Array.isArray(topups)
-    ? topups.reduce((sum, row) => sum + Number(row.amount_net != null ? row.amount_net : row.amount_input || 0), 0)
+    ? topups.reduce((sum, row) => {
+        const value = getTopupAccountAmount(row)
+        return sum + Number(value || 0)
+      }, 0)
     : 0
   const accountsCount = Array.isArray(accounts) ? accounts.length : 0
   const company = profile?.company || '—'
@@ -230,6 +255,7 @@ function renderClientTopups(rows) {
   clientTopups.innerHTML = rows
     .map((row) => {
       const accountCurrency = row.account_currency || 'USD'
+      const accountAmount = getTopupAccountAmount(row)
       return `
         <tr>
           <td>${formatDate(row.created_at)}</td>
@@ -237,7 +263,7 @@ function renderClientTopups(rows) {
           <td>${row.account_name || '—'}</td>
           <td>${formatMoney(row.amount_input)} ${row.currency || ''}</td>
           <td>${row.fx_rate ?? '—'}</td>
-          <td>${formatMoney(row.amount_net)} ${accountCurrency}</td>
+          <td>${accountAmount == null ? '—' : `${formatMoney(accountAmount)} ${accountCurrency}`}</td>
           <td>${row.status || '—'}</td>
         </tr>
       `
