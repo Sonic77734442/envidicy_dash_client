@@ -68,7 +68,7 @@ function renderClients(rows) {
           <td>${pending ? `<span class="dot">${pending}</span>` : '—'}</td>
           <td>${completedTotal ? `${formatMoney(completedTotal)} KZT` : '—'}</td>
           <td style="text-align:right;">
-            <button class="btn ghost small" data-client="${row.id}" data-email="${row.email}">Открыть</button>
+            <button class="btn ghost small" data-client="${row.id}" data-email="${row.email}" data-completed-kzt="${completedTotal}">Открыть</button>
           </td>
         </tr>
       `
@@ -82,7 +82,8 @@ if (clientsBody) {
     if (!btn) return
     const userId = btn.dataset.client
     const email = btn.dataset.email
-    await openClientModal(userId, email)
+    const completedKzt = btn.dataset.completedKzt ? Number(btn.dataset.completedKzt) : null
+    await openClientModal(userId, email, completedKzt)
   })
 }
 
@@ -98,7 +99,7 @@ if (clientModal) {
   })
 }
 
-async function openClientModal(userId, email) {
+async function openClientModal(userId, email, completedTotalKzt = null) {
   if (!clientModal || !clientTitle) return
   clientTitle.textContent = email || 'Клиент'
   const [requests, topups, walletOps, accounts, profile, fees] = await Promise.all([
@@ -109,7 +110,7 @@ async function openClientModal(userId, email) {
     fetchClientProfile(userId),
     fetchClientFees(userId),
   ])
-  renderClientSummary(userId, email, requests, topups, accounts, profile)
+  renderClientSummary(userId, email, requests, topups, accounts, profile, completedTotalKzt)
   renderClientRequests(requests)
   renderClientTopups(topups)
   renderClientWalletOps(walletOps)
@@ -179,15 +180,16 @@ function getTopupAccountAmountKzt(row) {
   return 0
 }
 
-function renderClientSummary(userId, email, requests, topups, accounts, profile) {
+function renderClientSummary(userId, email, requests, topups, accounts, profile, completedTotalKzt = null) {
   if (!clientSummary) return
   const pendingCount = Array.isArray(requests) ? requests.length : 0
-  const completedTotal = Array.isArray(topups)
+  const calculatedTotal = Array.isArray(topups)
     ? topups.reduce((sum, row) => {
         const value = getTopupAccountAmountKzt(row)
         return sum + Number(value || 0)
       }, 0)
     : 0
+  const completedTotal = Number.isFinite(Number(completedTotalKzt)) ? Number(completedTotalKzt) : calculatedTotal
   const accountsCount = Array.isArray(accounts) ? accounts.length : 0
   const company = profile?.company || '—'
   clientSummary.innerHTML = `
@@ -428,7 +430,11 @@ if (clientRequests) {
       }
       const userId = clientSummary?.dataset.userId
       const email = clientTitle?.textContent || ''
-      if (userId) await openClientModal(userId, email)
+      if (userId) {
+        const row = cachedClients.find((item) => String(item.id) === String(userId))
+        const completedKzt = row ? Number(row.completed_total_kzt ?? row.completed_total ?? 0) : null
+        await openClientModal(userId, email, completedKzt)
+      }
     } catch (e) {
       if (clientsStatus) clientsStatus.textContent = 'Ошибка обновления заявки.'
     }
