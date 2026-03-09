@@ -61,7 +61,7 @@ function renderClients(rows) {
   clientsBody.innerHTML = rows
     .map((row) => {
       const pending = Number(row.pending_requests || 0)
-      const completedTotal = Number(row.completed_total_usd ?? row.completed_total ?? 0)
+      const completedTotal = Number(row.completed_total_usd ?? 0)
       return `
         <tr>
           <td>${row.email || '—'}</td>
@@ -175,6 +175,7 @@ function getTopupAccountAmountUsd(row) {
   const amount = getTopupAccountAmount(row)
   if (!Number.isFinite(amount)) return 0
   if (accountCurrency === 'USD') return amount
+  if (accountCurrency === 'KZT' && Number(row?.fx_rate || 0) > 0) return amount / Number(row.fx_rate)
   return 0
 }
 
@@ -203,7 +204,7 @@ function renderClientSummary(userId, email, requests, topups, accounts, profile)
     <div class="stat">
       <p class="muted">Пополнено</p>
       <h3>${completedTotal ? `${formatMoney(completedTotal)} USD` : '—'}</h3>
-      <p class="muted small">По подтверждённым операциям, в USD</p>
+      <p class="muted small">Факт перевода в аккаунты, в USD</p>
     </div>
     <div class="stat">
       <p class="muted">Аккаунты</p>

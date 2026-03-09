@@ -5492,7 +5492,9 @@ def admin_list_clients(admin_user=Depends(get_admin_user)):
                 amount_usd = 0.0
             totals_usd[user_id] = totals_usd.get(user_id, 0.0) + amount_usd
         for row in clients:
-            row["completed_total_usd"] = totals_usd.get(int(row["id"]), 0.0)
+            total_usd = totals_usd.get(int(row["id"]), 0.0)
+            row["completed_total_usd"] = total_usd
+            row["completed_total"] = total_usd
         return clients
 
 
