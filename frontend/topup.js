@@ -213,6 +213,22 @@ function getAccountById(accountId) {
   return (state.accountsFull || []).find((acc) => String(acc.id) === String(accountId)) || null
 }
 
+function getTopupAccountAmount(row) {
+  if (row?.amount_account != null) return Number(row.amount_account)
+  if (row?.amount_net != null) return Number(row.amount_net)
+  return Number(row?.amount_input || 0)
+}
+
+function getCompletedTopupBudgetByAccountId(accountId) {
+  const id = String(accountId || '')
+  if (!id) return null
+  const rows = Array.isArray(state.topups) ? state.topups : []
+  const matched = rows.filter((row) => String(row.account_id) === id && String(row.status || '').toLowerCase() === 'completed')
+  if (!matched.length) return null
+  const total = matched.reduce((sum, row) => sum + Number(getTopupAccountAmount(row) || 0), 0)
+  return Number.isFinite(total) ? total : null
+}
+
 function getAccountRate(account) {
   const rates = bccRatesCache.data?.rates
   if (!rates) return null
@@ -356,9 +372,14 @@ function renderOpenAccounts() {
     const hasAccount = Boolean(row.account_db_id)
     const canTopup = hasAccount && row.can_topup !== false
     const tr = document.createElement('tr')
-    const budgetUsd = convertAmountToUsd(row.budget, row.currency)
+    const fallbackBudget = row.account_db_id ? getCompletedTopupBudgetByAccountId(row.account_db_id) : null
+    const effectiveBudget =
+      row.budget == null || Number(row.budget) <= 0
+        ? (fallbackBudget == null ? row.budget : fallbackBudget)
+        : row.budget
+    const budgetUsd = convertAmountToUsd(effectiveBudget, row.currency)
     const budgetLabel =
-      row.budget == null || budgetUsd == null
+      effectiveBudget == null || budgetUsd == null
         ? '—'
         : `${formatMoneyAmount(budgetUsd)} USD`
     const liveBillingLabel = formatLiveBillingCell(row.live_billing, row.currency)
@@ -992,6 +1013,7 @@ async function fetchTopups() {
     if (!res.ok) throw new Error('Failed to load topups')
     const data = await res.json()
     state.topups = data
+    syncOpenAccounts()
   } catch (e) {
     console.error(e)
   }

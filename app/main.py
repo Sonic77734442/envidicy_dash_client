@@ -3162,7 +3162,7 @@ def _google_fetch_account_billing(customer_id: str) -> Dict[str, object]:
 def _attach_live_billing(account: Dict[str, object]) -> Dict[str, object]:
     payload = dict(account)
     platform = str(payload.get("platform") or "").lower().strip()
-    external_id = payload.get("external_id") or payload.get("account_code")
+    external_id = payload.get("external_id") or payload.get("account_code") or payload.get("name")
     payload["live_billing"] = None
     if not external_id or platform not in {"meta", "google"}:
         return payload
