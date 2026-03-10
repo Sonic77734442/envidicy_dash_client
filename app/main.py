@@ -3165,12 +3165,131 @@ def _google_fetch_account_billing(customer_id: str) -> Dict[str, object]:
     return _live_billing_cache_set(cache_key, payload)
 
 
+def _tiktok_fetch_account_billing(advertiser_id: str) -> Dict[str, object]:
+    normalized_advertiser_id = _tiktok_normalize_advertiser_id(advertiser_id)
+    cache_key = f"tiktok:{normalized_advertiser_id}"
+    cached = _live_billing_cache_get(cache_key)
+    if cached:
+        return cached
+
+    if not normalized_advertiser_id:
+        payload = {
+            "provider": "tiktok",
+            "currency": "USD",
+            "spend": None,
+            "limit": None,
+            "balance": None,
+            "error": "TikTok advertiser_id не задан или указан неверно",
+            "source": "tiktok_api",
+            "updated_at": datetime.utcnow().isoformat() + "Z",
+        }
+        return _live_billing_cache_set(cache_key, payload)
+
+    now = datetime.utcnow()
+    date_from = now.replace(day=1).strftime("%Y-%m-%d")
+    date_to = now.strftime("%Y-%m-%d")
+
+    spend = None
+    spend_error = None
+    try:
+        spend_rows = _tiktok_fetch_report(
+            normalized_advertiser_id,
+            date_from,
+            date_to,
+            "AUCTION_ADVERTISER",
+            ["stat_time_day"],
+            ["spend"],
+        )
+        spend = sum(float(row.get("spend") or 0) for row in spend_rows)
+    except Exception as exc:
+        spend_error = str(exc)
+        spend = None
+
+    currency = "USD"
+    limit = None
+    balance = None
+    try:
+        url = "https://business-api.tiktok.com/open_api/v1.3/advertiser/balance/get/"
+        params = {"advertiser_id": normalized_advertiser_id}
+        headers = {"Access-Token": _tiktok_access_token()}
+        resp = httpx.get(url, params=params, headers=headers, timeout=20)
+        if resp.status_code == 200:
+            payload = resp.json()
+            if payload.get("code") in (0, None):
+                data = payload.get("data") or {}
+                entries: List[Dict[str, object]] = []
+                if isinstance(data, dict):
+                    entries.append(data)
+                    if isinstance(data.get("list"), list):
+                        entries.extend(item for item in data.get("list") if isinstance(item, dict))
+
+                for entry in entries:
+                    entry_currency = entry.get("currency") or entry.get("account_currency")
+                    if entry_currency:
+                        currency = str(entry_currency).upper()
+                        break
+
+                def _pick_numeric(keys: List[str]) -> Optional[float]:
+                    for entry in entries:
+                        for key in keys:
+                            raw = entry.get(key)
+                            try:
+                                if raw is None or raw == "":
+                                    continue
+                                return float(raw)
+                            except (TypeError, ValueError):
+                                continue
+                    return None
+
+                balance = _pick_numeric(
+                    [
+                        "balance",
+                        "available_balance",
+                        "cash_balance",
+                        "valid_cash_balance",
+                        "remain_cash",
+                    ]
+                )
+                limit = _pick_numeric(
+                    [
+                        "spend_cap",
+                        "budget",
+                        "total_budget",
+                        "total_balance",
+                    ]
+                )
+    except Exception:
+        pass
+
+    if limit is None and balance is not None and spend is not None:
+        limit = balance + spend
+    if balance is None and limit is not None and spend is not None:
+        balance = limit - spend
+
+    result_payload = {
+        "provider": "tiktok",
+        "currency": currency,
+        "spend": spend,
+        "limit": limit,
+        "balance": balance,
+        "source": "tiktok_api",
+        "updated_at": datetime.utcnow().isoformat() + "Z",
+    }
+    if spend_error and spend is None and limit is None and balance is None:
+        result_payload["error"] = spend_error
+    return _live_billing_cache_set(cache_key, result_payload)
+
+
 def _attach_live_billing(account: Dict[str, object]) -> Dict[str, object]:
     payload = dict(account)
     platform = str(payload.get("platform") or "").lower().strip()
     external_id = payload.get("external_id") or payload.get("account_code") or payload.get("name")
+    if platform == "tiktok" and not external_id:
+        env_advertiser_id = str(os.getenv("TIKTOK_ADVERTISER_ID") or "").strip()
+        if env_advertiser_id:
+            external_id = env_advertiser_id.split(",")[0].strip()
     payload["live_billing"] = None
-    if not external_id or platform not in {"meta", "google"}:
+    if not external_id or platform not in {"meta", "google", "tiktok"}:
         return payload
 
     try:
@@ -3178,6 +3297,8 @@ def _attach_live_billing(account: Dict[str, object]) -> Dict[str, object]:
             payload["live_billing"] = _meta_fetch_account_billing(str(external_id))
         elif platform == "google":
             payload["live_billing"] = _google_fetch_account_billing(str(external_id))
+        elif platform == "tiktok":
+            payload["live_billing"] = _tiktok_fetch_account_billing(str(external_id))
     except Exception as exc:
         logging.exception("Failed to fetch live billing for %s account %s", platform, external_id)
         payload["live_billing"] = {

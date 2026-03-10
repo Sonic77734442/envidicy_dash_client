@@ -401,11 +401,16 @@ function renderOpenAccounts() {
     const card = document.createElement('article')
     card.className = 'account-status-card'
     const fallbackBudget = row.account_db_id ? getCompletedTopupBudgetByAccountId(row.account_db_id) : null
+    const liveLimit = row.live_billing && row.live_billing.limit != null ? Number(row.live_billing.limit) : null
+    const liveBalance = row.live_billing && row.live_billing.balance != null ? Number(row.live_billing.balance) : null
+    const liveSpend = row.live_billing && row.live_billing.spend != null ? Number(row.live_billing.spend) : null
+    const liveBudget = liveLimit != null ? liveLimit : (liveBalance != null && liveSpend != null ? liveBalance + liveSpend : null)
     const effectiveBudget =
       row.budget == null || Number(row.budget) <= 0
-        ? (fallbackBudget == null ? row.budget : fallbackBudget)
+        ? (fallbackBudget == null ? (liveBudget == null ? row.budget : liveBudget) : fallbackBudget)
         : row.budget
-    const budgetUsd = convertAmountToUsd(effectiveBudget, row.currency)
+    const budgetCurrency = row.live_billing?.currency || row.currency
+    const budgetUsd = convertAmountToUsd(effectiveBudget, budgetCurrency)
     const budgetLabel =
       effectiveBudget == null || budgetUsd == null
         ? '—'
