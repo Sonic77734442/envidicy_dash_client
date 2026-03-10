@@ -1517,26 +1517,17 @@ h1 {
   border: 1px solid var(--line);
   color: #f8fafc;
   flex: 0 0 auto;
+  background: #ffffff;
 }
 
-.platform-meta {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-}
-
-.platform-google {
-  background: linear-gradient(135deg, #ea4335, #fbbc05);
-}
-
-.platform-tiktok {
-  background: linear-gradient(135deg, #111827, #ec4899);
+.platform-logo svg {
+  width: 14px;
+  height: 14px;
+  display: block;
 }
 
 .platform-yandex {
   background: linear-gradient(135deg, #ef4444, #f97316);
-}
-
-.platform-telegram {
-  background: linear-gradient(135deg, #38bdf8, #0284c7);
 }
 
 .platform-monochrome {

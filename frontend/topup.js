@@ -411,7 +411,7 @@ function renderOpenAccounts() {
         ? '—'
         : `${formatMoneyAmount(budgetUsd)} USD`
     const liveBillingLabel = formatLiveBillingCell(row.live_billing, row.currency)
-    const platformLogo = platformLogoLabel(row.platform)
+    const platformLogo = platformLogoHtml(row.platform)
     card.innerHTML = `
       <div class="account-status-left">
         <div class="account-status-title-row">
@@ -495,12 +495,20 @@ function mapStatusFilter(status) {
   return 'all'
 }
 
-function platformLogoLabel(platform) {
-  if (platform === 'meta') return 'M'
-  if (platform === 'google') return 'G'
-  if (platform === 'tiktok') return 'T'
+function platformLogoHtml(platform) {
+  if (platform === 'google') {
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg>'
+  }
+  if (platform === 'meta') {
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="#1877F2" d="M24,12.073c0,5.989-4.394,10.954-10.13,11.855v-8.363h2.789l0.531-3.46H13.87V8.716c0-0.947,0.464-1.869,1.958-1.869h1.513V3.949c0,0-1.37-0.234-2.679-0.234c-2.734,0-4.52,1.657-4.52,4.656v2.637H7.091v3.46h3.039v8.363C4.395,23.025,0,18.061,0,12.073c0-6.627,5.373-12,12-12S24,5.446,24,12.073z"/></svg>'
+  }
+  if (platform === 'tiktok') {
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="#000000" d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>'
+  }
+  if (platform === 'telegram') {
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="#0088CC" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.4-1.08.39-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .39z"/></svg>'
+  }
   if (platform === 'yandex') return 'Y'
-  if (platform === 'telegram') return 'TG'
   if (platform === 'monochrome') return 'MC'
   return 'AD'
 }
