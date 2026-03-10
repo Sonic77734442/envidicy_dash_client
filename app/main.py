@@ -4438,9 +4438,10 @@ def tiktok_insights(
     ads: List[Dict[str, object]] = []
 
     metrics = ["spend", "impressions", "clicks", "ctr", "cpc", "cpm"]
+    summary_currency = None
 
     for acc in accounts:
-        advertiser_id = acc.get("external_id") or acc.get("account_code") or os.getenv("TIKTOK_ADVERTISER_ID")
+        advertiser_id = acc.get("external_id") or acc.get("account_code")
         if not advertiser_id:
             if account_id:
                 raise HTTPException(
@@ -4448,6 +4449,7 @@ def tiktok_insights(
                     detail=f"Для аккаунта TikTok id={acc.get('id')} не указан advertiser id (external_id/account_code).",
                 )
             continue
+        summary_currency = summary_currency or acc.get("currency")
         advertiser_id = _tiktok_normalize_advertiser_id(advertiser_id)
         campaign_rows = _tiktok_fetch_report(
             str(advertiser_id),
@@ -4536,7 +4538,7 @@ def tiktok_insights(
         "cpm": cpm,
         "impressions": total_impressions,
         "clicks": total_clicks,
-        "currency": "USD",
+        "currency": summary_currency or "USD",
     }
     return {"summary": summary, "campaigns": campaigns, "adgroups": adgroups, "ads": ads}
 
