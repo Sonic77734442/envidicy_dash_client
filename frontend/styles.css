@@ -214,17 +214,16 @@ body {
 }
 
 .topbar {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: center;
+  display: grid;
+  gap: 10px;
   position: relative;
   z-index: 3000;
 }
 
 .topbar-left {
-  flex: 1;
+  width: 100%;
   min-width: 0;
+  order: 2;
 }
 
 .topbar-title-row {
@@ -269,6 +268,8 @@ body {
   flex-wrap: wrap;
   justify-content: flex-end;
   position: relative;
+  width: 100%;
+  order: 1;
 }
 
 .balance-pill {
@@ -2349,8 +2350,6 @@ h1 {
 
 @media (max-width: 768px) {
   .topbar {
-    flex-direction: column;
-    align-items: flex-start;
     gap: 12px;
   }
 
