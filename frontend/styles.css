@@ -1505,6 +1505,44 @@ h1 {
   margin-bottom: 6px;
 }
 
+.platform-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  border: 1px solid var(--line);
+  color: #f8fafc;
+  flex: 0 0 auto;
+}
+
+.platform-meta {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.platform-google {
+  background: linear-gradient(135deg, #ea4335, #fbbc05);
+}
+
+.platform-tiktok {
+  background: linear-gradient(135deg, #111827, #ec4899);
+}
+
+.platform-yandex {
+  background: linear-gradient(135deg, #ef4444, #f97316);
+}
+
+.platform-telegram {
+  background: linear-gradient(135deg, #38bdf8, #0284c7);
+}
+
+.platform-monochrome {
+  background: linear-gradient(135deg, #52525b, #18181b);
+}
+
 .account-status-name {
   font-weight: 700;
   font-size: 15px;

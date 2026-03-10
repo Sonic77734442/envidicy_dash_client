@@ -411,9 +411,11 @@ function renderOpenAccounts() {
         ? '—'
         : `${formatMoneyAmount(budgetUsd)} USD`
     const liveBillingLabel = formatLiveBillingCell(row.live_billing, row.currency)
+    const platformLogo = platformLogoLabel(row.platform)
     card.innerHTML = `
       <div class="account-status-left">
         <div class="account-status-title-row">
+          <span class="platform-logo platform-${row.platform}" title="${platformLabel(row.platform)}">${platformLogo}</span>
           <div class="account-status-name">${row.account_id}</div>
           <span class="status ${statusClass(row.status)}">${row.status}</span>
         </div>
@@ -493,10 +495,21 @@ function mapStatusFilter(status) {
   return 'all'
 }
 
+function platformLogoLabel(platform) {
+  if (platform === 'meta') return 'M'
+  if (platform === 'google') return 'G'
+  if (platform === 'tiktok') return 'T'
+  if (platform === 'yandex') return 'Y'
+  if (platform === 'telegram') return 'TG'
+  if (platform === 'monochrome') return 'MC'
+  return 'AD'
+}
+
 function getFilteredOpenAccounts() {
   const filters = state.openAccountsFilters
   const q = String(filters.search || '').trim().toLowerCase()
   return state.openAccounts.filter((row) => {
+    if (mapStatusFilter(row.status) === 'closed') return false
     const rowDate = normalizeDateValue(row.created_at)
     if (filters.dateFrom && rowDate && rowDate < filters.dateFrom) return false
     if (filters.dateTo && rowDate && rowDate > filters.dateTo) return false
