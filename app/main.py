@@ -3196,8 +3196,8 @@ def _tiktok_fetch_account_billing(advertiser_id: str, force_refresh: bool = Fals
             normalized_advertiser_id,
             date_from,
             date_to,
-            "AUCTION_ADVERTISER",
-            ["stat_time_day"],
+            "AUCTION_CAMPAIGN",
+            ["campaign_id"],
             ["spend"],
         )
         spend = sum(float(row.get("spend") or 0) for row in spend_rows)
