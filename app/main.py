@@ -5744,22 +5744,40 @@ def admin_list_clients(admin_user=Depends(get_admin_user)):
     if not get_conn:
         return []
     with get_conn() as conn:
-        rows = conn.execute(
-            """
-            SELECT u.id, u.email,
-              COALESCE(SUM(CASE WHEN t.seen_by_admin=0 THEN 1 ELSE 0 END), 0) as unread_topups,
-              COALESCE(SUM(CASE WHEN t.status!='completed' THEN 1 ELSE 0 END), 0) as pending_requests,
-              COALESCE(SUM(CASE WHEN t.status='completed' THEN COALESCE(t.amount_net, t.amount_input) ELSE 0 END), 0) as completed_total,
-              COALESCE(SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END), 0) as completed_count,
-              MAX(t.created_at) as last_activity
-            FROM users u
-            LEFT JOIN topups t ON t.user_id = u.id
-            GROUP BY u.id, u.email
-            HAVING COALESCE(SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END), 0) > 0
-               OR COALESCE(u.is_client, 0) = 1
-            ORDER BY unread_topups DESC, u.email ASC
-            """
-        ).fetchall()
+        try:
+            rows = conn.execute(
+                """
+                SELECT u.id, u.email,
+                  COALESCE(SUM(CASE WHEN t.seen_by_admin=0 THEN 1 ELSE 0 END), 0) as unread_topups,
+                  COALESCE(SUM(CASE WHEN t.status!='completed' THEN 1 ELSE 0 END), 0) as pending_requests,
+                  COALESCE(SUM(CASE WHEN t.status='completed' THEN COALESCE(t.amount_net, t.amount_input) ELSE 0 END), 0) as completed_total,
+                  COALESCE(SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END), 0) as completed_count,
+                  MAX(t.created_at) as last_activity
+                FROM users u
+                LEFT JOIN topups t ON t.user_id = u.id
+                GROUP BY u.id, u.email
+                HAVING COALESCE(SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END), 0) > 0
+                   OR COALESCE(u.is_client, 0) = 1
+                ORDER BY unread_topups DESC, u.email ASC
+                """
+            ).fetchall()
+        except Exception:
+            rows = conn.execute(
+                """
+                SELECT u.id, u.email,
+                  0 as unread_topups,
+                  COALESCE(SUM(CASE WHEN t.status!='completed' THEN 1 ELSE 0 END), 0) as pending_requests,
+                  COALESCE(SUM(CASE WHEN t.status='completed' THEN COALESCE(t.amount_net, t.amount_input) ELSE 0 END), 0) as completed_total,
+                  COALESCE(SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END), 0) as completed_count,
+                  MAX(t.created_at) as last_activity
+                FROM users u
+                LEFT JOIN topups t ON t.user_id = u.id
+                GROUP BY u.id, u.email
+                HAVING COALESCE(SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END), 0) > 0
+                   OR COALESCE(u.is_client, 0) = 1
+                ORDER BY u.email ASC
+                """
+            ).fetchall()
         clients = [dict(row) for row in rows]
         topup_rows = conn.execute(
             """
