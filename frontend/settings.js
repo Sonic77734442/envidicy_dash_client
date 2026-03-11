@@ -1,9 +1,9 @@
 const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
 
 renderHeader({
-  eyebrow: 'Envidicy \u00b7 Profile',
-  title: '\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438',
-  subtitle: '\u0423\u043f\u0440\u0430\u0432\u043b\u044f\u0439\u0442\u0435 \u0434\u0430\u043d\u043d\u044b\u043c\u0438, \u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0441\u0442\u044c\u044e \u0438 \u0434\u043e\u043a\u0443\u043c\u0435\u043d\u0442\u0430\u043c\u0438.',
+  eyebrow: 'Envidicy ? Profile',
+  title: '?????????',
+  subtitle: '?????????? ???????, ????????????? ? ???????????.',
   buttons: [],
 })
 
@@ -85,27 +85,25 @@ function applyAccessVisibility(enabled) {
 function renderAccesses(rows) {
   if (!accesses.body) return
   if (!rows || !rows.length) {
-    accesses.body.innerHTML = '<tr><td colspan="4" class="muted">\u0414\u043e\u0441\u0442\u0443\u043f\u043e\u0432 \u043f\u043e\u043a\u0430 \u043d\u0435\u0442.</td></tr>'
+    accesses.body.innerHTML = '<tr><td colspan="4" class="muted">???????? ???? ???.</td></tr>'
     return
   }
-  accesses.body.innerHTML = rows
-    .map((row) => {
-      const isOwner = (row.role || 'member') === 'owner'
-      const roleLabel = isOwner ? '\u041e\u0441\u043d\u043e\u0432\u043d\u043e\u0439' : '\u0414\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0439'
-      const statusLabel = row.status === 'active' ? '\u0410\u043a\u0442\u0438\u0432\u0435\u043d' : row.status || '\u2014'
-      const actionHtml = isOwner
-        ? '<span class="muted small">\u0423\u0434\u0430\u043b\u0435\u043d\u0438\u0435 \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e</span>'
-        : `<button class="btn ghost small" type="button" data-access-delete="${row.id}">\u0423\u0434\u0430\u043b\u0438\u0442\u044c</button>`
-      return `
+  accesses.body.innerHTML = rows.map((row) => {
+    const isOwner = (row.role || 'member') === 'owner'
+    const roleLabel = isOwner ? '????????' : '??????????????'
+    const statusLabel = row.status === 'active' ? '???????' : row.status || '?'
+    const actionHtml = isOwner
+      ? '<span class="muted small">???????? ??????????</span>'
+      : `<button class="btn ghost small" type="button" data-access-delete="${row.id}">???????</button>`
+    return `
       <tr>
-        <td>${row.email || '\u2014'}</td>
+        <td>${row.email || '?'}</td>
         <td>${roleLabel}</td>
         <td>${statusLabel}</td>
         <td style="text-align:right;">${actionHtml}</td>
       </tr>
     `
-    })
-    .join('')
+  }).join('')
 }
 
 async function loadAccesses() {
@@ -124,17 +122,17 @@ async function loadAccesses() {
     const data = await res.json()
     renderAccesses(data.items || [])
   } catch (e) {
-    if (accesses.status) accesses.status.textContent = '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u043e\u0441\u0442\u0443\u043f\u044b.'
+    if (accesses.status) accesses.status.textContent = '?? ??????? ????????? ???????.'
   }
 }
 
 async function addAccess() {
   const email = accesses.email?.value?.trim().toLowerCase()
   if (!email) {
-    if (accesses.status) accesses.status.textContent = '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 email.'
+    if (accesses.status) accesses.status.textContent = '??????? email.'
     return
   }
-  if (accesses.status) accesses.status.textContent = '\u0414\u043e\u0431\u0430\u0432\u043b\u044f\u0435\u043c \u0434\u043e\u0441\u0442\u0443\u043f...'
+  if (accesses.status) accesses.status.textContent = '????????? ??????...'
   try {
     const res = await fetch(`${apiBase}/profile/accesses`, {
       method: 'POST',
@@ -148,17 +146,17 @@ async function addAccess() {
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(data?.detail || 'create access failed')
     if (accesses.email) accesses.email.value = ''
-    if (accesses.status) accesses.status.textContent = '\u0414\u043e\u0441\u0442\u0443\u043f \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d. \u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c \u043c\u043e\u0436\u0435\u0442 \u0437\u0430\u0434\u0430\u0442\u044c \u043f\u0430\u0440\u043e\u043b\u044c \u043d\u0430 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435 \u0432\u0445\u043e\u0434\u0430.'
+    if (accesses.status) accesses.status.textContent = '?????? ????????. ???????????? ????? ?????? ?????? ?? ???????? ?????.'
     await loadAccesses()
   } catch (e) {
-    if (accesses.status) accesses.status.textContent = '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0434\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0434\u043e\u0441\u0442\u0443\u043f.'
+    if (accesses.status) accesses.status.textContent = '?? ??????? ???????? ??????.'
   }
 }
 
 async function deleteAccess(accessId) {
   if (!accessId) return
-  if (!confirm('\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u044d\u0442\u043e\u0442 \u0434\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0439 \u0434\u043e\u0441\u0442\u0443\u043f?')) return
-  if (accesses.status) accesses.status.textContent = '\u0423\u0434\u0430\u043b\u044f\u0435\u043c \u0434\u043e\u0441\u0442\u0443\u043f...'
+  if (!confirm('??????? ???? ?????????????? ???????')) return
+  if (accesses.status) accesses.status.textContent = '??????? ??????...'
   try {
     const res = await fetch(`${apiBase}/profile/accesses/${accessId}`, {
       method: 'DELETE',
@@ -169,10 +167,10 @@ async function deleteAccess(accessId) {
       return
     }
     if (!res.ok) throw new Error('delete access failed')
-    if (accesses.status) accesses.status.textContent = '\u0414\u043e\u0441\u0442\u0443\u043f \u0443\u0434\u0430\u043b\u0435\u043d.'
+    if (accesses.status) accesses.status.textContent = '?????? ??????.'
     await loadAccesses()
   } catch (e) {
-    if (accesses.status) accesses.status.textContent = '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0443\u0434\u0430\u043b\u0438\u0442\u044c \u0434\u043e\u0441\u0442\u0443\u043f.'
+    if (accesses.status) accesses.status.textContent = '?? ??????? ??????? ??????.'
   }
 }
 
@@ -203,17 +201,17 @@ async function loadProfile() {
     }
     if (canManageAccesses) await loadAccesses()
   } catch (e) {
-    if (profile.status) profile.status.textContent = '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u043f\u0440\u043e\u0444\u0438\u043b\u044c.'
+    if (profile.status) profile.status.textContent = '?? ??????? ????????? ???????.'
   }
 }
 
 async function uploadAvatar() {
   const file = profile.avatarFile?.files?.[0]
   if (!file) {
-    if (profile.avatarStatus) profile.avatarStatus.textContent = '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0444\u0430\u0439\u043b.'
+    if (profile.avatarStatus) profile.avatarStatus.textContent = '???????? ????.'
     return
   }
-  if (profile.avatarStatus) profile.avatarStatus.textContent = '\u0417\u0430\u0433\u0440\u0443\u0436\u0430\u0435\u043c...'
+  if (profile.avatarStatus) profile.avatarStatus.textContent = '?????????...'
   const form = new FormData()
   form.append('file', file)
   try {
@@ -231,14 +229,14 @@ async function uploadAvatar() {
     if (profile.avatarPreview && data.avatar_url) {
       profile.avatarPreview.innerHTML = `<img src="${apiBase}${data.avatar_url}" alt="avatar" />`
     }
-    if (profile.avatarStatus) profile.avatarStatus.textContent = '\u0424\u043e\u0442\u043e \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u043e.'
+    if (profile.avatarStatus) profile.avatarStatus.textContent = '???? ?????????.'
   } catch (e) {
-    if (profile.avatarStatus) profile.avatarStatus.textContent = '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0444\u043e\u0442\u043e.'
+    if (profile.avatarStatus) profile.avatarStatus.textContent = '?? ??????? ????????? ????.'
   }
 }
 
 async function saveProfile() {
-  if (profile.status) profile.status.textContent = '\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u043c...'
+  if (profile.status) profile.status.textContent = '?????????...'
   const payload = {
     name: profile.name?.value?.trim() || null,
     company: profile.company?.value?.trim() || null,
@@ -257,9 +255,9 @@ async function saveProfile() {
       return
     }
     if (!res.ok) throw new Error('save failed')
-    if (profile.status) profile.status.textContent = '\u041f\u0440\u043e\u0444\u0438\u043b\u044c \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d.'
+    if (profile.status) profile.status.textContent = '??????? ????????.'
   } catch (e) {
-    if (profile.status) profile.status.textContent = '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f.'
+    if (profile.status) profile.status.textContent = '?? ??????? ????????? ?????????.'
   }
 }
 
@@ -268,14 +266,14 @@ async function changePassword() {
   const next = password.next?.value?.trim()
   const confirm = password.confirm?.value?.trim()
   if (!current || !next) {
-    if (password.status) password.status.textContent = '\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u0438 \u043d\u043e\u0432\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c.'
+    if (password.status) password.status.textContent = '????????? ??????? ? ????? ??????.'
     return
   }
   if (next !== confirm) {
-    if (password.status) password.status.textContent = '\u041f\u0430\u0440\u043e\u043b\u0438 \u043d\u0435 \u0441\u043e\u0432\u043f\u0430\u0434\u0430\u044e\u0442.'
+    if (password.status) password.status.textContent = '?????? ?? ?????????.'
     return
   }
-  if (password.status) password.status.textContent = '\u041e\u0431\u043d\u043e\u0432\u043b\u044f\u0435\u043c \u043f\u0430\u0440\u043e\u043b\u044c...'
+  if (password.status) password.status.textContent = '????????? ??????...'
   try {
     const res = await fetch(`${apiBase}/auth/change-password`, {
       method: 'POST',
@@ -289,12 +287,12 @@ async function changePassword() {
     if (!res.ok) throw new Error('change failed')
     const data = await res.json()
     if (data?.token) localStorage.setItem('auth_token', data.token)
-    if (password.status) password.status.textContent = '\u041f\u0430\u0440\u043e\u043b\u044c \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d.'
+    if (password.status) password.status.textContent = '?????? ????????.'
     if (password.current) password.current.value = ''
     if (password.next) password.next.value = ''
     if (password.confirm) password.confirm.value = ''
   } catch (e) {
-    if (password.status) password.status.textContent = '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u043f\u0430\u0440\u043e\u043b\u044c.'
+    if (password.status) password.status.textContent = '?? ??????? ???????? ??????.'
   }
 }
 
@@ -311,7 +309,7 @@ async function renderFees() {
     const rows = [
       { key: 'meta', platform: 'Meta', note: 'Facebook / Instagram' },
       { key: 'google', platform: 'Google Ads', note: 'Search / Display / YouTube' },
-      { key: 'yandex', platform: '\u042f\u043d\u0434\u0435\u043a\u0441 \u0414\u0438\u0440\u0435\u043a\u0442', note: '\u041f\u043e\u0438\u0441\u043a/\u0420\u0421\u042f' },
+      { key: 'yandex', platform: '?????? ??????', note: '?????/???' },
       { key: 'tiktok', platform: 'TikTok Ads', note: 'Video' },
       { key: 'telegram', platform: 'Telegram Ads', note: 'Channels / Bots' },
       { key: 'monochrome', platform: 'Monochrome', note: 'Programmatic' },
@@ -319,7 +317,7 @@ async function renderFees() {
     feesBody.innerHTML = rows
       .map((r) => {
         const val = data?.[r.key]
-        const label = val == null || val === '' ? '\u2014' : `${Number(val).toFixed(2)}%`
+        const label = val == null || val === '' ? '?' : `${Number(val).toFixed(2)}%`
         return `
     <tr>
       <td>${r.platform}</td>
@@ -330,7 +328,7 @@ async function renderFees() {
       })
       .join('')
   } catch (e) {
-    feesBody.innerHTML = `<tr><td colspan="3" class="muted">\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u043a\u043e\u043c\u0438\u0441\u0441\u0438\u0438.</td></tr>`
+    feesBody.innerHTML = `<tr><td colspan="3" class="muted">?? ??????? ????????? ????????.</td></tr>`
   }
 }
 
@@ -356,9 +354,9 @@ async function loadDocuments() {
         (row) => `
       <tr>
         <td>${row.title}</td>
-        <td>${row.created_at?.split(' ')[0] || '\u2014'}</td>
+        <td>${row.created_at?.split(' ')[0] || '?'}</td>
         <td style="text-align:right;">
-          <a class="btn ghost small" href="${apiBase}/documents/${row.id}${token ? `?token=${encodeURIComponent(token)}` : ''}" target="_blank" rel="noopener">\u0421\u043a\u0430\u0447\u0430\u0442\u044c</a>
+          <a class="btn ghost small" href="${apiBase}/documents/${row.id}${token ? `?token=${encodeURIComponent(token)}` : ''}" target="_blank" rel="noopener">???????</a>
         </td>
       </tr>
     `
@@ -367,7 +365,7 @@ async function loadDocuments() {
   } catch (e) {
     if (docs.empty) {
       docs.empty.hidden = false
-      docs.empty.textContent = '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u043e\u043a\u0443\u043c\u0435\u043d\u0442\u044b.'
+      docs.empty.textContent = '?? ??????? ????????? ?????????.'
     }
   }
 }
