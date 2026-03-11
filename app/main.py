@@ -2568,66 +2568,43 @@ def _normalize_email(email: Optional[str]) -> str:
 
 
 def _ensure_owner_access(conn, user_id: int):
-    try:
-        row = conn.execute(
-            "SELECT * FROM user_accesses WHERE user_id=? AND role='owner' ORDER BY id LIMIT 1",
-            (user_id,),
-        ).fetchone()
-        if row:
-            return dict(row)
-    except Exception:
-        row = None
+    row = conn.execute(
+        "SELECT * FROM user_accesses WHERE user_id=? AND role='owner' ORDER BY id LIMIT 1",
+        (user_id,),
+    ).fetchone()
+    if row:
+        return dict(row)
     user = conn.execute(
         "SELECT id, email, password_hash, salt FROM users WHERE id=?",
         (user_id,),
     ).fetchone()
     if not user or not user["email"]:
         return None
-    try:
-        cur = conn.execute(
-            """
-            INSERT INTO user_accesses (user_id, email, password_hash, salt, role, status)
-            VALUES (?, ?, ?, ?, 'owner', 'active')
-            """,
-            (user["id"], _normalize_email(user["email"]), user["password_hash"], user["salt"]),
-        )
-        row = conn.execute("SELECT * FROM user_accesses WHERE id=?", (cur.lastrowid,)).fetchone()
-        return dict(row) if row else None
-    except Exception:
-        return {
-            "id": None,
-            "user_id": user["id"],
-            "email": _normalize_email(user["email"]),
-            "password_hash": user["password_hash"],
-            "salt": user["salt"],
-            "role": "owner",
-            "status": "active",
-        }
+    cur = conn.execute(
+        """
+        INSERT INTO user_accesses (user_id, email, password_hash, salt, role, status)
+        VALUES (?, ?, ?, ?, 'owner', 'active')
+        """,
+        (user["id"], _normalize_email(user["email"]), user["password_hash"], user["salt"]),
+    )
+    row = conn.execute("SELECT * FROM user_accesses WHERE id=?", (cur.lastrowid,)).fetchone()
+    return dict(row) if row else None
 
 
 def _get_access_by_email(conn, email: str):
-    try:
-        row = conn.execute(
-            "SELECT * FROM user_accesses WHERE email=? AND status='active'",
-            (_normalize_email(email),),
-        ).fetchone()
-    except Exception:
-        row = None
+    row = conn.execute(
+        "SELECT * FROM user_accesses WHERE email=? AND status='active'",
+        (_normalize_email(email),),
+    ).fetchone()
     return dict(row) if row else None
 
 
 def _issue_token(conn, user_id: int, access_id: Optional[int]) -> str:
     token = secrets.token_hex(24)
-    try:
-        conn.execute(
-            "INSERT INTO user_tokens (user_id, access_id, token) VALUES (?, ?, ?)",
-            (user_id, access_id, token),
-        )
-    except Exception:
-        conn.execute(
-            "INSERT INTO user_tokens (user_id, token) VALUES (?, ?)",
-            (user_id, token),
-        )
+    conn.execute(
+        "INSERT INTO user_tokens (user_id, access_id, token) VALUES (?, ?, ?)",
+        (user_id, access_id, token),
+    )
     return token
 
 
@@ -2648,37 +2625,23 @@ def _get_user_by_token(token: Optional[str]):
     if not get_conn:
         raise HTTPException(status_code=500, detail="DB not initialized")
     with get_conn() as conn:
-        access_row = None
-        try:
-            row = conn.execute(
-                """
-                SELECT u.*, ut.access_id
-                FROM user_tokens ut
-                JOIN users u ON u.id = ut.user_id
-                WHERE ut.token=?
-                """,
-                (token,),
-            ).fetchone()
-            if row and row["access_id"]:
-                try:
-                    access_row = conn.execute(
-                        "SELECT * FROM user_accesses WHERE id=?",
-                        (row["access_id"],),
-                    ).fetchone()
-                except Exception:
-                    access_row = None
-        except Exception:
-            row = conn.execute(
-                """
-                SELECT u.*
-                FROM user_tokens ut
-                JOIN users u ON u.id = ut.user_id
-                WHERE ut.token=?
-                """,
-                (token,),
-            ).fetchone()
+        row = conn.execute(
+            """
+            SELECT u.*, ut.access_id
+            FROM user_tokens ut
+            JOIN users u ON u.id = ut.user_id
+            WHERE ut.token=?
+            """,
+            (token,),
+        ).fetchone()
         if not row:
             return None
+        access_row = None
+        if row["access_id"]:
+            access_row = conn.execute(
+                "SELECT * FROM user_accesses WHERE id=?",
+                (row["access_id"],),
+            ).fetchone()
         return _hydrate_current_user(conn, row, access_row)
 
 
@@ -4172,15 +4135,12 @@ def get_fees(current_user=Depends(get_current_user)):
 
 def _ensure_token(conn, user_id: int, access_id: Optional[int] = None) -> str:
     if access_id:
-        try:
-            row = conn.execute(
-                "SELECT token FROM user_tokens WHERE user_id=? AND access_id=? ORDER BY created_at DESC LIMIT 1",
-                (user_id, access_id),
-            ).fetchone()
-            if row and row["token"]:
-                return row["token"]
-        except Exception:
-            pass
+        row = conn.execute(
+            "SELECT token FROM user_tokens WHERE user_id=? AND access_id=? ORDER BY created_at DESC LIMIT 1",
+            (user_id, access_id),
+        ).fetchone()
+        if row and row["token"]:
+            return row["token"]
     row = conn.execute(
         "SELECT token FROM user_tokens WHERE user_id=? ORDER BY created_at DESC LIMIT 1",
         (user_id,),
@@ -4188,10 +4148,7 @@ def _ensure_token(conn, user_id: int, access_id: Optional[int] = None) -> str:
     if row and row["token"]:
         return row["token"]
     token = secrets.token_hex(32)
-    try:
-        conn.execute("INSERT INTO user_tokens (user_id, access_id, token) VALUES (?, ?, ?)", (user_id, access_id, token))
-    except Exception:
-        conn.execute("INSERT INTO user_tokens (user_id, token) VALUES (?, ?)", (user_id, token))
+    conn.execute("INSERT INTO user_tokens (user_id, access_id, token) VALUES (?, ?, ?)", (user_id, access_id, token))
     conn.commit()
     return token
 
