@@ -29,7 +29,7 @@ body {
 }
 
 .app {
-  max-width: 1200px;
+  max-width: 1520px;
   margin: 0 auto;
   padding: 32px 20px 80px;
   position: relative;
@@ -1522,7 +1522,7 @@ h1 {
   background: linear-gradient(160deg, rgba(17, 22, 43, 0.94), rgba(12, 17, 34, 0.94));
   padding: 10px 12px;
   display: grid;
-  grid-template-columns: minmax(220px, 1.25fr) minmax(420px, 1.75fr) auto;
+  grid-template-columns: minmax(200px, 1.1fr) minmax(0, 2fr) auto;
   gap: 12px;
   align-items: center;
 }
@@ -1614,7 +1614,7 @@ h1 {
 .account-metric {
   border: 1px solid var(--line);
   border-radius: 9px;
-  padding: 7px 8px;
+  padding: 6px 7px;
   background: rgba(15, 19, 34, 0.5);
   min-width: 0;
 }
@@ -1626,7 +1626,7 @@ h1 {
 }
 
 .account-metric-value {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -2406,7 +2406,7 @@ h1 {
 
 @media (max-width: 1024px) {
   .app {
-    max-width: 1000px;
+    max-width: 1280px;
     padding: 28px 16px 64px;
   }
 
