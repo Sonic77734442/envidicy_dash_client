@@ -455,7 +455,6 @@ function renderOpenAccounts() {
               <div class="account-status-name">${row.account_id}</div>
             </div>
           </div>
-          <span class="status ${statusClass(row.status)}">${row.status}</span>
         </div>
         <div class="account-status-sub">
           <span>${platformLabel(row.platform)}</span>
@@ -501,6 +500,7 @@ function renderOpenAccounts() {
             : `<span class="muted small">Ожидает открытия</span>`
         }
       </div>
+      <span class="status account-status-ribbon ${statusClass(row.status)}">${row.status}</span>
     `
     cardsRoot.appendChild(card)
   })
