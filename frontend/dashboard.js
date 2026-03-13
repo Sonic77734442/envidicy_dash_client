@@ -52,9 +52,9 @@ const lineEl = document.getElementById('line-chart')
 const audienceAgeLoad = document.getElementById('audience-age-load')
 const audienceGeoLoad = document.getElementById('audience-geo-load')
 const audienceDeviceLoad = document.getElementById('audience-device-load')
-const audienceAgeBody = document.getElementById('audience-age-body')
-const audienceGeoBody = document.getElementById('audience-geo-body')
-const audienceDeviceBody = document.getElementById('audience-device-body')
+const audienceAgePlatform = document.getElementById('audience-age-platform')
+const audienceGeoPlatform = document.getElementById('audience-geo-platform')
+const audienceDevicePlatform = document.getElementById('audience-device-platform')
 const audienceAgeDonut = document.getElementById('audience-age-donut')
 const audienceGeoDonut = document.getElementById('audience-geo-donut')
 const audienceDeviceDonut = document.getElementById('audience-device-donut')
@@ -674,34 +674,13 @@ async function loadOverview() {
   }
 }
 
-function renderAudienceRows(target, rows) {
-  if (!target) return
-  if (!rows.length) {
-    target.innerHTML = '<tr><td colspan="5">Нет данных</td></tr>'
-    return
-  }
-  target.innerHTML = rows
-    .map(
-      (row) => `
-      <tr>
-        <td>${row.platform}</td>
-        <td>${row.segment}</td>
-        <td>${formatInt(row.impressions || 0)}</td>
-        <td>${formatInt(row.clicks || 0)}</td>
-        <td>${formatMoney(row.spend || 0)}</td>
-      </tr>
-    `
-    )
-    .join('')
-}
-
 function renderAudienceDonut(target, legendTarget, rows) {
   if (!target || !legendTarget) return
   const grouped = new Map()
   rows.forEach((row) => {
     const key = String(row.segment || '').trim() || 'Unknown'
-    const spend = Number(row.spend || 0)
-    grouped.set(key, (grouped.get(key) || 0) + (Number.isFinite(spend) ? spend : 0))
+    const impressions = Number(row.impressions || 0)
+    grouped.set(key, (grouped.get(key) || 0) + (Number.isFinite(impressions) ? impressions : 0))
   })
   const items = Array.from(grouped.entries())
     .map(([label, value]) => ({ label, value }))
@@ -747,8 +726,8 @@ function renderAudienceDonut(target, legendTarget, rows) {
     <svg viewBox="0 0 36 36" style="width: 220px; height: 220px;">
       <circle cx="18" cy="18" r="${donutRadius}" fill="none" stroke="var(--line)" stroke-width="${donutStroke}"></circle>
       ${arcs}
-      <text x="18" y="17" text-anchor="middle" fill="var(--muted)" font-size="3.2">Spend</text>
-      <text x="18" y="21.5" text-anchor="middle" fill="var(--text)" font-size="3.6" font-weight="700">$${formatMoney(total)}</text>
+      <text x="18" y="17" text-anchor="middle" fill="var(--muted)" font-size="3.2">Impr</text>
+      <text x="18" y="21.5" text-anchor="middle" fill="var(--text)" font-size="3.6" font-weight="700">${formatInt(total)}</text>
     </svg>
   `
   legendTarget.innerHTML = items
@@ -756,11 +735,18 @@ function renderAudienceDonut(target, legendTarget, rows) {
       (item, idx) => `
       <div class="legend-item">
         <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${palette[idx % palette.length]};margin-right:6px;"></span>${item.label}</span>
-        <span>${((item.value / total) * 100).toFixed(1)}% · $${formatMoney(item.value)}</span>
+        <span>${((item.value / total) * 100).toFixed(1)}% · ${formatInt(item.value)}</span>
       </div>
     `
     )
     .join('')
+}
+
+function filterAudienceRowsByPlatform(rows, platformFilter) {
+  const filter = String(platformFilter || 'all').toLowerCase()
+  if (!filter || filter === 'all') return rows
+  const expected = filter === 'meta' ? 'meta' : filter === 'google' ? 'google' : filter
+  return rows.filter((row) => String(row.platform || '').toLowerCase().startsWith(expected))
 }
 
 async function loadAudience(group) {
@@ -956,10 +942,16 @@ const withGlobalLoading = async (message, fn) => {
   }
 }
 
-async function refreshAudienceGroup(group, bodyEl, donutEl, legendEl) {
+async function refreshAudienceGroup(group, donutEl, legendEl, platformSelect) {
   const rows = await loadAudience(group)
-  renderAudienceRows(bodyEl, rows)
-  renderAudienceDonut(donutEl, legendEl, rows)
+  const filtered = filterAudienceRowsByPlatform(rows, platformSelect?.value || 'all')
+  renderAudienceDonut(donutEl, legendEl, filtered)
+  if (audienceStatus) {
+    const platformLabel =
+      platformSelect?.value === 'meta' ? 'Meta' : platformSelect?.value === 'google' ? 'Google' : 'Все платформы'
+    const totalImpressions = filtered.reduce((sum, row) => sum + Number(row.impressions || 0), 0)
+    audienceStatus.textContent = `Срез: ${platformLabel} · Период ${metaDateFrom?.value || ''} — ${metaDateTo?.value || ''} · Impr: ${formatInt(totalImpressions)}`
+  }
 }
 
 if (metaLoad) metaLoad.addEventListener('click', () => withGlobalLoading('Загружаем данные...', loadMetaInsights))
@@ -970,21 +962,42 @@ if (reportExport) reportExport.addEventListener('click', () => window.print())
 if (audienceAgeLoad)
   audienceAgeLoad.addEventListener('click', () =>
     withGlobalLoading('Загружаем данные...', async () =>
-      refreshAudienceGroup('age_gender', audienceAgeBody, audienceAgeDonut, audienceAgeLegend)
+      refreshAudienceGroup('age_gender', audienceAgeDonut, audienceAgeLegend, audienceAgePlatform)
     )
   )
 if (audienceGeoLoad)
   audienceGeoLoad.addEventListener('click', () =>
     withGlobalLoading('Загружаем данные...', async () =>
-      refreshAudienceGroup('geo', audienceGeoBody, audienceGeoDonut, audienceGeoLegend)
+      refreshAudienceGroup('geo', audienceGeoDonut, audienceGeoLegend, audienceGeoPlatform)
     )
   )
 if (audienceDeviceLoad)
   audienceDeviceLoad.addEventListener('click', () =>
     withGlobalLoading('Загружаем данные...', async () =>
-      refreshAudienceGroup('device', audienceDeviceBody, audienceDeviceDonut, audienceDeviceLegend)
+      refreshAudienceGroup('device', audienceDeviceDonut, audienceDeviceLegend, audienceDevicePlatform)
     )
   )
+if (audienceAgePlatform) {
+  audienceAgePlatform.addEventListener('change', () =>
+    withGlobalLoading('Обновляем срез...', async () =>
+      refreshAudienceGroup('age_gender', audienceAgeDonut, audienceAgeLegend, audienceAgePlatform)
+    )
+  )
+}
+if (audienceGeoPlatform) {
+  audienceGeoPlatform.addEventListener('change', () =>
+    withGlobalLoading('Обновляем срез...', async () =>
+      refreshAudienceGroup('geo', audienceGeoDonut, audienceGeoLegend, audienceGeoPlatform)
+    )
+  )
+}
+if (audienceDevicePlatform) {
+  audienceDevicePlatform.addEventListener('change', () =>
+    withGlobalLoading('Обновляем срез...', async () =>
+      refreshAudienceGroup('device', audienceDeviceDonut, audienceDeviceLegend, audienceDevicePlatform)
+    )
+  )
+}
 initMetaDates()
 loadMetaAccounts()
 
