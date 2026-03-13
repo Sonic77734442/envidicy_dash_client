@@ -55,6 +55,12 @@ const audienceDeviceLoad = document.getElementById('audience-device-load')
 const audienceAgeBody = document.getElementById('audience-age-body')
 const audienceGeoBody = document.getElementById('audience-geo-body')
 const audienceDeviceBody = document.getElementById('audience-device-body')
+const audienceAgeDonut = document.getElementById('audience-age-donut')
+const audienceGeoDonut = document.getElementById('audience-geo-donut')
+const audienceDeviceDonut = document.getElementById('audience-device-donut')
+const audienceAgeLegend = document.getElementById('audience-age-legend')
+const audienceGeoLegend = document.getElementById('audience-geo-legend')
+const audienceDeviceLegend = document.getElementById('audience-device-legend')
 const audienceStatus = document.getElementById('audience-status')
 
 function authHeaders() {
@@ -689,6 +695,74 @@ function renderAudienceRows(target, rows) {
     .join('')
 }
 
+function renderAudienceDonut(target, legendTarget, rows) {
+  if (!target || !legendTarget) return
+  const grouped = new Map()
+  rows.forEach((row) => {
+    const key = String(row.segment || '').trim() || 'Unknown'
+    const spend = Number(row.spend || 0)
+    grouped.set(key, (grouped.get(key) || 0) + (Number.isFinite(spend) ? spend : 0))
+  })
+  const items = Array.from(grouped.entries())
+    .map(([label, value]) => ({ label, value }))
+    .filter((item) => item.value > 0)
+    .sort((a, b) => b.value - a.value)
+  const total = items.reduce((sum, item) => sum + item.value, 0)
+
+  if (!items.length || total <= 0) {
+    target.innerHTML = '<div class="muted">Нет данных по расходам</div>'
+    legendTarget.innerHTML = ''
+    return
+  }
+
+  const palette = ['#3b82f6', '#f59e0b', '#34d399', '#a78bfa', '#ef4444', '#22d3ee', '#f97316', '#10b981']
+  const donutRadius = 13
+  const donutStroke = 6
+  const circumference = 2 * Math.PI * donutRadius
+  let offset = 0
+  const arcs = items
+    .map((item, idx) => {
+      const ratio = item.value / total
+      const length = circumference * ratio
+      const dash = `${length.toFixed(2)} ${(circumference - length).toFixed(2)}`
+      const rotate = (offset / circumference) * 360 - 90
+      offset += length
+      return `
+        <circle
+          cx="18"
+          cy="18"
+          r="${donutRadius}"
+          fill="none"
+          stroke="${palette[idx % palette.length]}"
+          stroke-width="${donutStroke}"
+          stroke-dasharray="${dash}"
+          transform="rotate(${rotate.toFixed(2)} 18 18)"
+          stroke-linecap="butt"
+        ></circle>
+      `
+    })
+    .join('')
+
+  target.innerHTML = `
+    <svg viewBox="0 0 36 36" style="width: 220px; height: 220px;">
+      <circle cx="18" cy="18" r="${donutRadius}" fill="none" stroke="var(--line)" stroke-width="${donutStroke}"></circle>
+      ${arcs}
+      <text x="18" y="17" text-anchor="middle" fill="var(--muted)" font-size="3.2">Spend</text>
+      <text x="18" y="21.5" text-anchor="middle" fill="var(--text)" font-size="3.6" font-weight="700">$${formatMoney(total)}</text>
+    </svg>
+  `
+  legendTarget.innerHTML = items
+    .map(
+      (item, idx) => `
+      <div class="legend-item">
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${palette[idx % palette.length]};margin-right:6px;"></span>${item.label}</span>
+        <span>${((item.value / total) * 100).toFixed(1)}% · $${formatMoney(item.value)}</span>
+      </div>
+    `
+    )
+    .join('')
+}
+
 async function loadAudience(group) {
   if (!metaDateFrom || !metaDateTo) return
   const params = new URLSearchParams()
@@ -882,6 +956,12 @@ const withGlobalLoading = async (message, fn) => {
   }
 }
 
+async function refreshAudienceGroup(group, bodyEl, donutEl, legendEl) {
+  const rows = await loadAudience(group)
+  renderAudienceRows(bodyEl, rows)
+  renderAudienceDonut(donutEl, legendEl, rows)
+}
+
 if (metaLoad) metaLoad.addEventListener('click', () => withGlobalLoading('Загружаем данные...', loadMetaInsights))
 if (googleLoad) googleLoad.addEventListener('click', () => withGlobalLoading('Загружаем данные...', loadGoogleInsights))
 if (tiktokLoad) tiktokLoad.addEventListener('click', () => withGlobalLoading('Загружаем данные...', loadTiktokInsights))
@@ -889,15 +969,21 @@ if (reportLoad) reportLoad.addEventListener('click', () => withGlobalLoading('З
 if (reportExport) reportExport.addEventListener('click', () => window.print())
 if (audienceAgeLoad)
   audienceAgeLoad.addEventListener('click', () =>
-    withGlobalLoading('Загружаем данные...', async () => renderAudienceRows(audienceAgeBody, await loadAudience('age_gender')))
+    withGlobalLoading('Загружаем данные...', async () =>
+      refreshAudienceGroup('age_gender', audienceAgeBody, audienceAgeDonut, audienceAgeLegend)
+    )
   )
 if (audienceGeoLoad)
   audienceGeoLoad.addEventListener('click', () =>
-    withGlobalLoading('Загружаем данные...', async () => renderAudienceRows(audienceGeoBody, await loadAudience('geo')))
+    withGlobalLoading('Загружаем данные...', async () =>
+      refreshAudienceGroup('geo', audienceGeoBody, audienceGeoDonut, audienceGeoLegend)
+    )
   )
 if (audienceDeviceLoad)
   audienceDeviceLoad.addEventListener('click', () =>
-    withGlobalLoading('Загружаем данные...', async () => renderAudienceRows(audienceDeviceBody, await loadAudience('device')))
+    withGlobalLoading('Загружаем данные...', async () =>
+      refreshAudienceGroup('device', audienceDeviceBody, audienceDeviceDonut, audienceDeviceLegend)
+    )
   )
 initMetaDates()
 loadMetaAccounts()
