@@ -668,6 +668,27 @@ function getFilteredOpenAccounts() {
   })
 }
 
+function attachDatePickerBehavior(input) {
+  if (!input) return
+  input.setAttribute('inputmode', 'none')
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') return
+    e.preventDefault()
+  })
+  input.addEventListener('paste', (e) => e.preventDefault())
+  const openPicker = () => {
+    if (typeof input.showPicker === 'function') {
+      try {
+        input.showPicker()
+      } catch (e) {
+        // no-op: some browsers restrict showPicker by gesture context
+      }
+    }
+  }
+  input.addEventListener('focus', openPicker)
+  input.addEventListener('click', openPicker)
+}
+
 function bindOpenAccountsControls() {
   const periodPreset = document.getElementById('accounts-period-preset')
   const dateFrom = document.getElementById('accounts-date-from')
@@ -700,6 +721,7 @@ function bindOpenAccountsControls() {
   }
 
   if (dateFrom) {
+    attachDatePickerBehavior(dateFrom)
     dateFrom.value = state.openAccountsFilters.dateFrom
     dateFrom.addEventListener('change', () => {
       state.openAccountsFilters.dateFrom = dateFrom.value
@@ -709,6 +731,7 @@ function bindOpenAccountsControls() {
     })
   }
   if (dateTo) {
+    attachDatePickerBehavior(dateTo)
     dateTo.value = state.openAccountsFilters.dateTo
     dateTo.addEventListener('change', () => {
       state.openAccountsFilters.dateTo = dateTo.value
