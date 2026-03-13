@@ -216,7 +216,7 @@ function renderClientSummary(userId, email, requests, topups, accounts, profile,
     <div class="stat">
       <p class="muted">Пополнено</p>
       <h3>${completedTotal ? `${formatMoney(completedTotal)} KZT` : '—'}</h3>
-      <p class="muted small">По выставленным счетам, в KZT</p>
+      <p class="muted small">По загруженным счетам (ready), в KZT</p>
     </div>
     <div class="stat">
       <p class="muted">Аккаунты</p>

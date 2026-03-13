@@ -6047,12 +6047,16 @@ def admin_client_invoice_summary(user_id: int, admin_user=Depends(get_admin_user
         rows = conn.execute(
             """
             SELECT
-              r.id as request_id,
-              COALESCE(i.amount, r.amount) as invoice_amount,
-              COALESCE(i.currency, r.currency, 'KZT') as invoice_currency
+              i.id as invoice_id,
+              i.amount as invoice_amount,
+              COALESCE(i.currency, 'KZT') as invoice_currency
             FROM wallet_topup_requests r
-            LEFT JOIN invoice_uploads i ON i.id = (
-              SELECT id FROM invoice_uploads WHERE request_id = r.id ORDER BY created_at DESC LIMIT 1
+            JOIN invoice_uploads i ON i.id = (
+              SELECT id
+              FROM invoice_uploads
+              WHERE request_id = r.id AND COALESCE(status, 'pending') = 'ready'
+              ORDER BY created_at DESC
+              LIMIT 1
             )
             WHERE r.user_id=?
             ORDER BY r.created_at DESC
