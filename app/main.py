@@ -3463,12 +3463,12 @@ def _google_fetch_audience_age_gender(customer_id: str, date_from: str, date_to:
     ga_service = client.get_service("GoogleAdsService")
     query = f"""
         SELECT
-          segments.adjusted_age_range,
-          segments.adjusted_gender,
+          segments.age_range,
+          segments.gender,
           metrics.impressions,
           metrics.clicks,
           metrics.cost_micros
-        FROM customer
+        FROM campaign
         WHERE segments.date BETWEEN '{date_from}' AND '{date_to}'
     """
     rows = ga_service.search(customer_id=customer_id, query=query)
@@ -3476,8 +3476,8 @@ def _google_fetch_audience_age_gender(customer_id: str, date_from: str, date_to:
     for row in rows:
         data.append(
             {
-                "age_range": str(row.segments.adjusted_age_range),
-                "gender": str(row.segments.adjusted_gender),
+                "age_range": str(row.segments.age_range),
+                "gender": str(row.segments.gender),
                 "impressions": int(row.metrics.impressions or 0),
                 "clicks": int(row.metrics.clicks or 0),
                 "spend": float(row.metrics.cost_micros or 0) / 1_000_000,
@@ -3528,7 +3528,7 @@ def _google_fetch_audience_geo(customer_id: str, date_from: str, date_to: str, l
           metrics.impressions,
           metrics.clicks,
           metrics.cost_micros
-        FROM customer
+        FROM campaign
         WHERE segments.date BETWEEN '{date_from}' AND '{date_to}'
     """
     rows = ga_service.search(customer_id=customer_id, query=query)
@@ -3548,13 +3548,16 @@ def _google_fetch_audience_geo(customer_id: str, date_from: str, date_to: str, l
         )
     if not resource_names:
         return data
-    name_map = _google_resolve_geo_names(client, resource_names)
-    for row in data:
-        row["geo"] = name_map.get(row["geo"], row["geo"])
+    try:
+        name_map = _google_resolve_geo_names(client, customer_id, resource_names)
+        for row in data:
+            row["geo"] = name_map.get(row["geo"], row["geo"])
+    except Exception:
+        pass
     return data
 
 
-def _google_resolve_geo_names(client: GoogleAdsClient, resource_names: List[str]) -> Dict[str, str]:
+def _google_resolve_geo_names(client: GoogleAdsClient, customer_id: str, resource_names: List[str]) -> Dict[str, str]:
     ga_service = client.get_service("GoogleAdsService")
     unique = sorted(set(resource_names))
     if not unique:
@@ -3568,7 +3571,7 @@ def _google_resolve_geo_names(client: GoogleAdsClient, resource_names: List[str]
         FROM geo_target_constant
         WHERE geo_target_constant.resource_name IN ({placeholders})
     """
-    rows = ga_service.search(customer_id="0", query=query)
+    rows = ga_service.search(customer_id=customer_id, query=query)
     mapping: Dict[str, str] = {}
     for row in rows:
         mapping[row.geo_target_constant.resource_name] = row.geo_target_constant.name
