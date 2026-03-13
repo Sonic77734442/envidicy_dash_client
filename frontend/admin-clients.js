@@ -219,7 +219,7 @@ function renderClientRequests(rows) {
   }
   clientRequests.innerHTML = rows
     .map((row) => {
-      const accountCurrency = row.account_currency || 'USD'
+      const accountCurrency = row.amount_account_currency || row.account_currency || row.currency || 'KZT'
       const amountNet = row.amount_net != null ? Number(row.amount_net) : ''
       const fxRate = row.fx_rate != null ? Number(row.fx_rate) : ''
       return `
@@ -254,7 +254,7 @@ function renderClientTopups(rows) {
   }
   clientTopups.innerHTML = rows
     .map((row) => {
-      const accountCurrency = row.account_currency || 'USD'
+      const accountCurrency = row.amount_account_currency || row.account_currency || row.currency || 'KZT'
       const accountAmount = getTopupAccountAmount(row)
       return `
         <tr>

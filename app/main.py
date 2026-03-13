@@ -3417,9 +3417,18 @@ def _attach_topup_account_amount(rows: List[Dict[str, object]]) -> List[Dict[str
     for row in rows:
         payload = dict(row)
         payload["amount_account"] = _resolve_topup_account_amount(payload)
-        account_currency = payload.get("account_currency") or payload.get("currency") or "USD"
-        payload["amount_account_usd"] = _convert_amount_to_usd(payload.get("amount_account"), account_currency, rates_data)
-        payload["amount_account_kzt"] = _convert_amount_to_kzt(payload.get("amount_account"), account_currency, rates_data)
+        input_currency = str(payload.get("currency") or "KZT").upper()
+        account_currency = str(payload.get("account_currency") or input_currency or "USD").upper()
+        try:
+            fx_rate_value = float(payload.get("fx_rate")) if payload.get("fx_rate") is not None else None
+        except (TypeError, ValueError):
+            fx_rate_value = None
+        amount_currency = account_currency
+        if input_currency != account_currency and not (fx_rate_value and fx_rate_value > 0):
+            amount_currency = input_currency
+        payload["amount_account_currency"] = amount_currency
+        payload["amount_account_usd"] = _convert_amount_to_usd(payload.get("amount_account"), amount_currency, rates_data)
+        payload["amount_account_kzt"] = _convert_amount_to_kzt(payload.get("amount_account"), amount_currency, rates_data)
         prepared.append(payload)
     return prepared
 
