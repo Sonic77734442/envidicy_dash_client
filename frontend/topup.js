@@ -468,6 +468,10 @@ function renderOpenAccounts() {
           <div class="account-metric-value account-metric-value-id">${row.account_ref || '—'}</div>
         </div>
         <div class="account-metric">
+          <div class="account-metric-label">Пополнено (факт)</div>
+          <div class="account-metric-value">${formatTopupFactCell(row)}</div>
+        </div>
+        <div class="account-metric">
           <div class="account-metric-label">Потрачено</div>
           <div class="account-metric-value">${liveBillingLabel}</div>
         </div>
@@ -779,6 +783,13 @@ function formatPeriodSpendCell(row) {
   const spend = Number(item.spend)
   if (!Number.isFinite(spend)) return '<span class="muted small">Нет данных</span>'
   return `${formatMoneyAmount(spend)} ${item.currency || row.currency || ''}`
+}
+
+function formatTopupFactCell(row) {
+  if (!row?.account_db_id) return '<span class="muted small">—</span>'
+  const total = getCompletedTopupBudgetByAccountId(row.account_db_id)
+  if (total == null) return '<span class="muted small">Нет пополнений</span>'
+  return `${formatMoneyAmount(total)} ${row.currency || ''}`
 }
 
 function normalizeAccountStatus(status) {
