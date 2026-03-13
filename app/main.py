@@ -6058,7 +6058,7 @@ def admin_client_invoice_summary(user_id: int, admin_user=Depends(get_admin_user
               ORDER BY created_at DESC
               LIMIT 1
             )
-            WHERE r.user_id=?
+            WHERE r.user_id=? AND COALESCE(r.status, 'requested') = 'invoice_ready'
             ORDER BY r.created_at DESC
             """,
             (user_id,),
@@ -6076,25 +6076,14 @@ def admin_client_invoice_summary(user_id: int, admin_user=Depends(get_admin_user
                 except (TypeError, ValueError):
                     return 0.0
 
-        try:
-            rates_data = _fetch_bcc_rates()
-        except Exception:
-            rates_data = None
-
         total_kzt = 0.0
         count = 0
         for row in rows:
             amount = _to_float(row.get("invoice_amount"))
             if amount <= 0:
                 continue
-            currency = str(row.get("invoice_currency") or "KZT").upper()
-            converted = _convert_amount_to_kzt(amount, currency, rates_data)
-            if converted is None:
-                if currency == "KZT":
-                    converted = amount
-                else:
-                    continue
-            total_kzt += float(converted)
+            # Wallet invoices are treated as KZT source of truth for admin summary.
+            total_kzt += float(amount)
             count += 1
         return {"invoice_total_kzt": round(total_kzt, 2), "invoice_count": count}
 
