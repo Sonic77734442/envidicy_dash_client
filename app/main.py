@@ -5791,36 +5791,67 @@ def admin_list_clients(admin_user=Depends(get_admin_user)):
             try:
                 rows = conn.execute(
                     """
-                    SELECT u.id, u.email,
-                      COALESCE(SUM(CASE WHEN t.seen_by_admin=0 THEN 1 ELSE 0 END), 0) as unread_topups,
-                      COALESCE(SUM(CASE WHEN t.status!='completed' THEN 1 ELSE 0 END), 0) as pending_requests,
-                      COALESCE(SUM(CASE WHEN wt.type='adjustment' AND wt.amount > 0 THEN wt.amount ELSE 0 END), 0) as completed_total,
-                      COALESCE(SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END), 0) as completed_count,
-                      MAX(COALESCE(t.created_at, wt.created_at)) as last_activity
+                    SELECT
+                      u.id,
+                      u.email,
+                      COALESCE(ts.unread_topups, 0) as unread_topups,
+                      COALESCE(ts.pending_requests, 0) as pending_requests,
+                      COALESCE(ws.completed_total, 0) as completed_total,
+                      COALESCE(ts.completed_count, 0) as completed_count,
+                      COALESCE(ts.last_topup_at, ws.last_funding_at) as last_activity
                     FROM users u
-                    LEFT JOIN topups t ON t.user_id = u.id
-                    LEFT JOIN wallet_transactions wt ON wt.user_id = u.id
-                    GROUP BY u.id, u.email
-                    HAVING COALESCE(SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END), 0) > 0
-                       OR COALESCE(u.is_client, 0) = 1
+                    LEFT JOIN (
+                      SELECT
+                        user_id,
+                        COALESCE(SUM(CASE WHEN seen_by_admin=0 THEN 1 ELSE 0 END), 0) as unread_topups,
+                        COALESCE(SUM(CASE WHEN status!='completed' THEN 1 ELSE 0 END), 0) as pending_requests,
+                        COALESCE(SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END), 0) as completed_count,
+                        MAX(created_at) as last_topup_at
+                      FROM topups
+                      GROUP BY user_id
+                    ) ts ON ts.user_id = u.id
+                    LEFT JOIN (
+                      SELECT
+                        user_id,
+                        COALESCE(SUM(CASE WHEN type='adjustment' AND amount > 0 THEN amount ELSE 0 END), 0) as completed_total,
+                        MAX(created_at) as last_funding_at
+                      FROM wallet_transactions
+                      GROUP BY user_id
+                    ) ws ON ws.user_id = u.id
+                    WHERE COALESCE(ts.completed_count, 0) > 0 OR COALESCE(u.is_client, 0) = 1
                     ORDER BY unread_topups DESC, u.email ASC
                     """
                 ).fetchall()
             except Exception:
                 rows = conn.execute(
                     """
-                    SELECT u.id, u.email,
+                    SELECT
+                      u.id,
+                      u.email,
                       0 as unread_topups,
-                      COALESCE(SUM(CASE WHEN t.status!='completed' THEN 1 ELSE 0 END), 0) as pending_requests,
-                      COALESCE(SUM(CASE WHEN wt.type='adjustment' AND wt.amount > 0 THEN wt.amount ELSE 0 END), 0) as completed_total,
-                      COALESCE(SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END), 0) as completed_count,
-                      MAX(COALESCE(t.created_at, wt.created_at)) as last_activity
+                      COALESCE(ts.pending_requests, 0) as pending_requests,
+                      COALESCE(ws.completed_total, 0) as completed_total,
+                      COALESCE(ts.completed_count, 0) as completed_count,
+                      COALESCE(ts.last_topup_at, ws.last_funding_at) as last_activity
                     FROM users u
-                    LEFT JOIN topups t ON t.user_id = u.id
-                    LEFT JOIN wallet_transactions wt ON wt.user_id = u.id
-                    GROUP BY u.id, u.email
-                    HAVING COALESCE(SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END), 0) > 0
-                       OR COALESCE(u.is_client, 0) = 1
+                    LEFT JOIN (
+                      SELECT
+                        user_id,
+                        COALESCE(SUM(CASE WHEN status!='completed' THEN 1 ELSE 0 END), 0) as pending_requests,
+                        COALESCE(SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END), 0) as completed_count,
+                        MAX(created_at) as last_topup_at
+                      FROM topups
+                      GROUP BY user_id
+                    ) ts ON ts.user_id = u.id
+                    LEFT JOIN (
+                      SELECT
+                        user_id,
+                        COALESCE(SUM(CASE WHEN type='adjustment' AND amount > 0 THEN amount ELSE 0 END), 0) as completed_total,
+                        MAX(created_at) as last_funding_at
+                      FROM wallet_transactions
+                      GROUP BY user_id
+                    ) ws ON ws.user_id = u.id
+                    WHERE COALESCE(ts.completed_count, 0) > 0 OR COALESCE(u.is_client, 0) = 1
                     ORDER BY u.email ASC
                     """
                 ).fetchall()
