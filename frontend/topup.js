@@ -455,6 +455,7 @@ function renderOpenAccounts() {
               <div class="account-status-name">${row.account_id}</div>
             </div>
           </div>
+          <span class="account-status-dot ${statusClass(row.status)}" data-tooltip="${statusHint(row.status)}" aria-label="${row.status}"></span>
         </div>
         <div class="account-status-sub">
           <span>${platformLabel(row.platform)}</span>
@@ -500,7 +501,6 @@ function renderOpenAccounts() {
             : `<span class="muted small">Ожидает открытия</span>`
         }
       </div>
-      <span class="status account-status-ribbon ${statusClass(row.status)}">${row.status}</span>
     `
     cardsRoot.appendChild(card)
   })
@@ -835,6 +835,17 @@ function statusClass(status) {
   if (status === 'Заблокирован') return 'status-blocked'
   if (status === 'Закрыт') return 'status-closed'
   return ''
+}
+
+function statusHint(status) {
+  if (status === 'Новая') return 'Новая заявка, аккаунт еще не обработан.'
+  if (status === 'В работе') return 'Заявка в обработке, ожидаются действия менеджера.'
+  if (status === 'Открыт' || status === 'Активен') return 'Аккаунт активен и доступен для пополнения.'
+  if (status === 'На модерации') return 'Аккаунт проходит проверку площадки.'
+  if (status === 'Приостановлен') return 'Аккаунт временно приостановлен.'
+  if (status === 'Заблокирован') return 'Аккаунт ограничен площадкой.'
+  if (status === 'Отклонен' || status === 'Закрыт') return 'Аккаунт недоступен для работы.'
+  return String(status || 'Статус аккаунта')
 }
 
 function syncOpenAccounts() {
