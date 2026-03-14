@@ -161,6 +161,19 @@ function applyAiAssistantDraft(draft, payload) {
     if (!el || val == null) return
     el.value = val
   }
+  const applyChannelInputs = (inputs) => {
+    if (!inputs || typeof inputs !== 'object') return
+    const meta = inputs.meta || {}
+    setVal('meta-cpm', meta.cpm)
+    setVal('meta-ctr', meta.ctr)
+    setVal('meta-cvr', meta.cvr)
+    const g = inputs.google_search || {}
+    setVal('gsearch-cpc', g.cpc)
+    setVal('gsearch-cvr', g.cvr)
+    const tg = inputs.telegrad_channels || inputs.telegram || {}
+    setVal('tg-cpm', tg.cpm)
+    setVal('tg-ctr', tg.ctr)
+  }
   const profile = draft?.assumption_profile || chooseAiProfile(payload)
   setVal('assumption-profile', profile)
   applyAssumptionProfile(profile)
@@ -174,6 +187,7 @@ function applyAiAssistantDraft(draft, payload) {
   setVal('assumption-history', assumptions.history)
   setVal('assumption-method', assumptions.methodology)
   setVal('assumption-recalc', assumptions.recalc)
+  applyChannelInputs(draft?.channel_inputs)
 
   state.aiDraft = {
     source: draft?.source || 'fallback',
@@ -183,8 +197,10 @@ function applyAiAssistantDraft(draft, payload) {
     periodDays: payload.period_days || 30,
     budget: payload.budget || 0,
     recommendations: Array.isArray(draft?.recommendations) ? draft.recommendations : [],
+    rationale: typeof draft?.rationale === 'string' ? draft.rationale : '',
     confidence: typeof draft?.confidence === 'number' ? draft.confidence : 0.6,
     budgetSplit: draft?.budget_split || {},
+    channelInputs: draft?.channel_inputs || {},
     factsUsed: Boolean(draft?.facts_used),
     factsPeriod: draft?.facts_period || null,
     factsTotals: draft?.facts_totals || {},
@@ -218,6 +234,7 @@ function renderAiAssistant() {
   const cpl = totals.leads ? totals.budget / totals.leads : null
   const cpa = totals.conversions ? totals.budget / totals.conversions : null
   const recommendations = Array.isArray(draft.recommendations) ? draft.recommendations : []
+  const rationale = typeof draft.rationale === 'string' ? draft.rationale : ''
   const recRows = recommendations.length
     ? recommendations.map((r) => `<li>${r}</li>`).join('')
     : '<li>Добавьте фактические данные и запустите AI-черновик снова.</li>'
@@ -272,6 +289,7 @@ function renderAiAssistant() {
       ${draft.globalFactsPeriod ? `<span class="chip chip-ghost">Период global: ${draft.globalFactsPeriod}</span>` : ''}
     </div>
     <div class="chips small" style="margin-top:8px;">${chips || '<span class="chip chip-ghost">Нет рекомендаций по сплиту</span>'}</div>
+    ${rationale ? `<div style="margin-top:8px;"><strong>Rationale:</strong> ${rationale}</div>` : ''}
     <div style="margin-top:8px;">
       <ul style="margin:0;padding-left:18px;">${recRows}</ul>
     </div>
