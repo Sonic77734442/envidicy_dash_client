@@ -1373,6 +1373,24 @@ def _blend_platform_scores(
     return scores
 
 
+def _fallback_platform_share_from_spend(
+    client_facts: Dict[str, Dict[str, float]],
+    global_facts: Dict[str, Dict[str, float]],
+) -> Dict[str, float]:
+    spend_by_platform: Dict[str, float] = {}
+    for platform in ("meta", "google", "tiktok"):
+        c_spend = float((client_facts.get(platform) or {}).get("spend") or 0.0)
+        g_spend = float((global_facts.get(platform) or {}).get("spend") or 0.0)
+        # Prefer client facts; global is supportive prior only.
+        spend = c_spend + (0.4 * g_spend)
+        if spend > 0:
+            spend_by_platform[platform] = spend
+    total = sum(spend_by_platform.values())
+    if total <= 0:
+        return {}
+    return {k: (v / total) for k, v in spend_by_platform.items()}
+
+
 def _parse_iso_date(value: str) -> date:
     return datetime.strptime(value, "%Y-%m-%d").date()
 
@@ -1822,14 +1840,14 @@ def _build_assistant_response(
     budget_split = {line.key: round(float(line.share) * 100.0, 2) for line in baseline.lines}
 
     if isinstance(llm_data, dict):
-        raw_rationale = str(llm_data.get("rationale", "")).strip()
-        if raw_rationale:
-            rationale = raw_rationale
         try:
             confidence = max(0.0, min(1.0, float(llm_data.get("confidence", confidence))))
         except Exception:
             pass
         if confidence >= confidence_min:
+            raw_rationale = str(llm_data.get("rationale", "")).strip()
+            if raw_rationale:
+                rationale = raw_rationale
             split_constraints = constraints
             if llm_full_control and isinstance(constraints, dict):
                 allowed = constraints.get("allowed_channels")
@@ -1874,10 +1892,13 @@ def _build_assistant_response(
 
     # Rebalance platform shares by blended efficiency score:
     # client history + anonymized global history (all active accounts).
-    platform_scores = _blend_platform_scores(facts_totals, global_facts_totals)
-    score_sum = sum(platform_scores.values())
-    if score_sum > 0 and not (llm_full_control and source == "llm"):
-        fact_platform_share = {k: v / score_sum for k, v in platform_scores.items()}
+    if source == "fallback":
+        fact_platform_share = _fallback_platform_share_from_spend(facts_totals, global_facts_totals)
+    else:
+        platform_scores = _blend_platform_scores(facts_totals, global_facts_totals)
+        score_sum = sum(platform_scores.values())
+        fact_platform_share = {k: v / score_sum for k, v in platform_scores.items()} if score_sum > 0 else {}
+    if fact_platform_share and not (llm_full_control and source == "llm"):
 
         line_platform = {}
         for line in preview.lines:
@@ -1938,7 +1959,7 @@ def _build_assistant_response(
         if global_facts_used:
             recommendations.append("Для новых/пустых аккаунтов использован обезличенный global pool по всем активным кабинетам.")
         recommendations.append("Через 7 дней загрузите фактические данные и пересчитайте план.")
-    if rationale:
+    if source == "llm" and rationale:
         recommendations.insert(0, rationale)
 
     global_debug = {}
