@@ -74,7 +74,11 @@ function renderHeader({ eyebrow, title, subtitle, buttons = [] }) {
         <div class="header-actions">
           ${isAdmin ? '' : '<button class="icon-circle" id="help-btn" data-tooltip="Помощь">?</button>'}
           <div class="dropdown">
-            <button class="icon-circle" id="bell-btn" title="Уведомления">🔔</button>
+            <button class="icon-circle" id="bell-btn" title="Уведомления" aria-label="Уведомления">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 17H9m9-1V11a6 6 0 1 0-12 0v5l-2 2h16l-2-2zM10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
             <span id="bell-count" class="badge" hidden></span>
             <div class="dropdown-menu" id="bell-menu">
               <div class="dropdown-head">Уведомления</div>

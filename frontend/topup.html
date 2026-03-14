@@ -31,6 +31,14 @@
           <span class="chip chip-ghost">Обновляется после заявки</span>
         </div>
         <div class="accounts-toolbar">
+          <select id="accounts-period-preset" class="accounts-period-preset">
+            <option value="today">Сегодня</option>
+            <option value="7d">7 дней</option>
+            <option value="30d">30 дней</option>
+            <option value="this_month" selected>Этот месяц</option>
+            <option value="prev_month">Прошлый месяц</option>
+            <option value="custom">Свой период</option>
+          </select>
           <div class="accounts-date-range">
             <input id="accounts-date-from" type="date" />
             <span class="muted small">—</span>

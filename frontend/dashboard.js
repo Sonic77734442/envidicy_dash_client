@@ -11,6 +11,10 @@ renderHeader({
 })
 
 const apiBase = window.API_BASE || 'https://envidicy-dash-client.onrender.com'
+const dashboardQuery = new URLSearchParams(window.location.search || '')
+const deepLinkPlatform = String(dashboardQuery.get('platform') || '').toLowerCase()
+const deepLinkAccountId = String(dashboardQuery.get('account_id') || '')
+let deepLinkApplied = false
 const metaDateFrom = document.getElementById('meta-date-from')
 const metaDateTo = document.getElementById('meta-date-to')
 const metaAccount = document.getElementById('meta-account')
@@ -44,13 +48,19 @@ const ringGrid = document.getElementById('kpi-rings')
 const donutEl = document.getElementById('spend-donut')
 const legendEl = document.getElementById('spend-legend')
 const lineEl = document.getElementById('line-chart')
+const vizMetaAccount = document.getElementById('viz-meta-account')
+const vizGoogleAccount = document.getElementById('viz-google-account')
+const vizTiktokAccount = document.getElementById('viz-tiktok-account')
 
-const audienceAgeLoad = document.getElementById('audience-age-load')
-const audienceGeoLoad = document.getElementById('audience-geo-load')
-const audienceDeviceLoad = document.getElementById('audience-device-load')
-const audienceAgeBody = document.getElementById('audience-age-body')
-const audienceGeoBody = document.getElementById('audience-geo-body')
-const audienceDeviceBody = document.getElementById('audience-device-body')
+const audienceAgePlatform = document.getElementById('audience-age-platform')
+const audienceGeoPlatform = document.getElementById('audience-geo-platform')
+const audienceDevicePlatform = document.getElementById('audience-device-platform')
+const audienceAgeDonut = document.getElementById('audience-age-donut')
+const audienceGeoDonut = document.getElementById('audience-geo-donut')
+const audienceDeviceDonut = document.getElementById('audience-device-donut')
+const audienceAgeLegend = document.getElementById('audience-age-legend')
+const audienceGeoLegend = document.getElementById('audience-geo-legend')
+const audienceDeviceLegend = document.getElementById('audience-device-legend')
 const audienceStatus = document.getElementById('audience-status')
 
 function authHeaders() {
@@ -81,6 +91,22 @@ function accountOptionLabel(acc) {
   return ext ? `${name} · ${ext}` : `${name} · id:${acc.id}`
 }
 
+function renderAccountSelectOptions(selectEl, accounts, allLabel) {
+  if (!selectEl) return
+  selectEl.innerHTML =
+    `<option value="">${allLabel}</option>` +
+    accounts.map((acc) => `<option value="${acc.id}">${accountOptionLabel(acc)}</option>`).join('')
+  selectEl.value = ''
+}
+
+function selectedVisualizationAccounts() {
+  return {
+    meta: (vizMetaAccount && vizMetaAccount.value) || (metaAccount && metaAccount.value) || '',
+    google: (vizGoogleAccount && vizGoogleAccount.value) || (googleAccount && googleAccount.value) || '',
+    tiktok: (vizTiktokAccount && vizTiktokAccount.value) || (tiktokAccount && tiktokAccount.value) || '',
+  }
+}
+
 async function loadMetaAccounts() {
   if (!metaAccount) return
   try {
@@ -92,26 +118,56 @@ async function loadMetaAccounts() {
     if (!res.ok) throw new Error('Failed to load accounts')
     const data = await res.json()
     const meta = data.filter((acc) => String(acc.platform || '').toLowerCase().trim() === 'meta')
-    metaAccount.innerHTML =
-      '<option value="">Все</option>' +
-      meta.map((acc) => `<option value="${acc.id}">${accountOptionLabel(acc)}</option>`).join('')
-    metaAccount.value = ''
+    renderAccountSelectOptions(metaAccount, meta, 'Все')
+    renderAccountSelectOptions(vizMetaAccount, meta, 'Meta: все аккаунты')
     if (googleAccount) {
       const google = data.filter((acc) => String(acc.platform || '').toLowerCase().trim() === 'google')
-      googleAccount.innerHTML =
-        '<option value="">Все</option>' +
-        google.map((acc) => `<option value="${acc.id}">${accountOptionLabel(acc)}</option>`).join('')
-      googleAccount.value = ''
+      renderAccountSelectOptions(googleAccount, google, 'Все')
+      renderAccountSelectOptions(vizGoogleAccount, google, 'Google: все аккаунты')
     }
     if (tiktokAccount) {
       const tiktok = data.filter((acc) => String(acc.platform || '').toLowerCase().trim() === 'tiktok')
-      tiktokAccount.innerHTML =
-        '<option value="">Все</option>' +
-        tiktok.map((acc) => `<option value="${acc.id}">${accountOptionLabel(acc)}</option>`).join('')
-      tiktokAccount.value = ''
+      renderAccountSelectOptions(tiktokAccount, tiktok, 'Все')
+      renderAccountSelectOptions(vizTiktokAccount, tiktok, 'TikTok: все аккаунты')
     }
+    applyDashboardDeepLink()
   } catch (e) {
     if (metaStatus) metaStatus.textContent = 'Не удалось загрузить Meta аккаунты.'
+  }
+}
+
+function applyDashboardDeepLink() {
+  if (deepLinkApplied) return
+  if (!deepLinkPlatform || !deepLinkAccountId) return
+  deepLinkApplied = true
+  if (deepLinkPlatform === 'meta' && metaAccount) {
+    if (metaAccount.querySelector(`option[value="${deepLinkAccountId}"]`)) {
+      metaAccount.value = deepLinkAccountId
+      if (vizMetaAccount && vizMetaAccount.querySelector(`option[value="${deepLinkAccountId}"]`)) {
+        vizMetaAccount.value = deepLinkAccountId
+      }
+    }
+    void withGlobalLoading('Загружаем данные...', loadMetaInsights)
+    return
+  }
+  if (deepLinkPlatform === 'google' && googleAccount) {
+    if (googleAccount.querySelector(`option[value="${deepLinkAccountId}"]`)) {
+      googleAccount.value = deepLinkAccountId
+      if (vizGoogleAccount && vizGoogleAccount.querySelector(`option[value="${deepLinkAccountId}"]`)) {
+        vizGoogleAccount.value = deepLinkAccountId
+      }
+    }
+    void withGlobalLoading('Загружаем данные...', loadGoogleInsights)
+    return
+  }
+  if (deepLinkPlatform === 'tiktok' && tiktokAccount) {
+    if (tiktokAccount.querySelector(`option[value="${deepLinkAccountId}"]`)) {
+      tiktokAccount.value = deepLinkAccountId
+      if (vizTiktokAccount && vizTiktokAccount.querySelector(`option[value="${deepLinkAccountId}"]`)) {
+        vizTiktokAccount.value = deepLinkAccountId
+      }
+    }
+    void withGlobalLoading('Загружаем данные...', loadTiktokInsights)
   }
 }
 
@@ -610,6 +666,10 @@ async function loadOverview() {
   const params = new URLSearchParams()
   params.set('date_from', metaDateFrom.value)
   params.set('date_to', metaDateTo.value)
+  const selected = selectedVisualizationAccounts()
+  if (selected.meta) params.set('meta_account_id', selected.meta)
+  if (selected.google) params.set('google_account_id', selected.google)
+  if (selected.tiktok) params.set('tiktok_account_id', selected.tiktok)
   try {
     const res = await fetch(`${apiBase}/insights/overview?${params.toString()}`, { headers: authHeaders() })
     if (res.status === 401) {
@@ -637,25 +697,89 @@ async function loadOverview() {
   }
 }
 
-function renderAudienceRows(target, rows) {
-  if (!target) return
-  if (!rows.length) {
-    target.innerHTML = '<tr><td colspan="5">Нет данных</td></tr>'
+function renderAudienceDonut(target, legendTarget, rows) {
+  if (!target || !legendTarget) return
+  const grouped = new Map()
+  rows.forEach((row) => {
+    const key = String(row.segment || '').trim() || 'Unknown'
+    const impressions = Number(row.impressions || 0)
+    const clicks = Number(row.clicks || 0)
+    const spend = Number(row.spend || 0)
+    const weight =
+      Number.isFinite(impressions) && impressions > 0
+        ? impressions
+        : Number.isFinite(clicks) && clicks > 0
+          ? clicks
+          : Number.isFinite(spend) && spend > 0
+            ? spend
+            : 0
+    grouped.set(key, (grouped.get(key) || 0) + weight)
+  })
+  const items = Array.from(grouped.entries())
+    .map(([label, value]) => ({ label, value }))
+    .filter((item) => item.value > 0)
+    .sort((a, b) => b.value - a.value)
+  const total = items.reduce((sum, item) => sum + item.value, 0)
+
+  if (!items.length || total <= 0) {
+    target.innerHTML = '<div class="muted">Нет данных по расходам</div>'
+    legendTarget.innerHTML = ''
     return
   }
-  target.innerHTML = rows
+
+  const palette = ['#3b82f6', '#f59e0b', '#34d399', '#a78bfa', '#ef4444', '#22d3ee', '#f97316', '#10b981']
+  const donutRadius = 13
+  const donutStroke = 6
+  const circumference = 2 * Math.PI * donutRadius
+  let offset = 0
+  const arcs = items
+    .map((item, idx) => {
+      const ratio = item.value / total
+      const length = circumference * ratio
+      const dash = `${length.toFixed(2)} ${(circumference - length).toFixed(2)}`
+      const rotate = (offset / circumference) * 360 - 90
+      offset += length
+      return `
+        <circle
+          cx="18"
+          cy="18"
+          r="${donutRadius}"
+          fill="none"
+          stroke="${palette[idx % palette.length]}"
+          stroke-width="${donutStroke}"
+          stroke-dasharray="${dash}"
+          transform="rotate(${rotate.toFixed(2)} 18 18)"
+          stroke-linecap="butt"
+        ></circle>
+      `
+    })
+    .join('')
+
+  target.innerHTML = `
+    <svg viewBox="0 0 36 36" style="width: 220px; height: 220px;">
+      <circle cx="18" cy="18" r="${donutRadius}" fill="none" stroke="var(--line)" stroke-width="${donutStroke}"></circle>
+      ${arcs}
+      <text x="18" y="17" text-anchor="middle" fill="var(--muted)" font-size="3.2">Impr</text>
+      <text x="18" y="21.5" text-anchor="middle" fill="var(--text)" font-size="3.6" font-weight="700">${formatInt(total)}</text>
+    </svg>
+  `
+  legendTarget.innerHTML = items
     .map(
-      (row) => `
-      <tr>
-        <td>${row.platform}</td>
-        <td>${row.segment}</td>
-        <td>${formatInt(row.impressions || 0)}</td>
-        <td>${formatInt(row.clicks || 0)}</td>
-        <td>${formatMoney(row.spend || 0)}</td>
-      </tr>
+      (item, idx) => `
+      <div class="legend-item">
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${palette[idx % palette.length]};margin-right:6px;"></span>${item.label}</span>
+        <span>${((item.value / total) * 100).toFixed(1)}% · ${formatInt(item.value)}</span>
+      </div>
     `
     )
     .join('')
+}
+
+function filterAudienceRowsByPlatform(rows, platformFilter) {
+  const filter = String(platformFilter || 'all').toLowerCase()
+  if (!filter || filter === 'all') return rows
+  const expected = filter === 'meta' ? 'meta' : filter === 'google' ? 'google' : filter
+  return rows.filter((row) => String(row.platform || '').toLowerCase().startsWith(expected))
 }
 
 async function loadAudience(group) {
@@ -663,10 +787,11 @@ async function loadAudience(group) {
   const params = new URLSearchParams()
   params.set('date_from', metaDateFrom.value)
   params.set('date_to', metaDateTo.value)
+  const selected = selectedVisualizationAccounts()
 
   const tasks = []
   tasks.push(
-    fetch(`${apiBase}/meta/audience?${params.toString()}&group=${group}${metaAccount?.value ? `&account_id=${metaAccount.value}` : ''}`, {
+    fetch(`${apiBase}/meta/audience?${params.toString()}&group=${group}${selected.meta ? `&account_id=${selected.meta}` : ''}`, {
       headers: authHeaders(),
     })
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('meta failed'))))
@@ -675,15 +800,12 @@ async function loadAudience(group) {
   )
 
   tasks.push(
-    group === 'age_gender'
-      ? Promise.resolve({ platform: 'Google', data: { accounts: [] } })
-      : fetch(
-          `${apiBase}/google/audience?${params.toString()}&group=${group}${googleAccount?.value ? `&account_id=${googleAccount.value}` : ''}`,
-          { headers: authHeaders() }
-        )
-          .then((res) => (res.ok ? res.json() : Promise.reject(new Error('google failed'))))
-          .then((data) => ({ platform: 'Google', data }))
-          .catch(() => ({ platform: 'Google', data: { accounts: [] } }))
+    fetch(`${apiBase}/google/audience?${params.toString()}&group=${group}${selected.google ? `&account_id=${selected.google}` : ''}`, {
+      headers: authHeaders(),
+    })
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('google failed'))))
+      .then((data) => ({ platform: 'Google', data }))
+      .catch(() => ({ platform: 'Google', data: { accounts: [] } }))
   )
 
   const results = await Promise.all(tasks)
@@ -851,23 +973,53 @@ const withGlobalLoading = async (message, fn) => {
   }
 }
 
+async function refreshAudienceGroup(group, donutEl, legendEl, platformSelect) {
+  const rows = await loadAudience(group)
+  const filtered = filterAudienceRowsByPlatform(rows, platformSelect?.value || 'all')
+  renderAudienceDonut(donutEl, legendEl, filtered)
+  if (audienceStatus) {
+    const platformLabel =
+      platformSelect?.value === 'meta' ? 'Meta' : platformSelect?.value === 'google' ? 'Google' : 'Все платформы'
+    const totalImpressions = filtered.reduce((sum, row) => sum + Number(row.impressions || 0), 0)
+    audienceStatus.textContent = `Срез: ${platformLabel} · Период ${metaDateFrom?.value || ''} — ${metaDateTo?.value || ''} · Impr: ${formatInt(totalImpressions)}`
+  }
+}
+
+async function refreshVisualizationBundle() {
+  await Promise.all([
+    loadOverview(),
+    refreshAudienceGroup('age_gender', audienceAgeDonut, audienceAgeLegend, audienceAgePlatform),
+    refreshAudienceGroup('geo', audienceGeoDonut, audienceGeoLegend, audienceGeoPlatform),
+    refreshAudienceGroup('device', audienceDeviceDonut, audienceDeviceLegend, audienceDevicePlatform),
+  ])
+}
+
 if (metaLoad) metaLoad.addEventListener('click', () => withGlobalLoading('Загружаем данные...', loadMetaInsights))
 if (googleLoad) googleLoad.addEventListener('click', () => withGlobalLoading('Загружаем данные...', loadGoogleInsights))
 if (tiktokLoad) tiktokLoad.addEventListener('click', () => withGlobalLoading('Загружаем данные...', loadTiktokInsights))
-if (reportLoad) reportLoad.addEventListener('click', () => withGlobalLoading('Загружаем отчет...', loadOverview))
+if (reportLoad) reportLoad.addEventListener('click', () => withGlobalLoading('Загружаем визуализацию...', refreshVisualizationBundle))
 if (reportExport) reportExport.addEventListener('click', () => window.print())
-if (audienceAgeLoad)
-  audienceAgeLoad.addEventListener('click', () =>
-    withGlobalLoading('Загружаем данные...', async () => renderAudienceRows(audienceAgeBody, await loadAudience('age_gender')))
+if (audienceAgePlatform) {
+  audienceAgePlatform.addEventListener('change', () =>
+    withGlobalLoading('Обновляем срез...', async () =>
+      refreshAudienceGroup('age_gender', audienceAgeDonut, audienceAgeLegend, audienceAgePlatform)
+    )
   )
-if (audienceGeoLoad)
-  audienceGeoLoad.addEventListener('click', () =>
-    withGlobalLoading('Загружаем данные...', async () => renderAudienceRows(audienceGeoBody, await loadAudience('geo')))
+}
+if (audienceGeoPlatform) {
+  audienceGeoPlatform.addEventListener('change', () =>
+    withGlobalLoading('Обновляем срез...', async () =>
+      refreshAudienceGroup('geo', audienceGeoDonut, audienceGeoLegend, audienceGeoPlatform)
+    )
   )
-if (audienceDeviceLoad)
-  audienceDeviceLoad.addEventListener('click', () =>
-    withGlobalLoading('Загружаем данные...', async () => renderAudienceRows(audienceDeviceBody, await loadAudience('device')))
+}
+if (audienceDevicePlatform) {
+  audienceDevicePlatform.addEventListener('change', () =>
+    withGlobalLoading('Обновляем срез...', async () =>
+      refreshAudienceGroup('device', audienceDeviceDonut, audienceDeviceLegend, audienceDevicePlatform)
+    )
   )
+}
 initMetaDates()
 loadMetaAccounts()
 

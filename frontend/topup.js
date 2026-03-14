@@ -26,11 +26,13 @@ const state = {
   accountRequests: [],
   topups: [],
   accountsFull: [],
+  periodSpendByAccount: {},
   fees: null,
   walletBalanceKzt: null,
   openAccountsFilters: {
     dateFrom: '',
     dateTo: '',
+    periodPreset: 'this_month',
     status: 'all',
     search: '',
     page: 1,
@@ -206,6 +208,48 @@ function formatMoneyAmount(value) {
   return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+function getCurrentMonthPeriod() {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  return { dateFrom: `${y}-${m}-01`, dateTo: `${y}-${m}-${d}` }
+}
+
+function toIsoDate(value) {
+  const y = value.getFullYear()
+  const m = String(value.getMonth() + 1).padStart(2, '0')
+  const d = String(value.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function getPeriodFromPreset(preset) {
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  if (preset === 'today') {
+    const iso = toIsoDate(today)
+    return { dateFrom: iso, dateTo: iso }
+  }
+  if (preset === '7d') {
+    const from = new Date(today)
+    from.setDate(from.getDate() - 6)
+    return { dateFrom: toIsoDate(from), dateTo: toIsoDate(today) }
+  }
+  if (preset === '30d') {
+    const from = new Date(today)
+    from.setDate(from.getDate() - 29)
+    return { dateFrom: toIsoDate(from), dateTo: toIsoDate(today) }
+  }
+  if (preset === 'prev_month') {
+    const firstCurrent = new Date(today.getFullYear(), today.getMonth(), 1)
+    const lastPrev = new Date(firstCurrent)
+    lastPrev.setDate(0)
+    const firstPrev = new Date(lastPrev.getFullYear(), lastPrev.getMonth(), 1)
+    return { dateFrom: toIsoDate(firstPrev), dateTo: toIsoDate(lastPrev) }
+  }
+  return getCurrentMonthPeriod()
+}
+
 function withDefaultMarkup(rate) {
   if (rate == null || Number.isNaN(Number(rate))) return null
   return Number(rate) + BCC_DEFAULT_MARKUP
@@ -227,11 +271,11 @@ function getTopupAccountAmount(row) {
   return Number(row?.amount_input || 0)
 }
 
-function getCompletedTopupBudgetByAccountId(accountId) {
+function getTopupFactByAccountId(accountId) {
   const id = String(accountId || '')
   if (!id) return null
   const rows = Array.isArray(state.topups) ? state.topups : []
-  const matched = rows.filter((row) => String(row.account_id) === id && String(row.status || '').toLowerCase() === 'completed')
+  const matched = rows.filter((row) => String(row.account_id) === id)
   if (!matched.length) return null
   const total = matched.reduce((sum, row) => sum + Number(getTopupAccountAmount(row) || 0), 0)
   return Number.isFinite(total) ? total : null
@@ -400,27 +444,6 @@ function renderOpenAccounts() {
     const canTopup = hasAccount && row.can_topup !== false
     const card = document.createElement('article')
     card.className = 'account-status-card'
-    const fallbackBudget = row.account_db_id ? getCompletedTopupBudgetByAccountId(row.account_db_id) : null
-    const allowLiveBudgetFallback = row.platform === 'meta' || row.platform === 'google'
-    const liveLimit = row.live_billing && row.live_billing.limit != null ? Number(row.live_billing.limit) : null
-    const liveBalance = row.live_billing && row.live_billing.balance != null ? Number(row.live_billing.balance) : null
-    const liveSpend = row.live_billing && row.live_billing.spend != null ? Number(row.live_billing.spend) : null
-    const liveBudget =
-      allowLiveBudgetFallback && liveLimit != null
-        ? liveLimit
-        : allowLiveBudgetFallback && liveBalance != null && liveSpend != null
-          ? liveBalance + liveSpend
-          : null
-    const effectiveBudget =
-      row.budget == null || Number(row.budget) <= 0
-        ? (fallbackBudget == null ? (liveBudget == null ? row.budget : liveBudget) : fallbackBudget)
-        : row.budget
-    const budgetCurrency = row.live_billing?.currency || row.currency
-    const budgetUsd = convertAmountToUsd(effectiveBudget, budgetCurrency)
-    const budgetLabel =
-      effectiveBudget == null || budgetUsd == null
-        ? '—'
-        : `${formatMoneyAmount(budgetUsd)} USD`
     const liveBillingLabel = formatLiveBillingCell(row.live_billing, row.currency)
     const platformLogo = platformLogoHtml(row.platform)
     card.innerHTML = `
@@ -430,10 +453,9 @@ function renderOpenAccounts() {
             <span class="platform-logo platform-${row.platform}" title="${platformLabel(row.platform)}">${platformLogo}</span>
             <div class="account-status-name-wrap">
               <div class="account-status-name">${row.account_id}</div>
-              <div class="account-status-id">ID: ${row.account_ref || '—'}</div>
             </div>
           </div>
-          <span class="status ${statusClass(row.status)}">${row.status}</span>
+          <span class="account-status-dot ${statusClass(row.status)}" data-tooltip="${statusHint(row.status)}" aria-label="${row.status}"></span>
         </div>
         <div class="account-status-sub">
           <span>${platformLabel(row.platform)}</span>
@@ -442,21 +464,39 @@ function renderOpenAccounts() {
       </div>
       <div class="account-status-metrics">
         <div class="account-metric">
-          <div class="account-metric-label">Бюджет</div>
-          <div class="account-metric-value">${budgetLabel}</div>
+          <div class="account-metric-label">ID аккаунта</div>
+          <div class="account-metric-value account-metric-value-id">${row.account_ref || '—'}</div>
+        </div>
+        <div class="account-metric">
+          <div class="account-metric-label">Пополнено (факт)</div>
+          <div class="account-metric-value">${formatTopupFactCell(row)}</div>
         </div>
         <div class="account-metric">
           <div class="account-metric-label">Потрачено</div>
           <div class="account-metric-value">${liveBillingLabel}</div>
+        </div>
+        <div class="account-metric">
+          <div class="account-metric-label">Потрачено за период</div>
+          <div class="account-metric-value">${formatPeriodSpendCell(row)}</div>
         </div>
       </div>
       <div class="account-status-actions">
         ${
           hasAccount
             ? `
-        ${canTopup ? `<button class="btn primary small" title="Пополнить" data-topup="${row.account_db_id}" data-platform="${row.platform}">Пополнить</button>` : ''}
-        <button class="btn ghost small" title="Статистика" data-stat="${row.account_db_id}" data-platform="${row.platform}">Статистика</button>
-        <button class="btn ghost small" title="Обновить" data-refresh="${row.account_db_id}" data-platform="${row.platform}">Обновить</button>
+        ${
+          canTopup
+            ? `<button class="account-action-icon" data-tooltip="Пополнить" aria-label="Пополнить" data-topup="${row.account_db_id}" data-platform="${row.platform}">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </button>`
+            : ''
+        }
+        <button class="account-action-icon" data-tooltip="Статистика" aria-label="Статистика" data-stat="${row.account_db_id}" data-platform="${row.platform}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16M7 16v-5M12 16V8M17 16v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="account-action-icon" data-tooltip="Обновить бюджет" aria-label="Обновить бюджет" data-refresh="${row.account_db_id}" data-platform="${row.platform}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0 2 5.3M20 4v7h-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
         `
             : `<span class="muted small">Ожидает открытия</span>`
         }
@@ -481,13 +521,18 @@ function renderOpenAccounts() {
       }
       const stat = e.target.closest('button[data-stat]')
       if (stat) {
-        alert('Статистика будет подтягиваться позже.')
+        const accountId = stat.dataset.stat
+        const platform = stat.dataset.platform
+        const params = new URLSearchParams()
+        if (platform) params.set('platform', platform)
+        if (accountId) params.set('account_id', accountId)
+        window.location.href = `/dashboard${params.toString() ? `?${params.toString()}` : ''}`
+        return
       }
       const refresh = e.target.closest('button[data-refresh]')
       if (refresh) {
-        const originalText = refresh.textContent
         refresh.disabled = true
-        refresh.textContent = 'Обновляем...'
+        refresh.classList.add('is-loading')
         try {
           await refreshAccountLiveBilling(refresh.dataset.refresh)
         } catch (err) {
@@ -495,7 +540,7 @@ function renderOpenAccounts() {
           alert(message)
         } finally {
           refresh.disabled = false
-          refresh.textContent = originalText || 'Обновить'
+          refresh.classList.remove('is-loading')
         }
       }
     })
@@ -528,14 +573,49 @@ async function refreshAccountLiveBilling(accountId) {
   syncOpenAccounts()
 }
 
-function normalizeDateValue(raw) {
-  if (!raw) return ''
-  const dt = new Date(raw)
-  if (Number.isNaN(dt.getTime())) return ''
-  const y = dt.getFullYear()
-  const m = String(dt.getMonth() + 1).padStart(2, '0')
-  const d = String(dt.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
+async function fetchPeriodSpend() {
+  const { dateFrom, dateTo } = state.openAccountsFilters
+  if (!dateFrom || !dateTo) {
+    renderOpenAccounts()
+    return
+  }
+  if (dateFrom > dateTo) {
+    state.periodSpendByAccount = {}
+    renderOpenAccounts()
+    return
+  }
+  if (!Array.isArray(state.accountsFull) || state.accountsFull.length === 0) {
+    state.periodSpendByAccount = {}
+    renderOpenAccounts()
+    return
+  }
+  const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo })
+  try {
+    state.periodSpendByAccount = Object.fromEntries(
+      (state.accountsFull || []).map((acc) => [String(acc.id), { loading: true }])
+    )
+    renderOpenAccounts()
+    const res = await fetch(`${apiBase}/accounts/spend?${params.toString()}`, {
+      headers: { ...authHeadersSafe() },
+    })
+    if (handleAuthFailure(res)) return
+    if (!res.ok) throw new Error('Failed to load period spend')
+    const data = await res.json()
+    const mapped = {}
+    for (const item of data.items || []) {
+      mapped[String(item.account_id)] = {
+        spend: item.spend,
+        currency: item.currency,
+        error: item.error || null,
+      }
+    }
+    state.periodSpendByAccount = mapped
+  } catch (e) {
+    state.periodSpendByAccount = {}
+    console.error(e)
+  } finally {
+    renderOpenAccounts()
+  }
 }
 
 function mapStatusFilter(status) {
@@ -569,9 +649,6 @@ function getFilteredOpenAccounts() {
   const q = String(filters.search || '').trim().toLowerCase()
   return state.openAccounts.filter((row) => {
     if (mapStatusFilter(row.status) === 'closed') return false
-    const rowDate = normalizeDateValue(row.created_at)
-    if (filters.dateFrom && rowDate && rowDate < filters.dateFrom) return false
-    if (filters.dateTo && rowDate && rowDate > filters.dateTo) return false
     if (filters.status !== 'all' && mapStatusFilter(row.status) !== filters.status) return false
     if (q) {
       const haystack = [
@@ -591,7 +668,29 @@ function getFilteredOpenAccounts() {
   })
 }
 
+function attachDatePickerBehavior(input) {
+  if (!input) return
+  input.setAttribute('inputmode', 'none')
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') return
+    e.preventDefault()
+  })
+  input.addEventListener('paste', (e) => e.preventDefault())
+  const openPicker = () => {
+    if (typeof input.showPicker === 'function') {
+      try {
+        input.showPicker()
+      } catch (e) {
+        // no-op: some browsers restrict showPicker by gesture context
+      }
+    }
+  }
+  input.addEventListener('focus', openPicker)
+  input.addEventListener('click', openPicker)
+}
+
 function bindOpenAccountsControls() {
+  const periodPreset = document.getElementById('accounts-period-preset')
   const dateFrom = document.getElementById('accounts-date-from')
   const dateTo = document.getElementById('accounts-date-to')
   const status = document.getElementById('accounts-status-filter')
@@ -599,18 +698,46 @@ function bindOpenAccountsControls() {
   const prevBtn = document.getElementById('accounts-prev')
   const nextBtn = document.getElementById('accounts-next')
 
+  if (!state.openAccountsFilters.dateFrom || !state.openAccountsFilters.dateTo) {
+    const period = getPeriodFromPreset(state.openAccountsFilters.periodPreset || 'this_month')
+    state.openAccountsFilters.dateFrom = period.dateFrom
+    state.openAccountsFilters.dateTo = period.dateTo
+  }
+
+  if (periodPreset) {
+    periodPreset.value = state.openAccountsFilters.periodPreset || 'this_month'
+    periodPreset.addEventListener('change', () => {
+      const preset = periodPreset.value || 'this_month'
+      state.openAccountsFilters.periodPreset = preset
+      if (preset !== 'custom') {
+        const period = getPeriodFromPreset(preset)
+        state.openAccountsFilters.dateFrom = period.dateFrom
+        state.openAccountsFilters.dateTo = period.dateTo
+        if (dateFrom) dateFrom.value = period.dateFrom
+        if (dateTo) dateTo.value = period.dateTo
+      }
+      fetchPeriodSpend()
+    })
+  }
+
   if (dateFrom) {
+    attachDatePickerBehavior(dateFrom)
+    dateFrom.value = state.openAccountsFilters.dateFrom
     dateFrom.addEventListener('change', () => {
       state.openAccountsFilters.dateFrom = dateFrom.value
-      state.openAccountsFilters.page = 1
-      renderOpenAccounts()
+      state.openAccountsFilters.periodPreset = 'custom'
+      if (periodPreset) periodPreset.value = 'custom'
+      fetchPeriodSpend()
     })
   }
   if (dateTo) {
+    attachDatePickerBehavior(dateTo)
+    dateTo.value = state.openAccountsFilters.dateTo
     dateTo.addEventListener('change', () => {
       state.openAccountsFilters.dateTo = dateTo.value
-      state.openAccountsFilters.page = 1
-      renderOpenAccounts()
+      state.openAccountsFilters.periodPreset = 'custom'
+      if (periodPreset) periodPreset.value = 'custom'
+      fetchPeriodSpend()
     })
   }
   if (status) {
@@ -646,14 +773,46 @@ function formatLiveBillingCell(liveBilling, fallbackCurrency) {
   if (!liveBilling) return '—'
   if (liveBilling.error) return `<span class="muted small" title="${String(liveBilling.error)}">Ошибка API</span>`
   const currency = liveBilling.currency || fallbackCurrency || ''
-  const spend = liveBilling.spend
-  const limit = liveBilling.limit
-  if (spend == null && limit == null) return '<span class="muted small">Нет данных</span>'
-  if (spend != null && limit != null) {
-    return `${formatMoneyAmount(spend)} / ${formatMoneyAmount(limit)} ${currency}`
+  const spend = extractLiveSpend(liveBilling)
+  if (spend == null) return '<span class="muted small">Нет данных</span>'
+  return `${formatMoneyAmount(spend)} ${currency}`
+}
+
+function extractLiveSpend(liveBilling) {
+  if (!liveBilling || typeof liveBilling !== 'object') return null
+  const candidates = [
+    liveBilling.spend,
+    liveBilling.spent,
+    liveBilling.amount_spent,
+    liveBilling.total_spent,
+    liveBilling.total_spend,
+    liveBilling.metrics?.spend,
+    liveBilling.data?.spend,
+  ]
+  for (const item of candidates) {
+    const num = Number(item)
+    if (Number.isFinite(num)) return num
   }
-  if (spend != null) return `${formatMoneyAmount(spend)} ${currency}`
-  return `${formatMoneyAmount(limit)} ${currency}`
+  return null
+}
+
+function formatPeriodSpendCell(row) {
+  if (!row?.account_db_id) return '<span class="muted small">—</span>'
+  const key = String(row.account_db_id)
+  const item = state.periodSpendByAccount[key]
+  if (!item) return '<span class="muted small">—</span>'
+  if (item.loading) return '<span class="muted small">Загрузка...</span>'
+  if (item.error) return '<span class="muted small">Ошибка API</span>'
+  const spend = Number(item.spend)
+  if (!Number.isFinite(spend)) return '<span class="muted small">Нет данных</span>'
+  return `${formatMoneyAmount(spend)} ${item.currency || row.currency || ''}`
+}
+
+function formatTopupFactCell(row) {
+  if (!row?.account_db_id) return '<span class="muted small">—</span>'
+  const total = getTopupFactByAccountId(row.account_db_id)
+  if (total == null) return '<span class="muted small">Нет пополнений</span>'
+  return `${formatMoneyAmount(total)} ${row.currency || ''}`
 }
 
 function normalizeAccountStatus(status) {
@@ -676,6 +835,17 @@ function statusClass(status) {
   if (status === 'Заблокирован') return 'status-blocked'
   if (status === 'Закрыт') return 'status-closed'
   return ''
+}
+
+function statusHint(status) {
+  if (status === 'Новая') return 'Новая заявка, аккаунт еще не обработан.'
+  if (status === 'В работе') return 'Заявка в обработке, ожидаются действия менеджера.'
+  if (status === 'Открыт' || status === 'Активен') return 'Аккаунт активен и доступен для пополнения.'
+  if (status === 'На модерации') return 'Аккаунт проходит проверку площадки.'
+  if (status === 'Приостановлен') return 'Аккаунт временно приостановлен.'
+  if (status === 'Заблокирован') return 'Аккаунт ограничен площадкой.'
+  if (status === 'Отклонен' || status === 'Закрыт') return 'Аккаунт недоступен для работы.'
+  return String(status || 'Статус аккаунта')
 }
 
 function syncOpenAccounts() {
@@ -1216,6 +1386,7 @@ async function fetchAccounts() {
       if (acc.platform === 'telegram') accounts.telegram.push(row)
       if (acc.platform === 'monochrome') accounts.monochrome.push(row)
     })
+    await fetchPeriodSpend()
     await fetchAccountRequests()
     syncOpenAccounts()
   } catch (e) {

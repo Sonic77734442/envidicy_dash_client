@@ -29,7 +29,7 @@ body {
 }
 
 .app {
-  max-width: 1200px;
+  max-width: 1520px;
   margin: 0 auto;
   padding: 32px 20px 80px;
   position: relative;
@@ -291,6 +291,12 @@ body {
   display: grid;
   place-items: center;
   position: relative;
+}
+
+.icon-circle svg {
+  width: 18px;
+  height: 18px;
+  color: #fff;
 }
 
 .icon-circle[data-tooltip]:hover::after {
@@ -772,6 +778,11 @@ h1 {
   align-items: center;
   gap: 10px;
   margin-bottom: 8px;
+}
+
+.viz-account-filter {
+  min-width: 190px;
+  max-width: 220px;
 }
 
 .ring-grid {
@@ -1472,7 +1483,7 @@ h1 {
 
 .accounts-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1.2fr) minmax(170px, 0.9fr) minmax(220px, 1.3fr);
+  grid-template-columns: minmax(150px, 0.9fr) minmax(220px, 1.2fr) minmax(170px, 0.9fr) minmax(220px, 1.3fr);
   gap: 10px;
   margin-bottom: 12px;
 }
@@ -1488,6 +1499,7 @@ h1 {
 }
 
 .accounts-date-range input,
+.accounts-period-preset,
 .accounts-status-filter,
 #accounts-search {
   background: rgba(15, 19, 34, 0.45);
@@ -1513,9 +1525,9 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: linear-gradient(160deg, rgba(17, 22, 43, 0.94), rgba(12, 17, 34, 0.94));
-  padding: 12px;
+  padding: 10px 12px;
   display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) minmax(260px, 1fr) auto;
+  grid-template-columns: minmax(200px, 1.1fr) minmax(0, 2fr) auto;
   gap: 12px;
   align-items: center;
 }
@@ -1526,7 +1538,7 @@ h1 {
 
 .account-status-title-row {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 6px;
@@ -1589,12 +1601,6 @@ h1 {
   line-height: 1.2;
 }
 
-.account-status-title-row .status {
-  flex: 0 0 auto;
-  min-width: 108px;
-  text-align: center;
-}
-
 .account-status-sub {
   display: flex;
   flex-wrap: wrap;
@@ -1605,26 +1611,36 @@ h1 {
 
 .account-status-metrics {
   display: grid;
-  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
+  min-width: 0;
 }
 
 .account-metric {
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 8px;
+  border-radius: 9px;
+  padding: 6px 7px;
   background: rgba(15, 19, 34, 0.5);
+  min-width: 0;
 }
 
 .account-metric-label {
   color: var(--muted);
-  font-size: 11px;
-  margin-bottom: 4px;
+  font-size: 10px;
+  margin-bottom: 3px;
 }
 
 .account-metric-value {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-metric-value-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
 }
 
 .account-status-actions {
@@ -1633,6 +1649,76 @@ h1 {
   gap: 8px;
   justify-content: flex-end;
   flex-wrap: wrap;
+  align-self: center;
+}
+
+.account-status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  flex: 0 0 auto;
+  position: relative;
+  cursor: help;
+}
+
+.account-status-dot[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 18px;
+  top: -6px;
+  background: #0f1322;
+  border: 1px solid var(--line);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  z-index: 20;
+}
+
+.account-action-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(15, 19, 34, 0.72);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+}
+
+.account-action-icon:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(15, 19, 34, 0.88);
+}
+
+.account-action-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.account-action-icon[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: #0f1322;
+  border: 1px solid var(--line);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  z-index: 20;
+}
+
+.account-action-icon.is-loading {
+  opacity: 0.65;
 }
 
 .accounts-pagination {
@@ -2325,7 +2411,7 @@ h1 {
 
 @media (max-width: 1024px) {
   .app {
-    max-width: 1000px;
+    max-width: 1280px;
     padding: 28px 16px 64px;
   }
 

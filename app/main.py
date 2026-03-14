@@ -3161,19 +3161,6 @@ def _google_fetch_account_billing(customer_id: str, force_refresh: bool = False)
         rows = []
 
     spend = None
-    try:
-        spend_query = """
-            SELECT metrics.cost_micros
-            FROM customer
-            WHERE segments.date DURING THIS_MONTH
-        """
-        spend_rows = list(ga_service.search(customer_id=normalized_customer_id, query=spend_query))
-        if spend_rows:
-            spend_metrics = float(spend_rows[0].metrics.cost_micros or 0) / 1_000_000
-            if spend_metrics >= 0:
-                spend = spend_metrics
-    except Exception:
-        spend = None
 
     if not rows:
         payload = {
@@ -3189,8 +3176,7 @@ def _google_fetch_account_billing(customer_id: str, force_refresh: bool = False)
 
     budget = rows[0].account_budget
     spend_budget = float(budget.amount_served_micros or 0) / 1_000_000
-    if spend is None:
-        spend = spend_budget
+    spend = spend_budget
     adjusted_limit = float(budget.adjusted_spending_limit_micros or 0) / 1_000_000
     approved_limit = float(budget.approved_spending_limit_micros or 0) / 1_000_000
     limit = adjusted_limit or approved_limit or None
@@ -3477,12 +3463,12 @@ def _google_fetch_audience_age_gender(customer_id: str, date_from: str, date_to:
     ga_service = client.get_service("GoogleAdsService")
     query = f"""
         SELECT
-          segments.adjusted_age_range,
-          segments.adjusted_gender,
+          segments.age_range,
+          segments.gender,
           metrics.impressions,
           metrics.clicks,
           metrics.cost_micros
-        FROM customer
+        FROM campaign
         WHERE segments.date BETWEEN '{date_from}' AND '{date_to}'
     """
     rows = ga_service.search(customer_id=customer_id, query=query)
@@ -3490,8 +3476,8 @@ def _google_fetch_audience_age_gender(customer_id: str, date_from: str, date_to:
     for row in rows:
         data.append(
             {
-                "age_range": str(row.segments.adjusted_age_range),
-                "gender": str(row.segments.adjusted_gender),
+                "age_range": str(row.segments.age_range),
+                "gender": str(row.segments.gender),
                 "impressions": int(row.metrics.impressions or 0),
                 "clicks": int(row.metrics.clicks or 0),
                 "spend": float(row.metrics.cost_micros or 0) / 1_000_000,
@@ -3542,7 +3528,7 @@ def _google_fetch_audience_geo(customer_id: str, date_from: str, date_to: str, l
           metrics.impressions,
           metrics.clicks,
           metrics.cost_micros
-        FROM customer
+        FROM campaign
         WHERE segments.date BETWEEN '{date_from}' AND '{date_to}'
     """
     rows = ga_service.search(customer_id=customer_id, query=query)
@@ -3562,13 +3548,16 @@ def _google_fetch_audience_geo(customer_id: str, date_from: str, date_to: str, l
         )
     if not resource_names:
         return data
-    name_map = _google_resolve_geo_names(client, resource_names)
-    for row in data:
-        row["geo"] = name_map.get(row["geo"], row["geo"])
+    try:
+        name_map = _google_resolve_geo_names(client, customer_id, resource_names)
+        for row in data:
+            row["geo"] = name_map.get(row["geo"], row["geo"])
+    except Exception:
+        pass
     return data
 
 
-def _google_resolve_geo_names(client: GoogleAdsClient, resource_names: List[str]) -> Dict[str, str]:
+def _google_resolve_geo_names(client: GoogleAdsClient, customer_id: str, resource_names: List[str]) -> Dict[str, str]:
     ga_service = client.get_service("GoogleAdsService")
     unique = sorted(set(resource_names))
     if not unique:
@@ -3582,7 +3571,7 @@ def _google_resolve_geo_names(client: GoogleAdsClient, resource_names: List[str]
         FROM geo_target_constant
         WHERE geo_target_constant.resource_name IN ({placeholders})
     """
-    rows = ga_service.search(customer_id="0", query=query)
+    rows = ga_service.search(customer_id=customer_id, query=query)
     mapping: Dict[str, str] = {}
     for row in rows:
         mapping[row.geo_target_constant.resource_name] = row.geo_target_constant.name
@@ -4761,6 +4750,9 @@ def google_audience(
 def insights_overview(
     date_from: str,
     date_to: str,
+    meta_account_id: Optional[int] = None,
+    google_account_id: Optional[int] = None,
+    tiktok_account_id: Optional[int] = None,
     current_user=Depends(get_current_user),
 ):
     if not get_conn:
@@ -4784,22 +4776,23 @@ def insights_overview(
         target[date_val]["impressions"] += _to_float(row.get("impressions"))
         target[date_val]["clicks"] += _to_float(row.get("clicks"))
 
+    def _fetch_accounts(conn, platform: str, account_id: Optional[int]) -> List[Dict[str, object]]:
+        if account_id:
+            row = conn.execute(
+                "SELECT * FROM ad_accounts WHERE id=? AND user_id=? AND platform=?",
+                (account_id, current_user["id"], platform),
+            ).fetchone()
+            return [dict(row)] if row else []
+        rows = conn.execute(
+            "SELECT * FROM ad_accounts WHERE user_id=? AND platform=?",
+            (current_user["id"], platform),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
     with get_conn() as conn:
-        meta_rows = conn.execute(
-            "SELECT * FROM ad_accounts WHERE user_id=? AND platform='meta'",
-            (current_user["id"],),
-        ).fetchall()
-        google_rows = conn.execute(
-            "SELECT * FROM ad_accounts WHERE user_id=? AND platform='google'",
-            (current_user["id"],),
-        ).fetchall()
-        tiktok_rows = conn.execute(
-            "SELECT * FROM ad_accounts WHERE user_id=? AND platform='tiktok'",
-            (current_user["id"],),
-        ).fetchall()
-        meta_accounts = [dict(r) for r in meta_rows]
-        google_accounts = [dict(r) for r in google_rows]
-        tiktok_accounts = [dict(r) for r in tiktok_rows]
+        meta_accounts = _fetch_accounts(conn, "meta", meta_account_id)
+        google_accounts = _fetch_accounts(conn, "google", google_account_id)
+        tiktok_accounts = _fetch_accounts(conn, "tiktok", tiktok_account_id)
 
     totals = {"meta": {"spend": 0.0, "impressions": 0.0, "clicks": 0.0},
               "google": {"spend": 0.0, "impressions": 0.0, "clicks": 0.0},
@@ -6662,6 +6655,75 @@ def list_accounts(current_user=Depends(get_current_user)):
         query += " ORDER BY created_at DESC"
         rows = conn.execute(query, params).fetchall()
         return _attach_live_billing_many([dict(row) for row in rows])
+
+
+@app.get("/accounts/spend")
+def list_accounts_period_spend(
+    date_from: str,
+    date_to: str,
+    current_user=Depends(get_current_user),
+):
+    if not get_conn:
+        return {"date_from": date_from, "date_to": date_to, "items": []}
+    if not date_from or not date_to:
+        raise HTTPException(status_code=400, detail="date_from and date_to are required")
+    try:
+        from_dt = datetime.strptime(date_from, "%Y-%m-%d").date()
+        to_dt = datetime.strptime(date_to, "%Y-%m-%d").date()
+    except Exception:
+        raise HTTPException(status_code=400, detail="date_from/date_to must be in YYYY-MM-DD format")
+    if from_dt > to_dt:
+        raise HTTPException(status_code=400, detail="date_from must be less than or equal to date_to")
+
+    def _to_float(value: object) -> float:
+        try:
+            return float(value)
+        except Exception:
+            return 0.0
+
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT id, platform, external_id, account_code, name, currency FROM ad_accounts WHERE user_id=? ORDER BY created_at DESC",
+            (current_user["id"],),
+        ).fetchall()
+        accounts = [dict(row) for row in rows]
+
+    items: List[Dict[str, object]] = []
+    for acc in accounts:
+        account_id = acc.get("id")
+        platform = str(acc.get("platform") or "").lower().strip()
+        external_id = acc.get("external_id") or acc.get("account_code") or acc.get("name")
+        currency = acc.get("currency") or "USD"
+        payload: Dict[str, object] = {
+            "account_id": account_id,
+            "platform": platform,
+            "currency": currency,
+            "spend": None,
+        }
+
+        if platform not in {"meta", "google", "tiktok"}:
+            items.append(payload)
+            continue
+        if not external_id:
+            items.append(payload)
+            continue
+
+        try:
+            if platform == "meta":
+                daily_rows = _meta_fetch_daily(str(external_id), date_from, date_to)
+                payload["spend"] = sum(_to_float(row.get("spend")) for row in daily_rows)
+            elif platform == "google":
+                daily_rows = _google_fetch_daily(_google_normalize_customer_id(str(external_id)), date_from, date_to)
+                payload["spend"] = sum(_to_float(row.get("spend")) for row in daily_rows)
+            elif platform == "tiktok":
+                daily_rows = _tiktok_fetch_daily(_tiktok_normalize_advertiser_id(str(external_id)), date_from, date_to)
+                payload["spend"] = sum(_to_float(row.get("spend")) for row in daily_rows)
+        except Exception as exc:
+            payload["error"] = str(exc)
+
+        items.append(payload)
+
+    return {"date_from": date_from, "date_to": date_to, "items": items}
 
 
 @app.post("/accounts/{account_id}/refresh-live-billing")

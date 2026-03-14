@@ -196,6 +196,15 @@
             <div class="chart-head">
               <p class="eyebrow">KPI кольца</p>
               <div class="panel-actions">
+                <select id="viz-meta-account" class="accounts-status-filter viz-account-filter">
+                  <option value="">Meta: все аккаунты</option>
+                </select>
+                <select id="viz-google-account" class="accounts-status-filter viz-account-filter">
+                  <option value="">Google: все аккаунты</option>
+                </select>
+                <select id="viz-tiktok-account" class="accounts-status-filter viz-account-filter">
+                  <option value="">TikTok: все аккаунты</option>
+                </select>
                 <button class="btn ghost small" id="report-load" type="button">Обновить</button>
                 <button class="btn ghost small" id="report-export" type="button">Экспорт PDF</button>
               </div>
@@ -216,79 +225,51 @@
           </div>
           <div id="line-chart" class="chart-line"></div>
         </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Аудитория</p>
-            <h2>Кого охватили</h2>
-          </div>
-          <span class="chip chip-ghost">Audience</span>
-        </div>
         <div class="chart-grid">
           <div class="chart-card">
             <div class="chart-head">
-              <p class="eyebrow">Возраст / Пол</p>
-              <button class="btn ghost small" id="audience-age-load" type="button">Обновить</button>
+              <p class="eyebrow">Аудитория · Возраст / Пол</p>
+              <div class="panel-actions">
+                <select id="audience-age-platform" class="accounts-status-filter">
+                  <option value="all">Все платформы</option>
+                  <option value="meta">Meta</option>
+                  <option value="google">Google</option>
+                </select>
+              </div>
             </div>
-            <div class="table-wrapper">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Платформа</th>
-                    <th>Сегмент</th>
-                    <th>Impr</th>
-                    <th>Clicks</th>
-                    <th>Spend</th>
-                  </tr>
-                </thead>
-                <tbody id="audience-age-body"></tbody>
-              </table>
-            </div>
+            <div id="audience-age-donut" class="chart-donut"></div>
+            <div id="audience-age-legend" class="legend"></div>
           </div>
           <div class="chart-card">
             <div class="chart-head">
-              <p class="eyebrow">Гео</p>
-              <button class="btn ghost small" id="audience-geo-load" type="button">Обновить</button>
+              <p class="eyebrow">Аудитория · Гео</p>
+              <div class="panel-actions">
+                <select id="audience-geo-platform" class="accounts-status-filter">
+                  <option value="all">Все платформы</option>
+                  <option value="meta">Meta</option>
+                  <option value="google">Google</option>
+                </select>
+              </div>
             </div>
-            <div class="table-wrapper">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Платформа</th>
-                    <th>Сегмент</th>
-                    <th>Impr</th>
-                    <th>Clicks</th>
-                    <th>Spend</th>
-                  </tr>
-                </thead>
-                <tbody id="audience-geo-body"></tbody>
-              </table>
-            </div>
+            <div id="audience-geo-donut" class="chart-donut"></div>
+            <div id="audience-geo-legend" class="legend"></div>
           </div>
           <div class="chart-card">
             <div class="chart-head">
-              <p class="eyebrow">Плейсменты / Устройства</p>
-              <button class="btn ghost small" id="audience-device-load" type="button">Обновить</button>
+              <p class="eyebrow">Аудитория · Девайсы</p>
+              <div class="panel-actions">
+                <select id="audience-device-platform" class="accounts-status-filter">
+                  <option value="all">Все платформы</option>
+                  <option value="meta">Meta</option>
+                  <option value="google">Google</option>
+                </select>
+              </div>
             </div>
-            <div class="table-wrapper">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Платформа</th>
-                    <th>Сегмент</th>
-                    <th>Impr</th>
-                    <th>Clicks</th>
-                    <th>Spend</th>
-                  </tr>
-                </thead>
-                <tbody id="audience-device-body"></tbody>
-              </table>
-            </div>
+            <div id="audience-device-donut" class="chart-donut"></div>
+            <div id="audience-device-legend" class="legend"></div>
           </div>
         </div>
-        <p class="muted small" id="audience-status">TikTok Insights будет добавлен после подтверждения полей API.</p>
+        <p class="muted small" id="audience-status">Доли аудитории считаются по impressions за выбранный период.</p>
       </section>
 
     </div>
