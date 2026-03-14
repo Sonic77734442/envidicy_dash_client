@@ -5,6 +5,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 from contextlib import contextmanager
 
 DB_URL = (os.getenv("DATABASE_URL") or "sqlite:///local.db").strip()
+DB_SCHEMA = (os.getenv("DB_SCHEMA") or "").strip()
 
 
 def _is_postgres(url: str) -> bool:
@@ -13,6 +14,8 @@ def _is_postgres(url: str) -> bool:
 
 
 def _extract_search_path(url: str) -> str | None:
+    if DB_SCHEMA:
+        return DB_SCHEMA
     parsed = urlparse(url)
     qs = parse_qs(parsed.query or "")
     options = qs.get("options")
