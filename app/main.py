@@ -1290,6 +1290,27 @@ def _normalize_funnel(raw: Optional[Dict[str, object]], fallback: Dict[str, floa
     return {k: round((v / total) * 100.0, 2) for k, v in vals.items()}
 
 
+def _normalize_split_map(split: Dict[str, float]) -> Dict[str, float]:
+    cleaned: Dict[str, float] = {}
+    for k, v in split.items():
+        try:
+            num = max(0.0, float(v))
+        except Exception:
+            num = 0.0
+        cleaned[str(k)] = num
+    total = sum(cleaned.values())
+    if total <= 0:
+        return cleaned
+    return {k: round((v / total) * 100.0, 2) for k, v in cleaned.items()}
+
+
+def _max_split_delta(a: Dict[str, float], b: Dict[str, float]) -> float:
+    keys = set(a.keys()) | set(b.keys())
+    if not keys:
+        return 0.0
+    return max(abs(float(a.get(k, 0.0)) - float(b.get(k, 0.0))) for k in keys)
+
+
 def _assistant_call_llm(
     req: PlanRequest,
     baseline: PlanResponse,
@@ -1398,6 +1419,8 @@ def _build_assistant_response(
     req_for_preview.funnel_split = funnel
     preview = build_plan(req_for_preview)
     budget_split = {line.key: round(float(line.share) * 100.0, 2) for line in preview.lines}
+    baseline_for_compare = build_plan(req)
+    baseline_split = {line.key: round(float(line.share) * 100.0, 2) for line in baseline_for_compare.lines}
 
     facts_totals: Dict[str, Dict[str, float]] = {}
     facts_period: Optional[str] = None
@@ -1481,6 +1504,32 @@ def _build_assistant_response(
         if facts_used:
             recommendations.append("Рекомендации скорректированы с учетом фактических данных подключенных аккаунтов.")
         recommendations.append("Через 7 дней загрузите фактические данные и пересчитайте план.")
+
+    # If AI split is too close to baseline, nudge it so user sees meaningful delta.
+    # This keeps UX explicit: AI draft should differ from plain "Рассчитать план".
+    delta = _max_split_delta(budget_split, baseline_split)
+    if delta < 2.0 and budget_split:
+        adjusted = dict(budget_split)
+        perf_keys = [k for k in adjusted.keys() if ("google_search" in k or k == "meta" or "tiktok" in k)]
+        awareness_keys = [
+            k
+            for k in adjusted.keys()
+            if ("display" in k or "youtube" in k or "telegram" in k or "yandex_display" in k)
+        ]
+        goal = str(req.goal or "").lower()
+        shift = 8.0 if goal in {"conversions", "sales", "leads"} else 5.0
+        if perf_keys and awareness_keys:
+            boost_each = shift / len(perf_keys)
+            cut_each = shift / len(awareness_keys)
+            for k in perf_keys:
+                adjusted[k] = max(0.0, adjusted[k] + boost_each)
+            for k in awareness_keys:
+                adjusted[k] = max(0.0, adjusted[k] - cut_each)
+            budget_split = _normalize_split_map(adjusted)
+            recommendations.insert(
+                0,
+                "AI-черновик применил дополнительный сдвиг сплита в performance-каналы, чтобы усилить отличие от базового расчета.",
+            )
 
     return PlanAssistantResponse(
         source=source,
