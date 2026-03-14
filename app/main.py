@@ -533,6 +533,9 @@ class PlanAssistantResponse(BaseModel):
     recommendations: List[str]
     confidence: float = Field(0.6, ge=0, le=1)
     budget_split: Dict[str, float] = Field(default_factory=dict)
+    facts_used: bool = False
+    facts_period: Optional[str] = None
+    facts_totals: Dict[str, Dict[str, float]] = Field(default_factory=dict)
 
 
 rate_cards: Dict[PlatformKey, RateCard] = {
@@ -1287,7 +1290,11 @@ def _normalize_funnel(raw: Optional[Dict[str, object]], fallback: Dict[str, floa
     return {k: round((v / total) * 100.0, 2) for k, v in vals.items()}
 
 
-def _assistant_call_llm(req: PlanRequest, baseline: PlanResponse) -> Optional[Dict[str, object]]:
+def _assistant_call_llm(
+    req: PlanRequest,
+    baseline: PlanResponse,
+    overview_context: Optional[Dict[str, object]] = None,
+) -> Optional[Dict[str, object]]:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         return None
@@ -1311,6 +1318,7 @@ def _assistant_call_llm(req: PlanRequest, baseline: PlanResponse) -> Optional[Di
                 for line in baseline.lines
             ],
         },
+        "connected_accounts_overview": overview_context or {},
     }
     body = {
         "model": model,
@@ -1347,7 +1355,11 @@ def _assistant_call_llm(req: PlanRequest, baseline: PlanResponse) -> Optional[Di
     return None
 
 
-def _build_assistant_response(req: PlanRequest, llm_data: Optional[Dict[str, object]] = None) -> PlanAssistantResponse:
+def _build_assistant_response(
+    req: PlanRequest,
+    llm_data: Optional[Dict[str, object]] = None,
+    overview_context: Optional[Dict[str, object]] = None,
+) -> PlanAssistantResponse:
     fallback_profile = _assistant_choose_profile(req)
     fallback_funnel = _assistant_default_funnel(req)
     fallback_assumptions = _assistant_default_assumptions()
@@ -1390,11 +1402,33 @@ def _build_assistant_response(req: PlanRequest, llm_data: Optional[Dict[str, obj
         for line in preview.lines
     }
 
+    facts_totals: Dict[str, Dict[str, float]] = {}
+    facts_period: Optional[str] = None
+    facts_used = False
+    if isinstance(overview_context, dict):
+        totals_raw = overview_context.get("totals")
+        if isinstance(totals_raw, dict):
+            for platform in ("meta", "google", "tiktok"):
+                row = totals_raw.get(platform) if isinstance(totals_raw, dict) else None
+                if isinstance(row, dict):
+                    facts_totals[platform] = {
+                        "spend": float(row.get("spend") or 0.0),
+                        "impressions": float(row.get("impressions") or 0.0),
+                        "clicks": float(row.get("clicks") or 0.0),
+                    }
+            facts_used = any((v.get("spend", 0.0) > 0 for v in facts_totals.values()))
+        date_from = overview_context.get("date_from")
+        date_to = overview_context.get("date_to")
+        if date_from and date_to:
+            facts_period = f"{date_from} — {date_to}"
+
     if not recommendations:
         top = sorted(preview.lines, key=lambda x: x.share, reverse=True)[:3]
         if top:
             joined = ", ".join(f"{line.name} ({round(line.share * 100, 1)}%)" for line in top)
             recommendations.append(f"Фокус по бюджету: {joined}.")
+        if facts_used:
+            recommendations.append("Рекомендации скорректированы с учетом фактических данных подключенных аккаунтов.")
         recommendations.append("Через 7 дней загрузите фактические данные и пересчитайте план.")
 
     return PlanAssistantResponse(
@@ -1405,6 +1439,9 @@ def _build_assistant_response(req: PlanRequest, llm_data: Optional[Dict[str, obj
         recommendations=recommendations,
         confidence=round(confidence, 2),
         budget_split=budget_split,
+        facts_used=facts_used,
+        facts_period=facts_period,
+        facts_totals=facts_totals,
     )
 
 
@@ -2540,14 +2577,35 @@ def estimate_plan(payload: PlanRequest) -> PlanResponse:
 
 
 @app.post("/plans/assistant", response_model=PlanAssistantResponse)
-def plan_assistant(payload: PlanRequest) -> PlanAssistantResponse:
+def plan_assistant(payload: PlanRequest, authorization: Optional[str] = Header(None)) -> PlanAssistantResponse:
     if payload.budget <= 0:
         raise HTTPException(status_code=400, detail="Budget must be positive")
     if payload.avg_frequency <= 0:
         raise HTTPException(status_code=400, detail="avg_frequency must be positive")
+    overview_context: Optional[Dict[str, object]] = None
+    token = _get_bearer_token(authorization)
+    current_user = _get_user_by_token(token)
+    if current_user:
+        try:
+            if payload.date_start and payload.date_end and payload.date_end >= payload.date_start:
+                d_from = payload.date_start.isoformat()
+                d_to = payload.date_end.isoformat()
+            else:
+                days = max(1, min(int(payload.period_days or 30), 180))
+                end_date = date.today()
+                start_date = end_date - timedelta(days=days - 1)
+                d_from = start_date.isoformat()
+                d_to = end_date.isoformat()
+            overview_context = _build_insights_overview_for_user(
+                current_user=current_user,
+                date_from=d_from,
+                date_to=d_to,
+            )
+        except Exception as exc:
+            logging.warning("Assistant insights context error: %s", exc)
     baseline = build_plan(payload)
-    llm_data = _assistant_call_llm(payload, baseline)
-    return _build_assistant_response(payload, llm_data=llm_data)
+    llm_data = _assistant_call_llm(payload, baseline, overview_context=overview_context)
+    return _build_assistant_response(payload, llm_data=llm_data, overview_context=overview_context)
 
 
 @app.post("/plans/estimate/excel")
@@ -4936,20 +4994,15 @@ def google_audience(
         results.append(payload)
     return {"accounts": results}
 
-@app.get("/insights/overview")
-def insights_overview(
+
+def _build_insights_overview_for_user(
+    current_user: Dict[str, object],
     date_from: str,
     date_to: str,
     meta_account_id: Optional[int] = None,
     google_account_id: Optional[int] = None,
     tiktok_account_id: Optional[int] = None,
-    current_user=Depends(get_current_user),
-):
-    if not get_conn:
-        raise HTTPException(status_code=500, detail="DB not initialized")
-    if not date_from or not date_to:
-        raise HTTPException(status_code=400, detail="date_from and date_to are required")
-
+) -> Dict[str, object]:
     def _to_float(value: object) -> float:
         try:
             return float(value)
@@ -4984,10 +5037,11 @@ def insights_overview(
         google_accounts = _fetch_accounts(conn, "google", google_account_id)
         tiktok_accounts = _fetch_accounts(conn, "tiktok", tiktok_account_id)
 
-    totals = {"meta": {"spend": 0.0, "impressions": 0.0, "clicks": 0.0},
-              "google": {"spend": 0.0, "impressions": 0.0, "clicks": 0.0},
-              "tiktok": {"spend": 0.0, "impressions": 0.0, "clicks": 0.0}}
-
+    totals = {
+        "meta": {"spend": 0.0, "impressions": 0.0, "clicks": 0.0},
+        "google": {"spend": 0.0, "impressions": 0.0, "clicks": 0.0},
+        "tiktok": {"spend": 0.0, "impressions": 0.0, "clicks": 0.0},
+    }
     daily_meta: Dict[str, Dict[str, object]] = {}
     daily_google: Dict[str, Dict[str, object]] = {}
     daily_tiktok: Dict[str, Dict[str, object]] = {}
@@ -5043,8 +5097,30 @@ def insights_overview(
         "google": _finalize(daily_google, "google"),
         "tiktok": _finalize(daily_tiktok, "tiktok"),
     }
+    return {"totals": totals, "daily": daily, "date_from": date_from, "date_to": date_to}
 
-    return {"totals": totals, "daily": daily}
+
+@app.get("/insights/overview")
+def insights_overview(
+    date_from: str,
+    date_to: str,
+    meta_account_id: Optional[int] = None,
+    google_account_id: Optional[int] = None,
+    tiktok_account_id: Optional[int] = None,
+    current_user=Depends(get_current_user),
+):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    if not date_from or not date_to:
+        raise HTTPException(status_code=400, detail="date_from and date_to are required")
+    return _build_insights_overview_for_user(
+        current_user=current_user,
+        date_from=date_from,
+        date_to=date_to,
+        meta_account_id=meta_account_id,
+        google_account_id=google_account_id,
+        tiktok_account_id=tiktok_account_id,
+    )
 
 
 @app.post("/admin/documents/upload")

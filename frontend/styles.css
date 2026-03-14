@@ -562,6 +562,12 @@ h1 {
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
+.chip-good {
+  background: rgba(16, 185, 129, 0.18);
+  color: var(--good);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
 .preset-row {
   display: flex;
   gap: 8px;

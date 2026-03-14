@@ -57,6 +57,11 @@ const usd = (v, d = 0) => `$${(v ?? 0).toLocaleString('ru-RU', { minimumFraction
 const num = (v, d = 0) => (v ?? 0).toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d })
 const pct = (v) => `${(v * 100).toFixed(1)}%`
 
+function authHeaders() {
+  const token = localStorage.getItem('auth_token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 async function fetchPlan() {
   const payload = readPayload()
   const res = await fetch(`${apiBase}/plans/estimate`, {
@@ -125,7 +130,7 @@ async function runAiDraft() {
   try {
     const res = await fetch(`${apiBase}/plans/assistant`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(payload),
     })
     if (!res.ok) throw new Error('assistant request failed')
@@ -178,6 +183,9 @@ function applyAiAssistantDraft(draft, payload) {
     recommendations: Array.isArray(draft?.recommendations) ? draft.recommendations : [],
     confidence: typeof draft?.confidence === 'number' ? draft.confidence : 0.6,
     budgetSplit: draft?.budget_split || {},
+    factsUsed: Boolean(draft?.facts_used),
+    factsPeriod: draft?.facts_period || null,
+    factsTotals: draft?.facts_totals || {},
   }
 }
 
@@ -207,6 +215,16 @@ function renderAiAssistant() {
   const recRows = recommendations.length
     ? recommendations.map((r) => `<li>${r}</li>`).join('')
     : '<li>Добавьте фактические данные и запустите AI-черновик снова.</li>'
+  const factsUsed = Boolean(draft.factsUsed)
+  const factsTotals = draft.factsTotals && typeof draft.factsTotals === 'object' ? draft.factsTotals : {}
+  const factsRows = Object.entries(factsTotals)
+    .map(([platform, row]) => {
+      const spend = row && typeof row === 'object' ? Number(row.spend || 0) : 0
+      const impressions = row && typeof row === 'object' ? Number(row.impressions || 0) : 0
+      const clicks = row && typeof row === 'object' ? Number(row.clicks || 0) : 0
+      return `<tr><td>${platform}</td><td>${usd(spend, 2)}</td><td>${num(impressions)}</td><td>${num(clicks)}</td></tr>`
+    })
+    .join('')
   box.classList.remove('muted')
   box.innerHTML = `
     <div class="chips small">
@@ -216,11 +234,30 @@ function renderAiAssistant() {
       <span class="chip chip-ghost">Период: ${draft.periodDays || state.plan.period_days || 30} дн.</span>
       <span class="chip chip-ghost">Бюджет: ${usd(draft.budget || state.plan.budget_usd || 0, 2)}</span>
       <span class="chip chip-ghost">Confidence: ${Math.round((draft.confidence || 0) * 100)}%</span>
+      <span class="chip ${factsUsed ? 'chip-good' : 'chip-ghost'}">Факт из аккаунтов: ${factsUsed ? 'учтен' : 'не учтен'}</span>
+      ${draft.factsPeriod ? `<span class="chip chip-ghost">Период факта: ${draft.factsPeriod}</span>` : ''}
     </div>
     <div class="chips small" style="margin-top:8px;">${chips || '<span class="chip chip-ghost">Нет рекомендаций по сплиту</span>'}</div>
     <div style="margin-top:8px;">
       <ul style="margin:0;padding-left:18px;">${recRows}</ul>
     </div>
+    ${
+      factsRows
+        ? `<div class="table-wrapper" style="margin-top:10px;">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Платформа</th>
+            <th>Spend (факт)</th>
+            <th>Impressions</th>
+            <th>Clicks</th>
+          </tr>
+        </thead>
+        <tbody>${factsRows}</tbody>
+      </table>
+    </div>`
+        : ''
+    }
     <div class="table-wrapper" style="margin-top:10px;">
       <table class="table">
         <thead>
