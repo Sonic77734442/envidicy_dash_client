@@ -1139,7 +1139,13 @@ def build_plan(req: PlanRequest) -> PlanResponse:
     smart_rationale: Dict[PlatformKey, str] = {}
     if plan_mode == "smart":
         platforms, split, rationale = smart_media_mix(req.goal, req.business_type)
-        active_keys = platforms
+        active_keys = list(platforms)
+        # If assistant/user provides explicit split, include those channels in smart mode too.
+        if req.budget_split:
+            explicit_keys = [str(k) for k, v in req.budget_split.items() if float(v or 0) > 0]
+            for key in explicit_keys:
+                if key in rate_cards and key not in active_keys:
+                    active_keys.append(key)
         smart_split = split
         smart_rationale = rationale
     else:
@@ -1824,6 +1830,7 @@ def _build_assistant_response(
     global_overview_context: Optional[Dict[str, object]] = None,
 ) -> PlanAssistantResponse:
     llm_full_control = _env_flag("ASSISTANT_LLM_FULL_CONTROL", False)
+    llm_blend_with_facts = _env_flag("ASSISTANT_LLM_BLEND_WITH_FACTS", False)
     fallback_profile = _assistant_choose_profile(req)
     fallback_funnel = _assistant_default_funnel(req)
     fallback_assumptions = _assistant_default_assumptions()
@@ -1899,7 +1906,8 @@ def _build_assistant_response(
         platform_scores = _blend_platform_scores(facts_totals, global_facts_totals)
         score_sum = sum(platform_scores.values())
         fact_platform_share = {k: v / score_sum for k, v in platform_scores.items()} if score_sum > 0 else {}
-    if fact_platform_share and not (llm_full_control and source == "llm"):
+    should_apply_blend = source == "fallback" or (source == "llm" and llm_blend_with_facts and not llm_full_control)
+    if fact_platform_share and should_apply_blend:
 
         line_platform = {}
         for line in preview.lines:
@@ -1961,7 +1969,19 @@ def _build_assistant_response(
             recommendations.append("Для новых/пустых аккаунтов использован обезличенный global pool по всем активным кабинетам.")
         recommendations.append("Через 7 дней загрузите фактические данные и пересчитайте план.")
     if source == "llm" and rationale:
-        recommendations.insert(0, rationale)
+        if not any(str(r).strip() == rationale for r in recommendations):
+            recommendations.insert(0, rationale)
+
+    # Deduplicate recommendations preserving order.
+    deduped_recommendations: List[str] = []
+    seen_recommendations: set = set()
+    for rec in recommendations:
+        key = str(rec).strip()
+        if not key or key in seen_recommendations:
+            continue
+        seen_recommendations.add(key)
+        deduped_recommendations.append(key)
+    recommendations = deduped_recommendations
 
     global_debug = {}
     if isinstance(global_overview_context, dict):
