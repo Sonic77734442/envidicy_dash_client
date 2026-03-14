@@ -1677,6 +1677,31 @@ def _assistant_min_request_for_llm(req: PlanRequest) -> Dict[str, object]:
     }
 
 
+def _assistant_parse_llm_json(content: str) -> Optional[Dict[str, object]]:
+    text = (content or "").strip()
+    if not text:
+        return None
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.lower().startswith("json"):
+            text = text[4:].strip()
+    try:
+        parsed = json.loads(text)
+        return parsed if isinstance(parsed, dict) else None
+    except Exception:
+        pass
+    # Fallback: try first JSON object boundaries.
+    start = text.find("{")
+    end = text.rfind("}")
+    if start >= 0 and end > start:
+        try:
+            parsed = json.loads(text[start : end + 1])
+            return parsed if isinstance(parsed, dict) else None
+        except Exception:
+            return None
+    return None
+
+
 def _assistant_call_llm(
     req: PlanRequest,
     constraints: Dict[str, object],
@@ -1688,6 +1713,7 @@ def _assistant_call_llm(
         return None
     model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
     max_tokens = int(os.getenv("ASSISTANT_LLM_MAX_TOKENS", "280") or 280)
+    max_tokens_cap = int(os.getenv("ASSISTANT_LLM_MAX_TOKENS_CAP", "600") or 600)
     max_retries = max(1, int(os.getenv("ASSISTANT_LLM_MAX_RETRIES", "2") or 2))
     retry_backoff = float(os.getenv("ASSISTANT_LLM_RETRY_BACKOFF_SEC", "1.5") or 1.5)
     system_prompt = (
@@ -1726,16 +1752,23 @@ def _assistant_call_llm(
                 )
             if resp.status_code < 300:
                 data = resp.json()
+                choice = data.get("choices", [{}])[0] if isinstance(data, dict) else {}
+                finish_reason = (choice or {}).get("finish_reason")
                 content = (
-                    data.get("choices", [{}])[0]
+                    choice
                     .get("message", {})
                     .get("content", "")
                 )
                 if not content:
                     return None
-                parsed = json.loads(content)
+                parsed = _assistant_parse_llm_json(content)
                 if isinstance(parsed, dict):
                     return parsed
+                if finish_reason == "length" and max_tokens < max_tokens_cap and attempt < max_retries:
+                    max_tokens = min(max_tokens_cap, max_tokens * 2)
+                    time.sleep(0.25)
+                    continue
+                logging.warning("LLM assistant JSON parse failed (finish_reason=%s)", finish_reason)
                 return None
 
             text_preview = resp.text[:600]
