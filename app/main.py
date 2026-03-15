@@ -3768,6 +3768,25 @@ def login(payload: AuthPayload):
         }
 
 
+@app.get("/auth/access-status")
+def auth_access_status(email: str):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    normalized = _normalize_email(email)
+    if not normalized:
+        raise HTTPException(status_code=400, detail="Email is required")
+    with get_conn() as conn:
+        access = _get_access_by_email(conn, normalized)
+        if not access:
+            return {"exists": False, "needs_password": False}
+        needs_password = not access.get("password_hash") or not access.get("salt")
+        return {
+            "exists": True,
+            "needs_password": needs_password,
+            "email": access.get("email") or normalized,
+        }
+
+
 @app.post("/auth/set-password")
 def set_password(payload: SetPasswordPayload):
     if not get_conn:
