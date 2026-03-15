@@ -59,7 +59,7 @@ const num = (v, d = 0) => (v ?? 0).toLocaleString('ru-RU', { minimumFractionDigi
 const pct = (v) => `${(v * 100).toFixed(1)}%`
 
 function authHeaders() {
-  const token = localStorage.getItem('auth_token')
+  const token = typeof getAuthToken === 'function' ? getAuthToken() : localStorage.getItem('auth_token')
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
@@ -161,6 +161,19 @@ function applyAiAssistantDraft(draft, payload) {
     if (!el || val == null) return
     el.value = val
   }
+  const applyChannelInputs = (inputs) => {
+    if (!inputs || typeof inputs !== 'object') return
+    const meta = inputs.meta || {}
+    setVal('meta-cpm', meta.cpm)
+    setVal('meta-ctr', meta.ctr)
+    setVal('meta-cvr', meta.cvr)
+    const g = inputs.google_search || {}
+    setVal('gsearch-cpc', g.cpc)
+    setVal('gsearch-cvr', g.cvr)
+    const tg = inputs.telegrad_channels || inputs.telegram || {}
+    setVal('tg-cpm', tg.cpm)
+    setVal('tg-ctr', tg.ctr)
+  }
   const profile = draft?.assumption_profile || chooseAiProfile(payload)
   setVal('assumption-profile', profile)
   applyAssumptionProfile(profile)
@@ -174,6 +187,7 @@ function applyAiAssistantDraft(draft, payload) {
   setVal('assumption-history', assumptions.history)
   setVal('assumption-method', assumptions.methodology)
   setVal('assumption-recalc', assumptions.recalc)
+  applyChannelInputs(draft?.channel_inputs)
 
   state.aiDraft = {
     source: draft?.source || 'fallback',
@@ -183,8 +197,10 @@ function applyAiAssistantDraft(draft, payload) {
     periodDays: payload.period_days || 30,
     budget: payload.budget || 0,
     recommendations: Array.isArray(draft?.recommendations) ? draft.recommendations : [],
+    rationale: typeof draft?.rationale === 'string' ? draft.rationale : '',
     confidence: typeof draft?.confidence === 'number' ? draft.confidence : 0.6,
     budgetSplit: draft?.budget_split || {},
+    channelInputs: draft?.channel_inputs || {},
     factsUsed: Boolean(draft?.facts_used),
     factsPeriod: draft?.facts_period || null,
     factsTotals: draft?.facts_totals || {},
@@ -218,6 +234,7 @@ function renderAiAssistant() {
   const cpl = totals.leads ? totals.budget / totals.leads : null
   const cpa = totals.conversions ? totals.budget / totals.conversions : null
   const recommendations = Array.isArray(draft.recommendations) ? draft.recommendations : []
+  const rationale = typeof draft.rationale === 'string' ? draft.rationale : ''
   const recRows = recommendations.length
     ? recommendations.map((r) => `<li>${r}</li>`).join('')
     : '<li>Добавьте фактические данные и запустите AI-черновик снова.</li>'
@@ -231,31 +248,14 @@ function renderAiAssistant() {
   const factsRows = Object.entries(factsTotals)
     .map(([platform, row]) => {
       const spend = row && typeof row === 'object' ? Number(row.spend || 0) : 0
-      const impressions = row && typeof row === 'object' ? Number(row.impressions || 0) : 0
-      const clicks = row && typeof row === 'object' ? Number(row.clicks || 0) : 0
-      return `<tr><td>${platform}</td><td>${usd(spend, 2)}</td><td>${num(impressions)}</td><td>${num(clicks)}</td></tr>`
+      return `<span class="chip chip-ghost">${platform}: ${usd(spend, 2)}</span>`
     })
     .join('')
   const globalFactsRows = Object.entries(globalFactsTotals)
     .map(([platform, row]) => {
       const spend = row && typeof row === 'object' ? Number(row.spend || 0) : 0
-      const impressions = row && typeof row === 'object' ? Number(row.impressions || 0) : 0
-      const clicks = row && typeof row === 'object' ? Number(row.clicks || 0) : 0
-      return `<tr><td>${platform}</td><td>${usd(spend, 2)}</td><td>${num(impressions)}</td><td>${num(clicks)}</td></tr>`
+      return `<span class="chip chip-ghost">${platform}: ${usd(spend, 2)}</span>`
     })
-    .join('')
-  const globalDebugRows = Object.entries(globalFactsDebug)
-    .map(([platform, row]) => {
-      if (!row || typeof row !== 'object') return ''
-      const accountsTotal = Number(row.accounts_total || 0)
-      const usedIds = Number(row.used_ids || 0)
-      const missingId = Number(row.missing_id || 0)
-      const apiOk = Number(row.api_ok || 0)
-      const apiFailed = Number(row.api_failed || 0)
-      const lastError = row.last_error ? String(row.last_error) : '—'
-      return `<tr><td>${platform}</td><td>${accountsTotal}</td><td>${usedIds}</td><td>${missingId}</td><td>${apiOk}</td><td>${apiFailed}</td><td>${lastError}</td></tr>`
-    })
-    .filter(Boolean)
     .join('')
   box.classList.remove('muted')
   box.innerHTML = `
@@ -272,78 +272,15 @@ function renderAiAssistant() {
       ${draft.globalFactsPeriod ? `<span class="chip chip-ghost">Период global: ${draft.globalFactsPeriod}</span>` : ''}
     </div>
     <div class="chips small" style="margin-top:8px;">${chips || '<span class="chip chip-ghost">Нет рекомендаций по сплиту</span>'}</div>
+    ${rationale ? `<div style="margin-top:8px;"><strong>Rationale:</strong> ${rationale}</div>` : ''}
     <div style="margin-top:8px;">
       <ul style="margin:0;padding-left:18px;">${recRows}</ul>
     </div>
-    ${
-      factsRows
-        ? `<div class="table-wrapper" style="margin-top:10px;">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Платформа</th>
-            <th>Spend (факт)</th>
-            <th>Impressions</th>
-            <th>Clicks</th>
-          </tr>
-        </thead>
-        <tbody>${factsRows}</tbody>
-      </table>
-    </div>`
-        : ''
-    }
-    ${
-      globalFactsRows
-        ? `<div class="table-wrapper" style="margin-top:10px;">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Global pool</th>
-            <th>Spend (факт)</th>
-            <th>Impressions</th>
-            <th>Clicks</th>
-          </tr>
-        </thead>
-        <tbody>${globalFactsRows}</tbody>
-      </table>
-    </div>`
-        : ''
-    }
-    ${
-      globalDebugRows
-        ? `<div class="table-wrapper" style="margin-top:10px;">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Global debug</th>
-            <th>Accounts</th>
-            <th>Used IDs</th>
-            <th>Missing ID</th>
-            <th>API OK</th>
-            <th>API Failed</th>
-            <th>Last error</th>
-          </tr>
-        </thead>
-        <tbody>${globalDebugRows}</tbody>
-      </table>
-    </div>`
-        : ''
-    }
-    <div class="table-wrapper" style="margin-top:10px;">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Метрика</th>
-            <th>Значение</th>
-            <th>Комментарий</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td>Прогноз CPL</td><td>${cpl ? usd(cpl, 2) : '—'}</td><td>Оценка по текущему сплиту и вводным</td></tr>
-          <tr><td>Прогноз CPA</td><td>${cpa ? usd(cpa, 2) : '—'}</td><td>Оценка по текущему сплиту и вводным</td></tr>
-          <tr><td>Следующий шаг</td><td>Загрузить факт через 7 дней</td><td>Пересчитать план по реальным CTR/CPC/CVR</td></tr>
-        </tbody>
-      </table>
+    ${factsRows ? `<div class="chips small" style="margin-top:8px;"><span class="chip chip-ghost">Факт:</span> ${factsRows}</div>` : ''}
+    ${globalFactsRows ? `<div class="chips small" style="margin-top:8px;"><span class="chip chip-ghost">Global:</span> ${globalFactsRows}</div>` : ''}
+    <div class="chips small" style="margin-top:8px;">
+      <span class="chip chip-ghost">CPL: ${cpl ? usd(cpl, 2) : '—'}</span>
+      <span class="chip chip-ghost">CPA: ${cpa ? usd(cpa, 2) : '—'}</span>
     </div>
   `
 }
@@ -412,6 +349,7 @@ function readPayload() {
       date_end: endDate.toISOString().slice(0, 10),
       avg_frequency: 1.6,
       pricing_mode: 'auto',
+      channel_inputs: hasChannelInputs ? channelInputs : null,
       budget_split: aiBudgetSplit,
     }
   }

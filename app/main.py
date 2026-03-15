@@ -2,6 +2,7 @@
 from io import BytesIO
 from typing import Dict, List, Literal, Optional, Tuple
 from enum import Enum
+import calendar
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Form, Request
 import logging
@@ -41,6 +42,13 @@ _LIVE_BILLING_CACHE: Dict[str, Dict[str, object]] = {}
 _LIVE_BILLING_TTL_SEC = 300
 _ASSISTANT_GLOBAL_OVERVIEW_CACHE: Dict[str, object] = {"key": None, "ts": 0.0, "data": None}
 _ASSISTANT_GLOBAL_OVERVIEW_TTL_SEC = int(os.getenv("ASSISTANT_GLOBAL_CACHE_TTL_SEC", "3600") or 3600)
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _default_fee_config() -> Dict[str, Optional[float]]:
@@ -531,7 +539,9 @@ class PlanAssistantResponse(BaseModel):
     source: Literal["llm", "fallback"]
     assumption_profile: Literal["base", "conservative", "aggressive"]
     funnel_split: Dict[str, float]
+    channel_inputs: Dict[str, Dict[str, float]] = Field(default_factory=dict)
     assumptions: Dict[str, str]
+    rationale: str = ""
     recommendations: List[str]
     confidence: float = Field(0.6, ge=0, le=1)
     budget_split: Dict[str, float] = Field(default_factory=dict)
@@ -1129,7 +1139,13 @@ def build_plan(req: PlanRequest) -> PlanResponse:
     smart_rationale: Dict[PlatformKey, str] = {}
     if plan_mode == "smart":
         platforms, split, rationale = smart_media_mix(req.goal, req.business_type)
-        active_keys = platforms
+        active_keys = list(platforms)
+        # If assistant/user provides explicit split, include those channels in smart mode too.
+        if req.budget_split:
+            explicit_keys = [str(k) for k, v in req.budget_split.items() if float(v or 0) > 0]
+            for key in explicit_keys:
+                if key in rate_cards and key not in active_keys:
+                    active_keys.append(key)
         smart_split = split
         smart_rationale = rationale
     else:
@@ -1177,7 +1193,8 @@ def build_plan(req: PlanRequest) -> PlanResponse:
         manual_total = sum(req.budget_split.values())
         if manual_total > 0:
             manual_split = {k: v / manual_total for k, v in req.budget_split.items()}
-    if smart_split:
+    # Smart preset is used only when there is no explicit split from assistant/user.
+    if smart_split and manual_split is None:
         manual_split = smart_split
 
     lines: List[PlanLine] = []
@@ -1363,9 +1380,356 @@ def _blend_platform_scores(
     return scores
 
 
+def _fallback_platform_share_from_spend(
+    client_facts: Dict[str, Dict[str, float]],
+    global_facts: Dict[str, Dict[str, float]],
+) -> Dict[str, float]:
+    spend_by_platform: Dict[str, float] = {}
+    for platform in ("meta", "google", "tiktok"):
+        c_spend = float((client_facts.get(platform) or {}).get("spend") or 0.0)
+        g_spend = float((global_facts.get(platform) or {}).get("spend") or 0.0)
+        # Prefer client facts; global is supportive prior only.
+        spend = c_spend + (0.4 * g_spend)
+        if spend > 0:
+            spend_by_platform[platform] = spend
+    total = sum(spend_by_platform.values())
+    if total <= 0:
+        return {}
+    return {k: (v / total) for k, v in spend_by_platform.items()}
+
+
+def _parse_iso_date(value: str) -> date:
+    return datetime.strptime(value, "%Y-%m-%d").date()
+
+
+def _shift_months(base: date, delta_months: int) -> date:
+    month_index = (base.month - 1) + delta_months
+    year = base.year + (month_index // 12)
+    month = (month_index % 12) + 1
+    day = min(base.day, calendar.monthrange(year, month)[1])
+    return date(year, month, day)
+
+
+def _meta_safe_date_from(date_from: str) -> str:
+    # Meta rejects ranges where start date is older than ~37 months.
+    start = _parse_iso_date(date_from)
+    min_allowed = _shift_months(date.today(), -37)
+    if start < min_allowed:
+        return min_allowed.isoformat()
+    return date_from
+
+
+def _date_chunks(date_from: str, date_to: str, max_days: int) -> List[Tuple[str, str]]:
+    start = _parse_iso_date(date_from)
+    end = _parse_iso_date(date_to)
+    if start > end:
+        return []
+    chunks: List[Tuple[str, str]] = []
+    cur = start
+    while cur <= end:
+        chunk_end = min(cur + timedelta(days=max_days - 1), end)
+        chunks.append((cur.isoformat(), chunk_end.isoformat()))
+        cur = chunk_end + timedelta(days=1)
+    return chunks
+
+
+_ASSISTANT_CHANNEL_GROUPS: Dict[str, List[str]] = {
+    "meta": ["meta"],
+    "google": [
+        "google_display_cpm",
+        "google_display_cpc",
+        "google_search",
+        "google_shopping",
+        "youtube",
+        "youtube_6s",
+        "youtube_15s",
+        "youtube_30s",
+    ],
+    "tiktok": ["tiktok"],
+    "telegram": ["telegrad_channels", "telegrad_users", "telegrad_bots", "telegrad_search"],
+    "yandex": ["yandex_search", "yandex_display"],
+}
+
+
+def _assistant_default_channel_inputs(profile: str) -> Dict[str, Dict[str, float]]:
+    base = {
+        "meta": {"cpm": 2.1, "ctr": 0.013, "cvr": 0.016},
+        "google_search": {"cpc": 0.55, "cvr": 0.028},
+        "tiktok": {"cpm": 2.0, "ctr": 0.012, "cvr": 0.014},
+        "telegrad_channels": {"cpm": 3.2, "ctr": 0.01},
+        "yandex_search": {"cpc": 0.48, "cvr": 0.024},
+    }
+    if profile == "conservative":
+        return {
+            "meta": {"cpm": 2.5, "ctr": 0.010, "cvr": 0.012},
+            "google_search": {"cpc": 0.7, "cvr": 0.02},
+            "tiktok": {"cpm": 2.5, "ctr": 0.009, "cvr": 0.011},
+            "telegrad_channels": {"cpm": 3.8, "ctr": 0.008},
+            "yandex_search": {"cpc": 0.6, "cvr": 0.019},
+        }
+    if profile == "aggressive":
+        return {
+            "meta": {"cpm": 1.8, "ctr": 0.016, "cvr": 0.02},
+            "google_search": {"cpc": 0.45, "cvr": 0.035},
+            "tiktok": {"cpm": 1.7, "ctr": 0.015, "cvr": 0.017},
+            "telegrad_channels": {"cpm": 2.8, "ctr": 0.012},
+            "yandex_search": {"cpc": 0.42, "cvr": 0.03},
+        }
+    return base
+
+
+def _assistant_derive_channel_shares(
+    req: PlanRequest,
+    overview_context: Optional[Dict[str, object]],
+    global_overview_context: Optional[Dict[str, object]],
+) -> Dict[str, float]:
+    active_keys = set(req.platforms or list(rate_cards.keys()))
+    channels: List[str] = []
+    for channel, keys in _ASSISTANT_CHANNEL_GROUPS.items():
+        if any(k in active_keys for k in keys):
+            channels.append(channel)
+    if not channels:
+        channels = ["meta", "google", "tiktok"]
+
+    facts_totals, _, _ = _extract_platform_facts(overview_context)
+    global_totals, _, _ = _extract_platform_facts(global_overview_context)
+    spend: Dict[str, float] = {c: 0.0 for c in channels}
+    for channel in channels:
+        if channel in {"meta", "google", "tiktok"}:
+            spend[channel] += float((facts_totals.get(channel) or {}).get("spend", 0.0))
+            spend[channel] += float((global_totals.get(channel) or {}).get("spend", 0.0)) * 0.7
+    total_spend = sum(spend.values())
+    if total_spend > 0:
+        return {k: (v / total_spend) * 100.0 for k, v in spend.items()}
+
+    equal = 100.0 / max(len(channels), 1)
+    return {k: equal for k in channels}
+
+
+def _assistant_build_constraints(
+    req: PlanRequest,
+    overview_context: Optional[Dict[str, object]],
+    global_overview_context: Optional[Dict[str, object]],
+) -> Dict[str, object]:
+    channel_shares = _assistant_derive_channel_shares(req, overview_context, global_overview_context)
+    min_split: Dict[str, float] = {}
+    max_split: Dict[str, float] = {}
+    for channel, share in channel_shares.items():
+        min_split[channel] = round(max(0.0, share - 20.0), 2)
+        max_split[channel] = round(min(100.0, share + 20.0), 2)
+
+    active_channels = list(channel_shares.keys())
+    confidence_min = float(os.getenv("ASSISTANT_MIN_CONFIDENCE", "0.55"))
+    return {
+        "allowed_channels": active_channels,
+        "budget_split": {
+            "sum": 100.0,
+            "min": min_split,
+            "max": max_split,
+        },
+        "channel_inputs_bounds": {
+            "cpm": {"min": 0.3, "max": 30.0},
+            "cpc": {"min": 0.03, "max": 10.0},
+            "cvr": {"min": 0.001, "max": 0.5},
+            "ctr": {"min": 0.001, "max": 0.3},
+            "cpv": {"min": 0.001, "max": 3.0},
+            "post_click": {"min": 0.01, "max": 0.8},
+        },
+        "confidence_min": confidence_min,
+    }
+
+
+def _assistant_normalize_and_clamp_split(
+    raw_split: Optional[Dict[str, object]],
+    constraints: Dict[str, object],
+    baseline: PlanResponse,
+) -> Dict[str, float]:
+    # Convert channel-level split into plan line-level split that build_plan understands.
+    min_cfg = ((constraints.get("budget_split") or {}).get("min") or {}) if isinstance(constraints, dict) else {}
+    max_cfg = ((constraints.get("budget_split") or {}).get("max") or {}) if isinstance(constraints, dict) else {}
+    channels = constraints.get("allowed_channels") if isinstance(constraints, dict) else []
+    allowed_channels = [str(x) for x in channels] if isinstance(channels, list) else ["meta", "google", "tiktok"]
+
+    parsed_channel: Dict[str, float] = {}
+    if isinstance(raw_split, dict):
+        for k, v in raw_split.items():
+            key = str(k).strip().lower()
+            try:
+                value = float(v)
+            except Exception:
+                continue
+            if key in allowed_channels:
+                parsed_channel[key] = max(0.0, value)
+
+    if not parsed_channel:
+        baseline_split = {str(line.key): float(line.share) * 100.0 for line in baseline.lines}
+        return _normalize_split_map(baseline_split)
+
+    clamped_channel: Dict[str, float] = {}
+    for channel, value in parsed_channel.items():
+        min_v = float(min_cfg.get(channel, 0.0)) if isinstance(min_cfg, dict) else 0.0
+        max_v = float(max_cfg.get(channel, 100.0)) if isinstance(max_cfg, dict) else 100.0
+        clamped_channel[channel] = min(max(value, min_v), max_v)
+    ch_total = sum(clamped_channel.values())
+    if ch_total <= 0:
+        baseline_split = {str(line.key): float(line.share) * 100.0 for line in baseline.lines}
+        return _normalize_split_map(baseline_split)
+    clamped_channel = {k: (v / ch_total) * 100.0 for k, v in clamped_channel.items()}
+
+    baseline_line = {str(line.key): float(line.share) for line in baseline.lines}
+    result: Dict[str, float] = {}
+    for channel, channel_pct in clamped_channel.items():
+        keys = _ASSISTANT_CHANNEL_GROUPS.get(channel, [])
+        line_keys = [k for k in keys if k in baseline_line]
+        if not line_keys:
+            continue
+        base_total = sum(baseline_line[k] for k in line_keys)
+        if base_total <= 0:
+            even = channel_pct / max(len(line_keys), 1)
+            for lk in line_keys:
+                result[lk] = even
+            continue
+        for lk in line_keys:
+            result[lk] = channel_pct * (baseline_line[lk] / base_total)
+
+    if not result:
+        baseline_split = {str(line.key): float(line.share) * 100.0 for line in baseline.lines}
+        return _normalize_split_map(baseline_split)
+    return _normalize_split_map(result)
+
+
+def _assistant_validate_channel_inputs(
+    raw_inputs: Optional[Dict[str, object]],
+    constraints: Dict[str, object],
+    fallback: Dict[str, Dict[str, float]],
+) -> Dict[str, Dict[str, float]]:
+    bounds = constraints.get("channel_inputs_bounds") if isinstance(constraints, dict) else {}
+    if not isinstance(raw_inputs, dict):
+        return fallback
+    out: Dict[str, Dict[str, float]] = {}
+    for channel, metrics in raw_inputs.items():
+        c_key = str(channel).strip()
+        if not isinstance(metrics, dict):
+            continue
+        metric_values: Dict[str, float] = {}
+        for metric_key, metric_val in metrics.items():
+            m_key = str(metric_key).strip().lower()
+            if not isinstance(bounds, dict) or m_key not in bounds or not isinstance(bounds.get(m_key), dict):
+                continue
+            try:
+                val = float(metric_val)
+            except Exception:
+                continue
+            b = bounds[m_key]
+            min_v = float((b or {}).get("min", val))
+            max_v = float((b or {}).get("max", val))
+            metric_values[m_key] = round(min(max(val, min_v), max_v), 6)
+        if metric_values:
+            out[c_key] = metric_values
+    return out or fallback
+
+
+def _assistant_take_llm_channel_inputs(raw_inputs: Optional[Dict[str, object]]) -> Dict[str, Dict[str, float]]:
+    if not isinstance(raw_inputs, dict):
+        return {}
+    out: Dict[str, Dict[str, float]] = {}
+    allowed_metrics = {"cpm", "cpc", "cvr", "ctr", "cpv", "post_click"}
+    for channel, metrics in raw_inputs.items():
+        if not isinstance(metrics, dict):
+            continue
+        c_key = str(channel).strip()
+        parsed: Dict[str, float] = {}
+        for mk, mv in metrics.items():
+            m_key = str(mk).strip().lower()
+            if m_key not in allowed_metrics:
+                continue
+            try:
+                val = float(mv)
+            except Exception:
+                continue
+            if val > 0:
+                parsed[m_key] = round(val, 6)
+        if parsed:
+            out[c_key] = parsed
+    return out
+
+
+def _assistant_compact_overview_for_llm(
+    context: Optional[Dict[str, object]],
+) -> Dict[str, object]:
+    if not isinstance(context, dict):
+        return {}
+    totals = context.get("totals") if isinstance(context.get("totals"), dict) else {}
+    compact_totals: Dict[str, Dict[str, float]] = {}
+    for platform in ("meta", "google", "tiktok"):
+        row = totals.get(platform) if isinstance(totals, dict) else None
+        if not isinstance(row, dict):
+            continue
+        spend = float(row.get("spend") or 0.0)
+        impressions = float(row.get("impressions") or 0.0)
+        clicks = float(row.get("clicks") or 0.0)
+        cpm = (spend / impressions * 1000.0) if impressions > 0 else 0.0
+        cpc = (spend / clicks) if clicks > 0 else 0.0
+        ctr = (clicks / impressions) if impressions > 0 else 0.0
+        compact_totals[platform] = {
+            "spend": round(spend, 2),
+            "impressions": round(impressions, 2),
+            "clicks": round(clicks, 2),
+            "cpm": round(cpm, 4),
+            "cpc": round(cpc, 4),
+            "ctr": round(ctr, 6),
+        }
+    return {
+        "date_from": context.get("date_from"),
+        "date_to": context.get("date_to"),
+        "totals": compact_totals,
+    }
+
+
+def _assistant_min_request_for_llm(req: PlanRequest) -> Dict[str, object]:
+    return {
+        "goal": req.goal,
+        "budget": req.budget,
+        "currency": req.currency,
+        "period_days": req.period_days,
+        "date_start": req.date_start.isoformat() if req.date_start else None,
+        "date_end": req.date_end.isoformat() if req.date_end else None,
+        "country": req.country,
+        "industry": req.industry,
+        "business_type": req.business_type,
+        "plan_mode": req.plan_mode,
+        "platforms": req.platforms or [],
+    }
+
+
+def _assistant_parse_llm_json(content: str) -> Optional[Dict[str, object]]:
+    text = (content or "").strip()
+    if not text:
+        return None
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.lower().startswith("json"):
+            text = text[4:].strip()
+    try:
+        parsed = json.loads(text)
+        return parsed if isinstance(parsed, dict) else None
+    except Exception:
+        pass
+    # Fallback: try first JSON object boundaries.
+    start = text.find("{")
+    end = text.rfind("}")
+    if start >= 0 and end > start:
+        try:
+            parsed = json.loads(text[start : end + 1])
+            return parsed if isinstance(parsed, dict) else None
+        except Exception:
+            return None
+    return None
+
+
 def _assistant_call_llm(
     req: PlanRequest,
-    baseline: PlanResponse,
+    constraints: Dict[str, object],
     overview_context: Optional[Dict[str, object]] = None,
     global_overview_context: Optional[Dict[str, object]] = None,
 ) -> Optional[Dict[str, object]]:
@@ -1373,105 +1737,193 @@ def _assistant_call_llm(
     if not api_key:
         return None
     model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+    max_tokens = int(os.getenv("ASSISTANT_LLM_MAX_TOKENS", "280") or 280)
+    max_tokens_cap = int(os.getenv("ASSISTANT_LLM_MAX_TOKENS_CAP", "600") or 600)
+    max_retries = max(1, int(os.getenv("ASSISTANT_LLM_MAX_RETRIES", "2") or 2))
+    retry_backoff = float(os.getenv("ASSISTANT_LLM_RETRY_BACKOFF_SEC", "1.5") or 1.5)
     system_prompt = (
-        "You are a senior media planner for performance marketing in Kazakhstan/CIS. "
-        "Return strict JSON only. "
-        "Keys: assumption_profile (base|conservative|aggressive), funnel_split "
-        "({awareness,consideration,performance} in percentages), assumptions "
-        "({benchmarks,history,methodology,recalc}), recommendations (array of short Russian strings), "
-        "confidence (0..1)."
+        "You are a principal digital media strategist with 20+ years of hands-on performance planning experience "
+        "across Meta, Google, TikTok, Telegram, and Yandex in CIS markets. "
+        "Your task is to produce an actionable media-plan draft, not generic advice.\n\n"
+        "Decision policy (strict):\n"
+        "1) Data priority:\n"
+        "   - First: connected_accounts_overview.totals (client facts).\n"
+        "   - Second: global_anonymized_overview.totals (market prior).\n"
+        "   - Third: conservative assumptions from constraints and request context.\n"
+        "2) Objective alignment:\n"
+        "   - leads/conversions/sales -> prioritize high-intent/performance mix but keep test allocation.\n"
+        "   - traffic -> balance click efficiency and scalable reach.\n"
+        "   - reach -> prioritize CPM efficiency and scale, keep minimum performance coverage.\n"
+        "3) Diversification & risk control:\n"
+        "   - Avoid single-channel concentration unless constraints force it.\n"
+        "   - If data is sparse or uncertain, allocate controlled test shares to secondary channels.\n"
+        "   - Do not zero-out channels solely due to weak history if they are allowed; keep small testing share when feasible.\n"
+        "4) Constraints are mandatory:\n"
+        "   - Respect allowed channels.\n"
+        "   - Respect min/max bounds from constraints.\n"
+        "   - Keep total split = 100.\n"
+        "5) Practical channel_inputs:\n"
+        "   - Return realistic planning inputs (CPM/CPC/CVR/CTR etc.) per channel.\n"
+        "   - Use conservative but actionable values if data quality is low.\n"
+        "6) Confidence scoring:\n"
+        "   - Higher confidence when client facts are rich and consistent.\n"
+        "   - Lower confidence when major platforms are missing/erroring.\n\n"
+        "Output contract (strict JSON only, no markdown):\n"
+        "{\n"
+        "  \"budget_split\": {\"meta\": number, \"google\": number, \"tiktok\": number, \"telegram\": number, \"yandex\": number},\n"
+        "  \"channel_inputs\": {\"channel_key\": {\"cpm\": number, \"cpc\": number, \"ctr\": number, \"cvr\": number, \"cpv\": number, \"post_click\": number}},\n"
+        "  \"confidence\": number,\n"
+        "  \"rationale\": \"short but specific Russian explanation with data-based reasoning\"\n"
+        "}\n"
+        "Only include channels that are allowed and relevant. "
+        "Do not include any extra keys. "
+        "Do not include prose outside JSON."
     )
+    compact_user_overview = _assistant_compact_overview_for_llm(overview_context)
+    compact_global_overview = _assistant_compact_overview_for_llm(global_overview_context)
     user_payload = {
-        "request": req.model_dump(mode="json"),
-        "baseline_plan": {
-            "period_days": baseline.period_days,
-            "budget_usd": baseline.budget_usd,
-            "totals": baseline.totals.model_dump(mode="json"),
-            "lines": [
-                {"key": line.key, "name": line.name, "share": line.share, "budget": line.budget}
-                for line in baseline.lines
+        "request": _assistant_min_request_for_llm(req),
+        "connected_accounts_overview": compact_user_overview,
+        "global_anonymized_overview": compact_global_overview,
+        "constraints": constraints,
+    }
+    attempt_payload = user_payload
+    for attempt in range(1, max_retries + 1):
+        body = {
+            "model": model,
+            "temperature": 0.2,
+            "max_tokens": max_tokens,
+            "response_format": {"type": "json_object"},
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": json.dumps(attempt_payload, ensure_ascii=False)},
             ],
-        },
-        "connected_accounts_overview": overview_context or {},
-        "global_anonymized_overview": global_overview_context or {},
-    }
-    body = {
-        "model": model,
-        "temperature": 0.2,
-        "response_format": {"type": "json_object"},
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
-        ],
-    }
-    try:
-        with httpx.Client(timeout=20.0) as client:
-            resp = client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                json=body,
-            )
-        if resp.status_code >= 300:
-            logging.warning("LLM assistant request failed: %s %s", resp.status_code, resp.text[:300])
-            return None
-        data = resp.json()
-        content = (
-            data.get("choices", [{}])[0]
-            .get("message", {})
-            .get("content", "")
-        )
-        if not content:
-            return None
-        parsed = json.loads(content)
-        if isinstance(parsed, dict):
-            return parsed
-    except Exception as exc:
-        logging.warning("LLM assistant error: %s", exc)
+        }
+        try:
+            with httpx.Client(timeout=20.0) as client:
+                resp = client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                    json=body,
+                )
+            if resp.status_code < 300:
+                data = resp.json()
+                choice = data.get("choices", [{}])[0] if isinstance(data, dict) else {}
+                finish_reason = (choice or {}).get("finish_reason")
+                content = (
+                    choice
+                    .get("message", {})
+                    .get("content", "")
+                )
+                if not content:
+                    return None
+                parsed = _assistant_parse_llm_json(content)
+                if isinstance(parsed, dict):
+                    return parsed
+                if finish_reason == "length" and max_tokens < max_tokens_cap and attempt < max_retries:
+                    max_tokens = min(max_tokens_cap, max_tokens * 2)
+                    time.sleep(0.25)
+                    continue
+                logging.warning("LLM assistant JSON parse failed (finish_reason=%s)", finish_reason)
+                return None
+
+            text_preview = resp.text[:600]
+            logging.warning("LLM assistant request failed: %s %s", resp.status_code, text_preview[:300])
+            is_429 = resp.status_code == 429
+            too_large = "Request too large" in text_preview or "tokens per min" in text_preview
+            if not is_429 or attempt >= max_retries:
+                return None
+            # Retry with degraded context when hitting rate/size limits.
+            if too_large:
+                attempt_payload = {
+                    "request": _assistant_min_request_for_llm(req),
+                    "connected_accounts_overview": _assistant_compact_overview_for_llm(overview_context),
+                    "global_anonymized_overview": {"totals": (compact_global_overview.get("totals") if isinstance(compact_global_overview, dict) else {})},
+                    "constraints": constraints,
+                }
+            time.sleep(retry_backoff * attempt)
+            continue
+        except Exception as exc:
+            logging.warning("LLM assistant error: %s", exc)
+            if attempt >= max_retries:
+                return None
+            time.sleep(retry_backoff * attempt)
+            continue
     return None
 
 
 def _build_assistant_response(
     req: PlanRequest,
+    baseline: PlanResponse,
+    constraints: Dict[str, object],
     llm_data: Optional[Dict[str, object]] = None,
     overview_context: Optional[Dict[str, object]] = None,
     global_overview_context: Optional[Dict[str, object]] = None,
 ) -> PlanAssistantResponse:
+    llm_full_control = _env_flag("ASSISTANT_LLM_FULL_CONTROL", False)
+    llm_blend_with_facts = _env_flag("ASSISTANT_LLM_BLEND_WITH_FACTS", False)
     fallback_profile = _assistant_choose_profile(req)
     fallback_funnel = _assistant_default_funnel(req)
     fallback_assumptions = _assistant_default_assumptions()
+    fallback_channel_inputs = _assistant_default_channel_inputs(fallback_profile)
     source: Literal["llm", "fallback"] = "fallback"
 
     profile: Literal["base", "conservative", "aggressive"] = fallback_profile
     funnel = fallback_funnel
+    channel_inputs = fallback_channel_inputs
     assumptions = fallback_assumptions
     recommendations: List[str] = []
+    rationale = ""
     confidence = 0.6
+    confidence_min = float(constraints.get("confidence_min", 0.55)) if isinstance(constraints, dict) else 0.55
+    budget_split = {line.key: round(float(line.share) * 100.0, 2) for line in baseline.lines}
 
     if isinstance(llm_data, dict):
-        raw_profile = str(llm_data.get("assumption_profile", "")).strip().lower()
-        if raw_profile in {"base", "conservative", "aggressive"}:
-            profile = raw_profile  # type: ignore[assignment]
-        funnel = _normalize_funnel(llm_data.get("funnel_split"), fallback_funnel)
-        raw_assumptions = llm_data.get("assumptions")
-        if isinstance(raw_assumptions, dict):
-            merged = dict(fallback_assumptions)
-            for k in ("benchmarks", "history", "methodology", "recalc"):
-                val = raw_assumptions.get(k)
-                if isinstance(val, str) and val.strip():
-                    merged[k] = val.strip()
-            assumptions = merged
-        raw_recos = llm_data.get("recommendations")
-        if isinstance(raw_recos, list):
-            recommendations = [str(x).strip() for x in raw_recos if str(x).strip()][:6]
         try:
             confidence = max(0.0, min(1.0, float(llm_data.get("confidence", confidence))))
         except Exception:
             pass
-        source = "llm"
+        if confidence >= confidence_min:
+            raw_rationale = str(llm_data.get("rationale", "")).strip()
+            if raw_rationale:
+                rationale = raw_rationale
+            split_constraints = constraints
+            if llm_full_control and isinstance(constraints, dict):
+                allowed = constraints.get("allowed_channels")
+                allowed_list = [str(x) for x in allowed] if isinstance(allowed, list) else ["meta", "google", "tiktok"]
+                split_constraints = {
+                    **constraints,
+                    "budget_split": {
+                        "sum": 100.0,
+                        "min": {c: 0.0 for c in allowed_list},
+                        "max": {c: 100.0 for c in allowed_list},
+                    },
+                }
+            budget_split = _assistant_normalize_and_clamp_split(
+                llm_data.get("budget_split"),
+                split_constraints,
+                baseline,
+            )
+            if llm_full_control:
+                llm_inputs = _assistant_take_llm_channel_inputs(llm_data.get("channel_inputs"))
+                channel_inputs = llm_inputs or {}
+            else:
+                channel_inputs = _assistant_validate_channel_inputs(
+                    llm_data.get("channel_inputs"),
+                    constraints,
+                    fallback_channel_inputs,
+                )
+            source = "llm"
+        else:
+            recommendations.append(
+                f"Ответ LLM отклонен: confidence {round(confidence, 2)} ниже порога {round(confidence_min, 2)}."
+            )
 
     req_for_preview = req.model_copy(deep=True)
     req_for_preview.assumption_profile = profile
     req_for_preview.funnel_split = funnel
+    req_for_preview.channel_inputs = channel_inputs
+    req_for_preview.budget_split = budget_split
     preview = build_plan(req_for_preview)
     budget_split = {line.key: round(float(line.share) * 100.0, 2) for line in preview.lines}
     facts_totals, facts_period, facts_used = _extract_platform_facts(overview_context)
@@ -1479,10 +1931,14 @@ def _build_assistant_response(
 
     # Rebalance platform shares by blended efficiency score:
     # client history + anonymized global history (all active accounts).
-    platform_scores = _blend_platform_scores(facts_totals, global_facts_totals)
-    score_sum = sum(platform_scores.values())
-    if score_sum > 0:
-        fact_platform_share = {k: v / score_sum for k, v in platform_scores.items()}
+    if source == "fallback":
+        fact_platform_share = _fallback_platform_share_from_spend(facts_totals, global_facts_totals)
+    else:
+        platform_scores = _blend_platform_scores(facts_totals, global_facts_totals)
+        score_sum = sum(platform_scores.values())
+        fact_platform_share = {k: v / score_sum for k, v in platform_scores.items()} if score_sum > 0 else {}
+    should_apply_blend = source == "fallback" or (source == "llm" and llm_blend_with_facts and not llm_full_control)
+    if fact_platform_share and should_apply_blend:
 
         line_platform = {}
         for line in preview.lines:
@@ -1510,7 +1966,11 @@ def _build_assistant_response(
                 continue
             within_platform = base_share / max(base_platform_total.get(plat, 1e-9), 1e-9)
             fact_line_share = fact_platform_share[plat] * within_platform
-            adjusted_line_share[key] = 0.6 * base_share + 0.4 * fact_line_share
+            # In fallback mode, prioritize factual account data instead of baseline heuristics.
+            if source == "fallback":
+                adjusted_line_share[key] = fact_line_share
+            else:
+                adjusted_line_share[key] = 0.6 * base_share + 0.4 * fact_line_share
 
         norm = sum(adjusted_line_share.values())
         if norm > 0:
@@ -1518,10 +1978,16 @@ def _build_assistant_response(
                 key: round((val / norm) * 100.0, 2)
                 for key, val in adjusted_line_share.items()
             }
-            recommendations.insert(
-                0,
-                "Бюджетный сплит скорректирован по blended-истории: клиент + обезличенный global pool.",
-            )
+            if source == "llm":
+                recommendations.insert(
+                    0,
+                    "Сплит LLM нормализован и дополнительно скорректирован по blended-истории (client + global).",
+                )
+            else:
+                recommendations.insert(
+                    0,
+                    "Бюджетный сплит скорректирован по blended-истории: клиент + обезличенный global pool.",
+                )
 
     if not recommendations:
         top = sorted(preview.lines, key=lambda x: x.share, reverse=True)[:3]
@@ -1533,6 +1999,20 @@ def _build_assistant_response(
         if global_facts_used:
             recommendations.append("Для новых/пустых аккаунтов использован обезличенный global pool по всем активным кабинетам.")
         recommendations.append("Через 7 дней загрузите фактические данные и пересчитайте план.")
+    if source == "llm" and rationale:
+        if not any(str(r).strip() == rationale for r in recommendations):
+            recommendations.insert(0, rationale)
+
+    # Deduplicate recommendations preserving order.
+    deduped_recommendations: List[str] = []
+    seen_recommendations: set = set()
+    for rec in recommendations:
+        key = str(rec).strip()
+        if not key or key in seen_recommendations:
+            continue
+        seen_recommendations.add(key)
+        deduped_recommendations.append(key)
+    recommendations = deduped_recommendations
 
     global_debug = {}
     if isinstance(global_overview_context, dict):
@@ -1544,7 +2024,9 @@ def _build_assistant_response(
         source=source,
         assumption_profile=profile,
         funnel_split=funnel,
+        channel_inputs=channel_inputs,
         assumptions=assumptions,
+        rationale=rationale,
         recommendations=recommendations,
         confidence=round(confidence, 2),
         budget_split=budget_split,
@@ -2714,14 +3196,21 @@ def plan_assistant(payload: PlanRequest, authorization: Optional[str] = Header(N
     except Exception as exc:
         logging.warning("Assistant global insights context error: %s", exc)
     baseline = build_plan(payload)
+    constraints = _assistant_build_constraints(
+        payload,
+        overview_context=overview_context,
+        global_overview_context=global_overview_context,
+    )
     llm_data = _assistant_call_llm(
         payload,
-        baseline,
+        constraints,
         overview_context=overview_context,
         global_overview_context=global_overview_context,
     )
     return _build_assistant_response(
         payload,
+        baseline=baseline,
+        constraints=constraints,
         llm_data=llm_data,
         overview_context=overview_context,
         global_overview_context=global_overview_context,
@@ -3074,6 +3563,25 @@ def get_admin_user(current_user=Depends(get_current_user)):
     if current_user["email"] not in ADMIN_EMAILS and current_user.get("primary_email") not in ADMIN_EMAILS:
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
+
+
+def _issue_user_token(conn, user_id: int) -> str:
+    token = secrets.token_hex(24)
+    conn.execute("INSERT INTO user_tokens (user_id, token) VALUES (?, ?)", (user_id, token))
+    return token
+
+
+@app.post("/admin/users/{user_id}/impersonate")
+def admin_impersonate_user(user_id: int, admin_user=Depends(get_admin_user)):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    with get_conn() as conn:
+        user = conn.execute("SELECT id, email FROM users WHERE id=?", (user_id,)).fetchone()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        token = _issue_user_token(conn, user_id)
+        conn.commit()
+        return {"id": user_id, "email": user["email"], "token": token}
 
 
 @app.get("/admin/check-key")
@@ -5360,13 +5868,14 @@ def _build_insights_overview_for_user(
     daily_meta: Dict[str, Dict[str, object]] = {}
     daily_google: Dict[str, Dict[str, object]] = {}
     daily_tiktok: Dict[str, Dict[str, object]] = {}
+    safe_meta_from = _meta_safe_date_from(date_from)
 
     for acc in meta_accounts:
         external_id = acc.get("external_id") or acc.get("account_code")
         if not external_id:
             continue
         try:
-            rows = _meta_fetch_daily(str(external_id), date_from, date_to)
+            rows = _meta_fetch_daily(str(external_id), safe_meta_from, date_to)
             for row in rows:
                 _merge_daily(daily_meta, "date_start", row)
         except Exception:
@@ -5394,9 +5903,10 @@ def _build_insights_overview_for_user(
             advertiser_ids.append(str(env_adv))
     for adv_id in sorted(set(advertiser_ids)):
         try:
-            rows = _tiktok_fetch_daily(adv_id, date_from, date_to)
-            for row in rows:
-                _merge_daily(daily_tiktok, "date", row)
+            for chunk_from, chunk_to in _date_chunks(date_from, date_to, 30):
+                rows = _tiktok_fetch_daily(adv_id, chunk_from, chunk_to)
+                for row in rows:
+                    _merge_daily(daily_tiktok, "date", row)
         except Exception:
             continue
 
@@ -5495,10 +6005,11 @@ def _build_insights_overview_global(date_from: str, date_to: str) -> Dict[str, o
     daily_meta: Dict[str, Dict[str, object]] = {}
     daily_google: Dict[str, Dict[str, object]] = {}
     daily_tiktok: Dict[str, Dict[str, object]] = {}
+    safe_meta_from = _meta_safe_date_from(date_from)
 
     for external_id in sorted(ids_by_platform["meta"]):
         try:
-            rows = _meta_fetch_daily(external_id, date_from, date_to)
+            rows = _meta_fetch_daily(external_id, safe_meta_from, date_to)
             for row in rows:
                 _merge_daily(daily_meta, "date_start", row)
             debug["meta"]["api_ok"] = int(debug["meta"]["api_ok"]) + 1
@@ -5522,9 +6033,10 @@ def _build_insights_overview_global(date_from: str, date_to: str) -> Dict[str, o
 
     for advertiser_id in sorted(ids_by_platform["tiktok"]):
         try:
-            rows = _tiktok_fetch_daily(advertiser_id, date_from, date_to)
-            for row in rows:
-                _merge_daily(daily_tiktok, "date", row)
+            for chunk_from, chunk_to in _date_chunks(date_from, date_to, 30):
+                rows = _tiktok_fetch_daily(advertiser_id, chunk_from, chunk_to)
+                for row in rows:
+                    _merge_daily(daily_tiktok, "date", row)
             debug["tiktok"]["api_ok"] = int(debug["tiktok"]["api_ok"]) + 1
         except Exception:
             debug["tiktok"]["api_failed"] = int(debug["tiktok"]["api_failed"]) + 1
