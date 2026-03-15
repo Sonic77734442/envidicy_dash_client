@@ -1262,6 +1262,7 @@ h1 {
 .table-admin-accounts td:nth-child(2) { width: 180px; }
 .table-admin-accounts th:nth-child(3),
 .table-admin-accounts td:nth-child(3) { width: 90px; }
+.table-admin-accounts th:nth-child(3) { white-space: nowrap; }
 .table-admin-accounts th:nth-child(4),
 .table-admin-accounts td:nth-child(4) { width: 180px; }
 .table-admin-accounts th:nth-child(5),
