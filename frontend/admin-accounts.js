@@ -93,8 +93,8 @@ function renderAccounts(rows) {
               data-code="${row.account_code || ''}"
               data-currency="${row.currency || ''}"
               data-status="${row.status || ''}"
-            >Редактировать</button>
-            <button class="btn ghost small" data-delete="1" data-id="${row.id}" data-name="${String(row.name || '').replace(/"/g, '&quot;')}">Удалить</button>
+            >Edit</button>
+            <button class="btn ghost small" data-delete="1" data-id="${row.id}" data-name="${String(row.name || '').replace(/"/g, '&quot;')}">Del</button>
           </div>
         </td>
       </tr>

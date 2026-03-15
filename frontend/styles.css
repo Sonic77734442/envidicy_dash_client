@@ -1226,19 +1226,26 @@ h1 {
 }
 
 .account-actions-cell {
-  width: 1%;
+  width: 76px;
+  min-width: 76px;
+  max-width: 76px;
   white-space: normal;
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
 .account-row-actions {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 6px;
 }
 
 .account-row-actions .btn {
-  min-width: 122px;
+  min-width: 0;
+  width: 100%;
+  padding: 6px 8px;
+  text-align: center;
 }
 
 .table-wrapper-tight {
