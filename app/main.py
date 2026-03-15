@@ -2520,6 +2520,7 @@ _default_origins = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
     "https://envidicydashclientv20.vercel.app",
+    "https://envidicydashclientv20develop.vercel.app",
     "https://app.envidicy.kz",
     "https://www.envidicy.kz",
 ]
