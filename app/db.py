@@ -139,6 +139,19 @@ def apply_schema():
             conn.execute("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS fee_config TEXT")
             conn.execute("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS notifications_seen_at TIMESTAMPTZ")
             conn.execute("ALTER TABLE topups ADD COLUMN IF NOT EXISTS hold_applied INTEGER DEFAULT 0")
+            conn.execute("ALTER TABLE user_tokens ADD COLUMN IF NOT EXISTS login_email TEXT")
+            conn.execute("""
+            CREATE TABLE IF NOT EXISTS user_accesses (
+              id BIGSERIAL PRIMARY KEY,
+              user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+              email TEXT NOT NULL UNIQUE,
+              password_hash TEXT,
+              salt TEXT,
+              role TEXT DEFAULT 'member',
+              status TEXT DEFAULT 'active',
+              created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+            )
+            """)
             conn.commit()
         return
     schema_path = os.path.join(os.path.dirname(__file__), "..", "db", "schema.sql")
@@ -154,6 +167,23 @@ def apply_schema():
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
               token TEXT NOT NULL UNIQUE,
+              login_email TEXT,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+            """,
+        )
+        _ensure_table(
+            conn,
+            "user_accesses",
+            """
+            CREATE TABLE IF NOT EXISTS user_accesses (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+              email TEXT NOT NULL UNIQUE,
+              password_hash TEXT,
+              salt TEXT,
+              role TEXT DEFAULT 'member',
+              status TEXT DEFAULT 'active',
               created_at TEXT DEFAULT CURRENT_TIMESTAMP
             );
             """,
@@ -371,6 +401,7 @@ def apply_schema():
         _ensure_column(conn, "account_requests", "comment", "TEXT")
         _ensure_column(conn, "users", "password_hash", "TEXT")
         _ensure_column(conn, "users", "salt", "TEXT")
+        _ensure_column(conn, "user_tokens", "login_email", "TEXT")
         _ensure_column(conn, "users", "is_client", "INTEGER")
         _ensure_column(conn, "ad_accounts", "user_id", "INTEGER")
         _ensure_column(conn, "ad_accounts", "account_code", "TEXT")

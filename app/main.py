@@ -3436,12 +3436,74 @@ class InvoicePendingPayload(BaseModel):
     order_ref: Optional[str] = None
 
 
+def _normalize_email(value: Optional[str]) -> str:
+    return (value or "").strip().lower()
+
+
 def _hash_password(password: str, salt: str) -> str:
     return hashlib.sha256(f"{salt}{password}".encode("utf-8")).hexdigest()
 
 
 def _verify_password(password: str, salt: str, stored_hash: str) -> bool:
     return hmac.compare_digest(_hash_password(password, salt), stored_hash)
+
+
+def _ensure_owner_access(conn, user_id: int):
+    user = conn.execute("SELECT id, email, password_hash, salt FROM users WHERE id=?", (user_id,)).fetchone()
+    if not user or not user["email"]:
+        return None
+    owner_email = _normalize_email(user["email"])
+    row = conn.execute("SELECT * FROM user_accesses WHERE user_id=? AND role='owner' ORDER BY id LIMIT 1", (user_id,)).fetchone()
+    if row:
+        conn.execute(
+            "UPDATE user_accesses SET email=?, password_hash=?, salt=?, status='active' WHERE id=?",
+            (owner_email, user["password_hash"], user["salt"], row["id"]),
+        )
+        refreshed = conn.execute("SELECT * FROM user_accesses WHERE id=?", (row["id"],)).fetchone()
+        return dict(refreshed) if refreshed else dict(row)
+    conn.execute(
+        """
+        INSERT INTO user_accesses (user_id, email, password_hash, salt, role, status)
+        VALUES (?, ?, ?, ?, 'owner', 'active')
+        """,
+        (user_id, owner_email, user["password_hash"], user["salt"]),
+    )
+    row = conn.execute("SELECT * FROM user_accesses WHERE user_id=? AND role='owner' ORDER BY id DESC LIMIT 1", (user_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def _get_access_by_email(conn, email: str):
+    normalized = _normalize_email(email)
+    row = conn.execute("SELECT * FROM user_accesses WHERE email=? AND status='active'", (normalized,)).fetchone()
+    if row:
+        return dict(row)
+    legacy_user = conn.execute("SELECT id FROM users WHERE email=?", (normalized,)).fetchone()
+    if legacy_user:
+        return _ensure_owner_access(conn, legacy_user["id"])
+    return None
+
+
+def _issue_user_token(conn, user_id: int, login_email: Optional[str] = None) -> str:
+    token = secrets.token_hex(24)
+    conn.execute("INSERT INTO user_tokens (user_id, token, login_email) VALUES (?, ?, ?)", (user_id, token, _normalize_email(login_email) or None))
+    return token
+
+
+def _can_manage_accesses(conn, user_id: int, login_email: str) -> bool:
+    access = _get_access_by_email(conn, login_email)
+    if access and access.get("user_id") == user_id:
+        return (access.get("role") or "member") == "owner"
+    user = conn.execute("SELECT email FROM users WHERE id=?", (user_id,)).fetchone()
+    return bool(user and _normalize_email(user["email"]) == _normalize_email(login_email))
+
+
+def _hydrate_token_user(conn, row):
+    user = dict(row)
+    login_email = _normalize_email(user.get("login_email") or user.get("email"))
+    user["primary_email"] = user.get("email")
+    user["email"] = login_email or user.get("email")
+    user["can_manage_accesses"] = _can_manage_accesses(conn, user["id"], user["email"])
+    return user
 
 
 def _get_bearer_token(authorization: Optional[str]) -> Optional[str]:
@@ -3461,13 +3523,14 @@ def _get_user_by_token(token: Optional[str]):
     with get_conn() as conn:
         row = conn.execute(
             """
-            SELECT u.* FROM user_tokens ut
+            SELECT u.*, ut.login_email
+            FROM user_tokens ut
             JOIN users u ON u.id = ut.user_id
             WHERE ut.token=?
             """,
             (token,),
         ).fetchone()
-        return dict(row) if row else None
+        return _hydrate_token_user(conn, row) if row else None
 
 
 def get_current_user(authorization: Optional[str] = Header(None)):
@@ -3479,7 +3542,8 @@ def get_current_user(authorization: Optional[str] = Header(None)):
     with get_conn() as conn:
         row = conn.execute(
             """
-            SELECT u.* FROM user_tokens ut
+            SELECT u.*, ut.login_email
+            FROM user_tokens ut
             JOIN users u ON u.id = ut.user_id
             WHERE ut.token=?
             """,
@@ -3487,7 +3551,7 @@ def get_current_user(authorization: Optional[str] = Header(None)):
         ).fetchone()
         if not row:
             raise HTTPException(status_code=401, detail="Invalid token")
-        return dict(row)
+        return _hydrate_token_user(conn, row)
 
 
 def get_optional_user(authorization: Optional[str] = Header(None)):
@@ -3496,7 +3560,7 @@ def get_optional_user(authorization: Optional[str] = Header(None)):
 
 
 def get_admin_user(current_user=Depends(get_current_user)):
-    if current_user["email"] not in ADMIN_EMAILS:
+    if current_user["email"] not in ADMIN_EMAILS and current_user.get("primary_email") not in ADMIN_EMAILS:
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
 
@@ -3576,6 +3640,15 @@ class PasswordReset(BaseModel):
     new_password: str
 
 
+class SetPasswordPayload(BaseModel):
+    email: str
+    new_password: str
+
+
+class AccessCreatePayload(BaseModel):
+    email: str
+
+
 class WalletAdjust(BaseModel):
     user_email: str
     amount: float
@@ -3643,13 +3716,13 @@ def topup_request(payload: TopUpRequest):
 def register(payload: AuthPayload):
     if not get_conn:
         raise HTTPException(status_code=500, detail="DB not initialized")
-    email = payload.email.strip().lower()
+    email = _normalize_email(payload.email)
     password = payload.password.strip()
     if not email or not password:
         raise HTTPException(status_code=400, detail="Email and password are required")
     with get_conn() as conn:
         existing = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-        if existing:
+        if existing or _get_access_by_email(conn, email):
             raise HTTPException(status_code=400, detail="User already exists")
         salt = secrets.token_hex(8)
         password_hash = _hash_password(password, salt)
@@ -3657,62 +3730,102 @@ def register(payload: AuthPayload):
             "INSERT INTO users (email, password_hash, salt) VALUES (?, ?, ?)",
             (email, password_hash, salt),
         )
-        token = secrets.token_hex(24)
-        conn.execute("INSERT INTO user_tokens (user_id, token) VALUES (?, ?)", (cur.lastrowid, token))
-        conn.commit()
         user_id = cur.lastrowid
+        _ensure_owner_access(conn, user_id)
+        token = _issue_user_token(conn, user_id, email)
+        conn.commit()
         _send_telegram_alert(
             "\n".join(
                 [
-                    "👤 <b>Новая регистрация</b>",
+                    "?? <b>????? ???????????</b>",
                     f"ID: <code>{user_id}</code>",
                     f"Email: <code>{email}</code>",
                 ]
             ),
             channel="reg",
         )
-        return {"id": user_id, "email": email, "token": token}
+        return {"id": user_id, "email": email, "token": token, "can_manage_accesses": True}
 
 
 @app.post("/auth/login")
 def login(payload: AuthPayload):
     if not get_conn:
         raise HTTPException(status_code=500, detail="DB not initialized")
-    email = payload.email.strip().lower()
+    email = _normalize_email(payload.email)
     password = payload.password.strip()
     if not email or not password:
         raise HTTPException(status_code=400, detail="Email and password are required")
     with get_conn() as conn:
-        user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-        if not user or not user["password_hash"] or not user["salt"]:
+        access = _get_access_by_email(conn, email)
+        if not access or not access.get("password_hash") or not access.get("salt"):
             raise HTTPException(status_code=401, detail="Invalid credentials")
-        if not _verify_password(password, user["salt"], user["password_hash"]):
+        if not _verify_password(password, access["salt"], access["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid credentials")
-        token = secrets.token_hex(24)
-        conn.execute("INSERT INTO user_tokens (user_id, token) VALUES (?, ?)", (user["id"], token))
+        user = conn.execute("SELECT * FROM users WHERE id=?", (access["user_id"],)).fetchone()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        token = _issue_user_token(conn, user["id"], access["email"])
         conn.commit()
-        return {"id": user["id"], "email": user["email"], "token": token}
+        return {
+            "id": user["id"],
+            "email": access["email"],
+            "token": token,
+            "can_manage_accesses": (access.get("role") or "member") == "owner",
+        }
+
+
+@app.post("/auth/set-password")
+def set_password(payload: SetPasswordPayload):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    email = _normalize_email(payload.email)
+    password = payload.new_password.strip()
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="email and new_password are required")
+    with get_conn() as conn:
+        access = _get_access_by_email(conn, email)
+        if not access:
+            raise HTTPException(status_code=404, detail="Email is not linked to any account")
+        salt = secrets.token_hex(8)
+        password_hash = _hash_password(password, salt)
+        conn.execute(
+            "UPDATE user_accesses SET password_hash=?, salt=?, status='active' WHERE id=?",
+            (password_hash, salt, access["id"]),
+        )
+        if (access.get("role") or "member") == "owner":
+            conn.execute(
+                "UPDATE users SET password_hash=?, salt=? WHERE id=?",
+                (password_hash, salt, access["user_id"]),
+            )
+        conn.execute("DELETE FROM user_tokens WHERE user_id=?", (access["user_id"],))
+        conn.commit()
+        return {"status": "ok"}
 
 
 @app.post("/admin/reset-password")
 def admin_reset_password(payload: PasswordReset, admin_user=Depends(get_admin_user)):
     if not get_conn:
         raise HTTPException(status_code=500, detail="DB not initialized")
-    email = payload.email.strip().lower()
+    email = _normalize_email(payload.email)
     password = payload.new_password.strip()
     if not email or not password:
         raise HTTPException(status_code=400, detail="Email and new_password are required")
     salt = secrets.token_hex(8)
     password_hash = _hash_password(password, salt)
     with get_conn() as conn:
-        user = conn.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()
-        if not user:
+        access = _get_access_by_email(conn, email)
+        if not access:
             raise HTTPException(status_code=404, detail="User not found")
         conn.execute(
-            "UPDATE users SET password_hash=?, salt=? WHERE id=?",
-            (password_hash, salt, user["id"]),
+            "UPDATE user_accesses SET password_hash=?, salt=?, status='active' WHERE id=?",
+            (password_hash, salt, access["id"]),
         )
-        conn.execute("DELETE FROM user_tokens WHERE user_id=?", (user["id"],))
+        if (access.get("role") or "member") == "owner":
+            conn.execute(
+                "UPDATE users SET password_hash=?, salt=? WHERE id=?",
+                (password_hash, salt, access["user_id"]),
+            )
+        conn.execute("DELETE FROM user_tokens WHERE user_id=?", (access["user_id"],))
         conn.commit()
         return {"status": "ok"}
 
@@ -4911,6 +5024,11 @@ def list_wallet_transactions(current_user=Depends(get_current_user)):
         return [dict(row) for row in rows]
 
 
+def _require_access_owner(current_user):
+    if not current_user.get("can_manage_accesses"):
+        raise HTTPException(status_code=403, detail="Owner access required")
+
+
 @app.get("/profile")
 def get_profile(current_user=Depends(get_current_user)):
     if not get_conn:
@@ -4918,6 +5036,8 @@ def get_profile(current_user=Depends(get_current_user)):
     with get_conn() as conn:
         profile = _get_or_create_profile(conn, current_user["id"])
         profile["email"] = current_user["email"]
+        profile["primary_email"] = current_user.get("primary_email") or current_user["email"]
+        profile["can_manage_accesses"] = bool(current_user.get("can_manage_accesses"))
         if profile.get("avatar_path"):
             profile["avatar_url"] = f"/profile/avatar?token={_ensure_token(conn, current_user['id'])}"
         return profile
@@ -4948,9 +5068,80 @@ def update_profile(payload: ProfilePayload, current_user=Depends(get_current_use
         row = conn.execute("SELECT * FROM user_profiles WHERE user_id=?", (current_user["id"],)).fetchone()
         result = dict(row) if row else {}
         result["email"] = current_user["email"]
+        result["primary_email"] = current_user.get("primary_email") or current_user["email"]
+        result["can_manage_accesses"] = bool(current_user.get("can_manage_accesses"))
         if result.get("avatar_path"):
             result["avatar_url"] = f"/profile/avatar?token={_ensure_token(conn, current_user['id'])}"
         return result
+
+
+@app.get("/profile/accesses")
+def list_profile_accesses(current_user=Depends(get_current_user)):
+    _require_access_owner(current_user)
+    if not get_conn:
+        return {"items": [], "can_manage_accesses": True}
+    with get_conn() as conn:
+        _ensure_owner_access(conn, current_user["id"])
+        rows = conn.execute(
+            """
+            SELECT id, user_id, email, role, status, created_at
+            FROM user_accesses
+            WHERE user_id=?
+            ORDER BY CASE WHEN role='owner' THEN 0 ELSE 1 END, created_at ASC
+            """,
+            (current_user["id"],),
+        ).fetchall()
+        return {"can_manage_accesses": True, "items": [dict(row) for row in rows]}
+
+
+@app.post("/profile/accesses")
+def create_profile_access(payload: AccessCreatePayload, current_user=Depends(get_current_user)):
+    _require_access_owner(current_user)
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    email = _normalize_email(payload.email)
+    if not email:
+        raise HTTPException(status_code=400, detail="email is required")
+    with get_conn() as conn:
+        owner = _ensure_owner_access(conn, current_user["id"])
+        if owner and _normalize_email(owner.get("email")) == email:
+            raise HTTPException(status_code=400, detail="Main email is already linked")
+        existing = _get_access_by_email(conn, email)
+        if existing:
+            raise HTTPException(status_code=400, detail="Email is already linked to an account")
+        conn.execute(
+            """
+            INSERT INTO user_accesses (user_id, email, role, status)
+            VALUES (?, ?, 'member', 'active')
+            """,
+            (current_user["id"], email),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT id, user_id, email, role, status, created_at FROM user_accesses WHERE email=?",
+            (email,),
+        ).fetchone()
+        return dict(row) if row else {"status": "ok"}
+
+
+@app.delete("/profile/accesses/{access_id}")
+def delete_profile_access(access_id: int, current_user=Depends(get_current_user)):
+    _require_access_owner(current_user)
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM user_accesses WHERE id=? AND user_id=?",
+            (access_id, current_user["id"]),
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Access not found")
+        if (row["role"] or "member") == "owner":
+            raise HTTPException(status_code=400, detail="Main email cannot be deleted")
+        conn.execute("DELETE FROM user_tokens WHERE user_id=? AND login_email=?", (current_user["id"], row["email"]))
+        conn.execute("DELETE FROM user_accesses WHERE id=?", (access_id,))
+        conn.commit()
+        return {"status": "ok"}
 
 
 @app.get("/fees")
@@ -5167,20 +5358,24 @@ def change_password(payload: ChangePasswordPayload, current_user=Depends(get_cur
     if not payload.current_password or not payload.new_password:
         raise HTTPException(status_code=400, detail="current_password and new_password are required")
     with get_conn() as conn:
-        user = conn.execute("SELECT * FROM users WHERE id=?", (current_user["id"],)).fetchone()
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        if not _verify_password(payload.current_password, user["salt"], user["password_hash"]):
+        access = _get_access_by_email(conn, current_user["email"])
+        if not access or not access.get("password_hash") or not access.get("salt"):
+            raise HTTPException(status_code=404, detail="Access not found")
+        if not _verify_password(payload.current_password, access["salt"], access["password_hash"]):
             raise HTTPException(status_code=400, detail="Invalid current password")
         salt = secrets.token_hex(8)
         password_hash = _hash_password(payload.new_password, salt)
         conn.execute(
-            "UPDATE users SET password_hash=?, salt=? WHERE id=?",
-            (password_hash, salt, current_user["id"]),
+            "UPDATE user_accesses SET password_hash=?, salt=? WHERE id=?",
+            (password_hash, salt, access["id"]),
         )
+        if (access.get("role") or "member") == "owner":
+            conn.execute(
+                "UPDATE users SET password_hash=?, salt=? WHERE id=?",
+                (password_hash, salt, current_user["id"]),
+            )
         conn.execute("DELETE FROM user_tokens WHERE user_id=?", (current_user["id"],))
-        new_token = secrets.token_hex(24)
-        conn.execute("INSERT INTO user_tokens (user_id, token) VALUES (?, ?)", (current_user["id"], new_token))
+        new_token = _issue_user_token(conn, current_user["id"], current_user["email"])
         conn.commit()
         return {"status": "ok", "token": new_token}
 
