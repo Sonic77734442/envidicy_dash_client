@@ -20,6 +20,7 @@ import hashlib
 import hmac
 import secrets
 import json
+import html
 import os
 import shutil
 import httpx
@@ -6226,6 +6227,646 @@ def insights_overview(
         google_account_id=google_account_id,
         tiktok_account_id=tiktok_account_id,
     )
+
+
+def _dashboard_export_fmt_money(value: object, currency: str = "USD") -> str:
+    try:
+        amount = float(value or 0)
+    except Exception:
+        amount = 0.0
+    return f"{amount:,.2f}".replace(",", " ") + f" {currency}"
+
+
+def _dashboard_export_fmt_int(value: object) -> str:
+    try:
+        amount = float(value or 0)
+    except Exception:
+        amount = 0.0
+    return f"{int(round(amount)):,}".replace(",", " ")
+
+
+def _dashboard_export_fmt_pct(value: object) -> str:
+    try:
+        amount = float(value or 0)
+    except Exception:
+        amount = 0.0
+    return f"{amount * 100:.2f}%"
+
+
+def _dashboard_export_safe_payload(loader, fallback: Dict[str, object]) -> Dict[str, object]:
+    try:
+        return loader()
+    except HTTPException as exc:
+        payload = dict(fallback)
+        payload["error"] = exc.detail
+        return payload
+    except Exception as exc:
+        payload = dict(fallback)
+        payload["error"] = str(exc)
+        return payload
+
+
+def _dashboard_export_collect_audience_rows(payload: Dict[str, object], group: str, platform: str) -> List[Dict[str, object]]:
+    rows: List[Dict[str, object]] = []
+    accounts = payload.get("accounts") or []
+    if not isinstance(accounts, list):
+        return rows
+    for account in accounts:
+        if not isinstance(account, dict) or account.get("error"):
+            continue
+        if group == "age_gender":
+            for row in account.get("age_gender") or []:
+                if not isinstance(row, dict):
+                    continue
+                if platform == "meta":
+                    label = f"{row.get('age') or '—'} / {row.get('gender') or '—'}"
+                else:
+                    label = f"{row.get('age_range') or '—'} / {row.get('gender') or '—'}"
+                rows.append(
+                    {
+                        "platform": platform,
+                        "segment": label,
+                        "impressions": row.get("impressions") or 0,
+                        "clicks": row.get("clicks") or 0,
+                        "spend": row.get("spend") or 0,
+                    }
+                )
+        elif group == "geo":
+            if platform == "meta":
+                for row in account.get("country") or []:
+                    if isinstance(row, dict):
+                        rows.append({"platform": platform, "segment": f"Country: {row.get('country') or '—'}", "impressions": row.get("impressions") or 0, "clicks": row.get("clicks") or 0, "spend": row.get("spend") or 0})
+                for row in account.get("region") or []:
+                    if isinstance(row, dict):
+                        rows.append({"platform": platform, "segment": f"Region: {row.get('region') or '—'}", "impressions": row.get("impressions") or 0, "clicks": row.get("clicks") or 0, "spend": row.get("spend") or 0})
+            else:
+                for row in account.get("country") or []:
+                    if isinstance(row, dict):
+                        rows.append({"platform": platform, "segment": f"Country: {row.get('geo') or '—'}", "impressions": row.get("impressions") or 0, "clicks": row.get("clicks") or 0, "spend": row.get("spend") or 0})
+                for row in account.get("region") or []:
+                    if isinstance(row, dict):
+                        rows.append({"platform": platform, "segment": f"Region: {row.get('geo') or '—'}", "impressions": row.get("impressions") or 0, "clicks": row.get("clicks") or 0, "spend": row.get("spend") or 0})
+                for row in account.get("city") or []:
+                    if isinstance(row, dict):
+                        rows.append({"platform": platform, "segment": f"City: {row.get('geo') or '—'}", "impressions": row.get("impressions") or 0, "clicks": row.get("clicks") or 0, "spend": row.get("spend") or 0})
+        elif group == "device":
+            source_rows = []
+            if platform == "meta":
+                source_rows.extend(account.get("impression_device") or [])
+                source_rows.extend(account.get("device_platform") or [])
+            else:
+                source_rows.extend(account.get("device") or [])
+            for row in source_rows:
+                if not isinstance(row, dict):
+                    continue
+                segment = row.get("impression_device") or row.get("device_platform") or row.get("device") or "—"
+                rows.append(
+                    {
+                        "platform": platform,
+                        "segment": str(segment),
+                        "impressions": row.get("impressions") or 0,
+                        "clicks": row.get("clicks") or 0,
+                        "spend": row.get("spend") or 0,
+                    }
+                )
+    return rows
+
+
+def _dashboard_export_aggregate_segments(rows: List[Dict[str, object]], platform_filter: str = "all", prefix: Optional[str] = None) -> List[Dict[str, object]]:
+    grouped: Dict[str, float] = {}
+    normalized_platform = str(platform_filter or "all").lower()
+    normalized_prefix = prefix.lower() if prefix else None
+    for row in rows:
+        platform = str(row.get("platform") or "").lower()
+        if normalized_platform != "all" and platform != normalized_platform:
+            continue
+        segment = str(row.get("segment") or "").strip()
+        if not segment:
+            continue
+        if normalized_prefix and not segment.lower().startswith(normalized_prefix):
+            continue
+        try:
+            impressions = float(row.get("impressions") or 0)
+            clicks = float(row.get("clicks") or 0)
+            spend = float(row.get("spend") or 0)
+        except Exception:
+            impressions = 0.0
+            clicks = 0.0
+            spend = 0.0
+        weight = impressions if impressions > 0 else clicks if clicks > 0 else spend
+        if weight <= 0:
+            continue
+        grouped[segment] = grouped.get(segment, 0.0) + weight
+    total = sum(grouped.values()) or 0.0
+    items = []
+    for label, value in sorted(grouped.items(), key=lambda item: item[1], reverse=True)[:10]:
+        items.append({"label": label, "value": value, "share": (value / total) if total else 0.0})
+    return items
+
+
+def _dashboard_export_bar_rows(rows: List[Dict[str, object]], metric: str) -> List[Dict[str, object]]:
+    points = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        try:
+            value = float(row.get(metric) or 0)
+        except Exception:
+            value = 0.0
+        points.append({"date": row.get("date") or "—", "value": value})
+    max_value = max([point["value"] for point in points], default=0.0) or 1.0
+    for point in points:
+        point["width"] = (point["value"] / max_value) * 100.0
+    return points
+
+
+def _dashboard_export_html(payload: Dict[str, object]) -> str:
+    overview = payload.get("overview") or {}
+    totals = overview.get("totals") or {}
+    meta = payload.get("meta") or {}
+    google = payload.get("google") or {}
+    tiktok = payload.get("tiktok") or {}
+    age_items = payload.get("audience_age") or []
+    geo_items = payload.get("audience_geo") or []
+    device_items = payload.get("audience_device") or []
+    account_trend = payload.get("account_trend") or {}
+    daily_points = payload.get("daily_points") or []
+    generated_at = payload.get("generated_at") or datetime.utcnow().strftime("%d.%m.%Y %H:%M")
+
+    total_spend = sum(float((totals.get(key) or {}).get("spend") or 0) for key in ("meta", "google", "tiktok"))
+    total_impressions = sum(float((totals.get(key) or {}).get("impressions") or 0) for key in ("meta", "google", "tiktok"))
+    total_clicks = sum(float((totals.get(key) or {}).get("clicks") or 0) for key in ("meta", "google", "tiktok"))
+
+    def summary_card(label: str, value: str, note: str) -> str:
+        return f"""
+        <div class="kpi-card">
+          <div class="kpi-label">{html.escape(label)}</div>
+          <div class="kpi-value">{html.escape(value)}</div>
+          <div class="kpi-note">{html.escape(note)}</div>
+        </div>
+        """
+
+    def platform_block(title: str, platform_payload: Dict[str, object], currency_default: str = "USD") -> str:
+        summary = platform_payload.get("summary") or {}
+        campaigns = platform_payload.get("campaigns") or []
+        error = platform_payload.get("error")
+        rows_html = ""
+        for row in campaigns[:8]:
+            rows_html += f"""
+            <tr>
+              <td>{html.escape(str(row.get('campaign_name') or row.get('campaign_id') or '—'))}</td>
+              <td>{html.escape(_dashboard_export_fmt_money(row.get('spend') or 0, row.get('currency') or row.get('account_currency') or summary.get('currency') or currency_default))}</td>
+              <td>{html.escape(_dashboard_export_fmt_int(row.get('impressions') or 0))}</td>
+              <td>{html.escape(_dashboard_export_fmt_int(row.get('clicks') or 0))}</td>
+              <td>{html.escape(_dashboard_export_fmt_pct(row.get('ctr') or 0))}</td>
+            </tr>
+            """
+        if not rows_html:
+            rows_html = '<tr><td colspan="5">Нет данных</td></tr>'
+        return f"""
+        <section class="section">
+          <div class="section-head">
+            <h2>{html.escape(title)}</h2>
+            <div class="section-note">{html.escape(str(error or 'Данные обновлены.'))}</div>
+          </div>
+          <div class="mini-kpis">
+            {summary_card('Расход', _dashboard_export_fmt_money(summary.get('spend') or 0, summary.get('currency') or currency_default), 'Итог по платформе')}
+            {summary_card('Показы', _dashboard_export_fmt_int(summary.get('impressions') or 0), 'За выбранный период')}
+            {summary_card('Клики', _dashboard_export_fmt_int(summary.get('clicks') or 0), 'Клики и переходы')}
+            {summary_card('CTR', _dashboard_export_fmt_pct(summary.get('ctr') or 0), 'Средний CTR')}
+          </div>
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>Кампания</th>
+                <th>Расход</th>
+                <th>Показы</th>
+                <th>Клики</th>
+                <th>CTR</th>
+              </tr>
+            </thead>
+            <tbody>{rows_html}</tbody>
+          </table>
+        </section>
+        """
+
+    def segment_block(title: str, rows: List[Dict[str, object]]) -> str:
+        content = ""
+        for row in rows:
+            value_text = _dashboard_export_fmt_int(row.get("value") or 0)
+            width = min(100.0, max(4.0, float(row.get("share") or 0) * 100.0)) if rows else 0.0
+            content += f"""
+            <div class="segment-row">
+              <div class="segment-head">
+                <span>{html.escape(str(row.get('label') or '—'))}</span>
+                <strong>{html.escape(value_text)} · {html.escape(f"{float(row.get('share') or 0) * 100:.1f}%")}</strong>
+              </div>
+              <div class="segment-bar"><span style="width:{width:.2f}%"></span></div>
+            </div>
+            """
+        if not content:
+            content = '<div class="empty">Нет данных</div>'
+        return f"""
+        <section class="section section-half">
+          <div class="section-head">
+            <h2>{html.escape(title)}</h2>
+          </div>
+          <div class="segment-list">{content}</div>
+        </section>
+        """
+
+    daily_rows_html = ""
+    for row in daily_points[:18]:
+        daily_rows_html += f"""
+        <tr>
+          <td>{html.escape(str(row.get('date') or '—'))}</td>
+          <td>{html.escape(_dashboard_export_fmt_money(row.get('spend') or 0, 'USD'))}</td>
+          <td>{html.escape(_dashboard_export_fmt_int(row.get('impressions') or 0))}</td>
+          <td>{html.escape(_dashboard_export_fmt_int(row.get('clicks') or 0))}</td>
+        </tr>
+        """
+    if not daily_rows_html:
+        daily_rows_html = '<tr><td colspan="4">Нет данных</td></tr>'
+
+    trend_metric = str(account_trend.get("metric_label") or "Показы")
+    trend_rows_html = ""
+    for row in account_trend.get("points") or []:
+        value = row.get("value") or 0
+        value_text = _dashboard_export_fmt_money(value, "USD") if account_trend.get("metric") == "spend" else _dashboard_export_fmt_int(value)
+        trend_rows_html += f"""
+        <div class="trend-row">
+          <span>{html.escape(str(row.get('date') or '—'))}</span>
+          <div class="trend-bar"><span style="width:{float(row.get('width') or 0):.2f}%"></span></div>
+          <strong>{html.escape(value_text)}</strong>
+        </div>
+        """
+    if not trend_rows_html:
+        trend_rows_html = '<div class="empty">Нет данных</div>'
+
+    return f"""
+    <!doctype html>
+    <html lang="ru">
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          @page {{
+            size: A4;
+            margin: 12mm;
+          }}
+          body {{
+            margin: 0;
+            font-family: DejaVu Sans, Arial, sans-serif;
+            color: #0f172a;
+            background: #f5f8ff;
+            font-size: 12px;
+          }}
+          .page {{
+            padding: 12px 18px 24px;
+            background:
+              radial-gradient(900px at 100% 0%, rgba(59,130,246,0.10), transparent 55%),
+              linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+          }}
+          .hero {{
+            border-radius: 18px;
+            padding: 20px;
+            background: linear-gradient(135deg, #071225 0%, #122445 52%, #113c6b 100%);
+            color: #f8fbff;
+            margin-bottom: 14px;
+          }}
+          .eyebrow {{
+            font-size: 10px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            opacity: 0.72;
+            margin-bottom: 8px;
+          }}
+          .hero h1 {{
+            margin: 0 0 10px;
+            font-size: 24px;
+          }}
+          .hero-meta {{
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+          }}
+          .pill {{
+            display: inline-block;
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.14);
+            font-size: 11px;
+          }}
+          .kpi-grid, .mini-kpis, .section-grid {{
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+          }}
+          .kpi-card {{
+            flex: 1 1 180px;
+            min-width: 180px;
+            border-radius: 16px;
+            background: #ffffff;
+            border: 1px solid #d7e2f4;
+            padding: 14px;
+            box-sizing: border-box;
+          }}
+          .kpi-label {{
+            color: #5b6b86;
+            font-size: 11px;
+            margin-bottom: 6px;
+          }}
+          .kpi-value {{
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 6px;
+          }}
+          .kpi-note {{
+            color: #64748b;
+            font-size: 11px;
+          }}
+          .section {{
+            margin-top: 14px;
+            border-radius: 18px;
+            background: #ffffff;
+            border: 1px solid #d7e2f4;
+            padding: 16px;
+            page-break-inside: avoid;
+          }}
+          .section-half {{
+            flex: 1 1 280px;
+            min-width: 280px;
+          }}
+          .section-head {{
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: baseline;
+            margin-bottom: 10px;
+          }}
+          .section h2 {{
+            margin: 0;
+            font-size: 17px;
+          }}
+          .section-note {{
+            color: #64748b;
+            font-size: 11px;
+          }}
+          .report-table {{
+            width: 100%;
+            border-collapse: collapse;
+          }}
+          .report-table th, .report-table td {{
+            border-bottom: 1px solid #e5edf8;
+            padding: 8px 6px;
+            text-align: left;
+            vertical-align: top;
+          }}
+          .report-table th {{
+            color: #5b6b86;
+            font-size: 11px;
+          }}
+          .segment-row, .trend-row {{
+            margin-bottom: 10px;
+          }}
+          .segment-head, .trend-row {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+          }}
+          .segment-bar, .trend-bar {{
+            height: 8px;
+            border-radius: 999px;
+            background: #e7eefb;
+            overflow: hidden;
+            flex: 1 1 auto;
+          }}
+          .segment-bar span {{
+            display: block;
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #3b82f6, #22c1ff);
+          }}
+          .trend-bar span {{
+            display: block;
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #0f766e, #14b8a6);
+          }}
+          .empty {{
+            color: #64748b;
+          }}
+        </style>
+      </head>
+      <body>
+        <div class="page">
+          <section class="hero">
+            <div class="eyebrow">Envidicy · Dashboard Export</div>
+            <h1>Отчет по эффективности кампаний</h1>
+            <div class="hero-meta">
+              <span class="pill">Период: {html.escape(str(payload.get('date_from') or '—'))} — {html.escape(str(payload.get('date_to') or '—'))}</span>
+              <span class="pill">Сформирован: {html.escape(str(generated_at))}</span>
+            </div>
+          </section>
+
+          <div class="kpi-grid">
+            {summary_card('Расход', _dashboard_export_fmt_money(total_spend, 'USD'), 'По всем подключенным платформам')}
+            {summary_card('Показы', _dashboard_export_fmt_int(total_impressions), 'Суммарный delivery')}
+            {summary_card('Клики', _dashboard_export_fmt_int(total_clicks), 'Суммарный clickstream')}
+            {summary_card('Аккаунты', _dashboard_export_fmt_int(payload.get('account_count') or 0), 'Активные кабинеты в отчете')}
+          </div>
+
+          {platform_block('Meta Insights', meta, 'USD')}
+          {platform_block('Google Insights', google, 'USD')}
+          {platform_block('TikTok Insights', tiktok, 'USD')}
+
+          <section class="section">
+            <div class="section-head">
+              <h2>Динамика по дням</h2>
+            </div>
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>Дата</th>
+                  <th>Расход</th>
+                  <th>Показы</th>
+                  <th>Клики</th>
+                </tr>
+              </thead>
+              <tbody>{daily_rows_html}</tbody>
+            </table>
+          </section>
+
+          <section class="section">
+            <div class="section-head">
+              <h2>Динамика по аккаунту</h2>
+              <div class="section-note">{html.escape(str(account_trend.get('title') or 'Выбранный аккаунт'))}</div>
+            </div>
+            <div class="section-note" style="margin-bottom:10px;">Метрика: {html.escape(trend_metric)}</div>
+            {trend_rows_html}
+          </section>
+
+          <div class="section-grid">
+            {segment_block('Аудитория · Возраст / Пол', age_items)}
+            {segment_block('Аудитория · Гео', geo_items)}
+            {segment_block('Аудитория · Девайсы', device_items)}
+          </div>
+        </div>
+      </body>
+    </html>
+    """
+
+
+@app.get("/dashboard/export/pdf")
+def dashboard_export_pdf(
+    date_from: str,
+    date_to: str,
+    meta_date_from: Optional[str] = None,
+    meta_date_to: Optional[str] = None,
+    google_date_from: Optional[str] = None,
+    google_date_to: Optional[str] = None,
+    tiktok_date_from: Optional[str] = None,
+    tiktok_date_to: Optional[str] = None,
+    meta_account_id: Optional[int] = None,
+    google_account_id: Optional[int] = None,
+    tiktok_account_id: Optional[int] = None,
+    meta_platform_account_id: Optional[int] = None,
+    google_platform_account_id: Optional[int] = None,
+    tiktok_platform_account_id: Optional[int] = None,
+    audience_age_platform: str = "all",
+    audience_geo_platform: str = "all",
+    audience_geo_level: str = "country",
+    audience_device_platform: str = "all",
+    account_trend_platform: str = "meta",
+    account_trend_account_id: Optional[int] = None,
+    account_trend_metric: str = "impressions",
+    current_user=Depends(get_current_user),
+):
+    if not date_from or not date_to:
+        raise HTTPException(status_code=400, detail="date_from and date_to are required")
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+
+    overview = _build_insights_overview_for_user(
+        current_user=current_user,
+        date_from=date_from,
+        date_to=date_to,
+        meta_account_id=meta_account_id,
+        google_account_id=google_account_id,
+        tiktok_account_id=tiktok_account_id,
+    )
+    meta_payload = _dashboard_export_safe_payload(
+        lambda: meta_insights(meta_date_from or date_from, meta_date_to or date_to, meta_platform_account_id, current_user),
+        {"summary": {}, "campaigns": []},
+    )
+    google_payload = _dashboard_export_safe_payload(
+        lambda: google_insights(google_date_from or date_from, google_date_to or date_to, google_platform_account_id, current_user),
+        {"summary": {}, "campaigns": []},
+    )
+    tiktok_payload = _dashboard_export_safe_payload(
+        lambda: tiktok_insights(tiktok_date_from or date_from, tiktok_date_to or date_to, tiktok_platform_account_id, current_user),
+        {"summary": {}, "campaigns": []},
+    )
+    meta_age = _dashboard_export_safe_payload(
+        lambda: meta_audience(date_from, date_to, "age_gender", meta_account_id, current_user),
+        {"accounts": []},
+    )
+    google_age = _dashboard_export_safe_payload(
+        lambda: google_audience(date_from, date_to, "age_gender", google_account_id, current_user),
+        {"accounts": []},
+    )
+    meta_geo = _dashboard_export_safe_payload(
+        lambda: meta_audience(date_from, date_to, "geo", meta_account_id, current_user),
+        {"accounts": []},
+    )
+    google_geo = _dashboard_export_safe_payload(
+        lambda: google_audience(date_from, date_to, "geo", google_account_id, current_user),
+        {"accounts": []},
+    )
+    meta_device = _dashboard_export_safe_payload(
+        lambda: meta_audience(date_from, date_to, "device", meta_account_id, current_user),
+        {"accounts": []},
+    )
+    google_device = _dashboard_export_safe_payload(
+        lambda: google_audience(date_from, date_to, "device", google_account_id, current_user),
+        {"accounts": []},
+    )
+
+    age_rows = _dashboard_export_collect_audience_rows(meta_age, "age_gender", "meta") + _dashboard_export_collect_audience_rows(google_age, "age_gender", "google")
+    geo_rows = _dashboard_export_collect_audience_rows(meta_geo, "geo", "meta") + _dashboard_export_collect_audience_rows(google_geo, "geo", "google")
+    device_rows = _dashboard_export_collect_audience_rows(meta_device, "device", "meta") + _dashboard_export_collect_audience_rows(google_device, "device", "google")
+
+    daily_points = []
+    daily_map: Dict[str, Dict[str, float]] = {}
+    for platform_key in ("meta", "google", "tiktok"):
+        for row in overview.get("daily", {}).get(platform_key, []):
+            if not isinstance(row, dict):
+                continue
+            date_key = str(row.get("date") or "")
+            if not date_key:
+                continue
+            bucket = daily_map.setdefault(date_key, {"spend": 0.0, "impressions": 0.0, "clicks": 0.0})
+            bucket["spend"] += float(row.get("spend") or 0)
+            bucket["impressions"] += float(row.get("impressions") or 0)
+            bucket["clicks"] += float(row.get("clicks") or 0)
+    for date_key in sorted(daily_map.keys(), reverse=True):
+        daily_points.append({"date": date_key, **daily_map[date_key]})
+
+    trend_platform = str(account_trend_platform or "meta").lower()
+    trend_accounts = overview.get("daily_by_account", {}).get(trend_platform, []) or []
+    selected_trend = None
+    for account in trend_accounts:
+        if str(account.get("account_id")) == str(account_trend_account_id):
+            selected_trend = account
+            break
+    if selected_trend is None and trend_accounts:
+        selected_trend = trend_accounts[0]
+    trend_points = _dashboard_export_bar_rows(selected_trend.get("daily", []) if isinstance(selected_trend, dict) else [], account_trend_metric)
+
+    with get_conn() as conn:
+        account_count = conn.execute(
+            "SELECT COUNT(*) AS c FROM ad_accounts WHERE user_id=? AND platform IN ('meta','google','tiktok')",
+            (current_user["id"],),
+        ).fetchone()["c"]
+
+    html_doc = _dashboard_export_html(
+        {
+            "date_from": date_from,
+            "date_to": date_to,
+            "generated_at": datetime.utcnow().strftime("%d.%m.%Y %H:%M UTC"),
+            "account_count": account_count,
+            "overview": overview,
+            "meta": meta_payload,
+            "google": google_payload,
+            "tiktok": tiktok_payload,
+            "daily_points": daily_points,
+            "account_trend": {
+                "metric": account_trend_metric,
+                "metric_label": "Клики" if account_trend_metric == "clicks" else "Расход" if account_trend_metric == "spend" else "Показы",
+                "title": selected_trend.get("name") if isinstance(selected_trend, dict) else "Нет данных",
+                "points": trend_points[:20],
+            },
+            "audience_age": _dashboard_export_aggregate_segments(age_rows, audience_age_platform),
+            "audience_geo": _dashboard_export_aggregate_segments(
+                geo_rows,
+                audience_geo_platform,
+                "country:" if audience_geo_level == "country" else "region:" if audience_geo_level == "region" else "city:",
+            ),
+            "audience_device": _dashboard_export_aggregate_segments(device_rows, audience_device_platform),
+        }
+    )
+
+    try:
+        from weasyprint import HTML
+    except Exception:
+        raise HTTPException(status_code=500, detail="PDF renderer is not available")
+
+    buffer = BytesIO()
+    HTML(string=html_doc, base_url=os.path.dirname(__file__)).write_pdf(buffer)
+    filename = f"dashboard_report_{date_from}_{date_to}.pdf"
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    return StreamingResponse(BytesIO(buffer.getvalue()), media_type="application/pdf", headers=headers)
 
 
 @app.post("/admin/documents/upload")
