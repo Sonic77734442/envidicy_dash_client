@@ -4480,29 +4480,59 @@ def _attach_topup_account_amount(rows: List[Dict[str, object]]) -> List[Dict[str
 def _google_fetch_audience_age_gender(customer_id: str, date_from: str, date_to: str) -> Tuple[List[Dict[str, object]], Optional[str]]:
     client = _google_ads_client()
     ga_service = client.get_service("GoogleAdsService")
-    query = f"""
+
+    age_query = f"""
         SELECT
-          segments.age_range,
-          segments.gender,
+          ad_group_criterion.age_range.type,
           metrics.impressions,
           metrics.clicks,
           metrics.cost_micros
-        FROM campaign
+        FROM age_range_view
         WHERE segments.date BETWEEN '{date_from}' AND '{date_to}'
     """
-    rows = ga_service.search(customer_id=customer_id, query=query)
-    data: List[Dict[str, object]] = []
-    for row in rows:
-        data.append(
+
+    gender_query = f"""
+        SELECT
+          ad_group_criterion.gender.type,
+          metrics.impressions,
+          metrics.clicks,
+          metrics.cost_micros
+        FROM gender_view
+        WHERE segments.date BETWEEN '{date_from}' AND '{date_to}'
+    """
+
+    age_rows = ga_service.search(customer_id=customer_id, query=age_query)
+    gender_rows = ga_service.search(customer_id=customer_id, query=gender_query)
+
+    age_data: List[Dict[str, object]] = []
+    for row in age_rows:
+        age_data.append(
             {
-                "age_range": str(row.segments.age_range),
-                "gender": str(row.segments.gender),
+                "age_range": str(row.ad_group_criterion.age_range.type),
                 "impressions": int(row.metrics.impressions or 0),
                 "clicks": int(row.metrics.clicks or 0),
                 "spend": float(row.metrics.cost_micros or 0) / 1_000_000,
             }
         )
-    return data, None
+
+    gender_data: List[Dict[str, object]] = []
+    for row in gender_rows:
+        gender_data.append(
+            {
+                "gender": str(row.ad_group_criterion.gender.type),
+                "impressions": int(row.metrics.impressions or 0),
+                "clicks": int(row.metrics.clicks or 0),
+                "spend": float(row.metrics.cost_micros or 0) / 1_000_000,
+            }
+        )
+
+    combined: List[Dict[str, object]] = []
+    for row in age_data:
+        combined.append({**row, "gender": "ALL"})
+    for row in gender_data:
+        combined.append({**row, "age_range": "ALL"})
+
+    return combined, None
 
 
 def _google_fetch_audience_device(customer_id: str, date_from: str, date_to: str) -> List[Dict[str, object]]:
@@ -4534,41 +4564,39 @@ def _google_fetch_audience_device(customer_id: str, date_from: str, date_to: str
 def _google_fetch_audience_geo(customer_id: str, date_from: str, date_to: str, level: str) -> List[Dict[str, object]]:
     client = _google_ads_client()
     ga_service = client.get_service("GoogleAdsService")
-    segment = {
-        "country": "segments.geo_target_country",
-        "region": "segments.geo_target_region",
-        "city": "segments.geo_target_city",
-    }.get(level)
-    if not segment:
+    if level != "country":
         return []
+
     query = f"""
         SELECT
-          {segment},
+          geographic_view.country_criterion_id,
+          geographic_view.location_type,
           metrics.impressions,
           metrics.clicks,
           metrics.cost_micros
-        FROM campaign
+        FROM geographic_view
         WHERE segments.date BETWEEN '{date_from}' AND '{date_to}'
     """
     rows = ga_service.search(customer_id=customer_id, query=query)
     data: List[Dict[str, object]] = []
-    resource_names: List[str] = []
+    criterion_ids: List[int] = []
     for row in rows:
-        geo_value = getattr(row.segments, segment.split(".")[1])
-        resource_name = str(geo_value)
-        resource_names.append(resource_name)
+        criterion_id = int(row.geographic_view.country_criterion_id or 0)
+        if criterion_id:
+            criterion_ids.append(criterion_id)
         data.append(
             {
-                "geo": resource_name,
+                "geo": str(criterion_id or "UNKNOWN"),
+                "location_type": str(row.geographic_view.location_type),
                 "impressions": int(row.metrics.impressions or 0),
                 "clicks": int(row.metrics.clicks or 0),
                 "spend": float(row.metrics.cost_micros or 0) / 1_000_000,
             }
         )
-    if not resource_names:
+    if not criterion_ids:
         return data
     try:
-        name_map = _google_resolve_geo_names(client, customer_id, resource_names)
+        name_map = _google_resolve_geo_names_by_id(client, customer_id, criterion_ids)
         for row in data:
             row["geo"] = name_map.get(row["geo"], row["geo"])
     except Exception:
@@ -4576,24 +4604,27 @@ def _google_fetch_audience_geo(customer_id: str, date_from: str, date_to: str, l
     return data
 
 
-def _google_resolve_geo_names(client: GoogleAdsClient, customer_id: str, resource_names: List[str]) -> Dict[str, str]:
+def _google_resolve_geo_names_by_id(client: GoogleAdsClient, customer_id: str, criterion_ids: List[int]) -> Dict[str, str]:
     ga_service = client.get_service("GoogleAdsService")
-    unique = sorted(set(resource_names))
+    unique = sorted({int(value) for value in criterion_ids if int(value) > 0})
     if not unique:
         return {}
-    placeholders = ", ".join([f"'{name}'" for name in unique])
+    placeholders = ", ".join(str(value) for value in unique)
     query = f"""
         SELECT
-          geo_target_constant.resource_name,
+          geo_target_constant.id,
           geo_target_constant.name,
-          geo_target_constant.target_type
+          geo_target_constant.country_code
         FROM geo_target_constant
-        WHERE geo_target_constant.resource_name IN ({placeholders})
+        WHERE geo_target_constant.id IN ({placeholders})
     """
     rows = ga_service.search(customer_id=customer_id, query=query)
     mapping: Dict[str, str] = {}
     for row in rows:
-        mapping[row.geo_target_constant.resource_name] = row.geo_target_constant.name
+        geo_id = str(int(row.geo_target_constant.id or 0))
+        name = str(row.geo_target_constant.name or geo_id)
+        country_code = str(row.geo_target_constant.country_code or "").strip()
+        mapping[geo_id] = f"{name} ({country_code})" if country_code else name
     return mapping
 
 
