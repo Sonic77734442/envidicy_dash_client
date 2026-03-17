@@ -1372,11 +1372,29 @@ body {
   font-size: 13px;
 }
 
+.impersonation-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(106, 227, 255, 0.28);
+  background: rgba(106, 227, 255, 0.1);
+  color: var(--text);
+}
+
 .small {
   font-size: 12px;
 }
 
 @media (max-width: 900px) {
+  .impersonation-banner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .profile-avatar {
     align-items: flex-start;
     flex-direction: column;

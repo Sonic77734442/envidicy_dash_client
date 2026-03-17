@@ -3,7 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { apiFetch } from '../../lib/api'
-import { clearAuth, getAuthToken } from '../../lib/auth'
+import {
+  clearAuth,
+  clearImpersonation,
+  getAuthToken,
+  getImpersonationLabel,
+  getImpersonationReturnUrl,
+  isImpersonating,
+} from '../../lib/auth'
 
 const TOPUP_MARKUP = 10
 
@@ -36,6 +43,8 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [supportOpen, setSupportOpen] = useState(false)
+  const [impersonationActive, setImpersonationActive] = useState(false)
+  const [impersonationLabel, setImpersonationLabel] = useState('')
   const profileMenuRef = useRef(null)
   const notificationsRef = useRef(null)
   const supportRef = useRef(null)
@@ -67,6 +76,11 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
       { label: 'Настройки', href: '/settings' },
     ]
   }, [area])
+
+  useEffect(() => {
+    setImpersonationActive(isImpersonating())
+    setImpersonationLabel(getImpersonationLabel())
+  }, [pathname])
 
   useEffect(() => {
     async function loadProfile() {
@@ -143,6 +157,12 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
   }, [])
 
   function logout() {
+    if (isImpersonating()) {
+      const returnUrl = getImpersonationReturnUrl()
+      clearImpersonation()
+      router.push(returnUrl)
+      return
+    }
     clearAuth()
     router.push('/login')
   }
@@ -209,6 +229,14 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
 
       <div className="app with-sidebar plan-app">
         <div className="bg-blur" />
+        {impersonationActive ? (
+          <div className="impersonation-banner">
+            <span>Вы вошли как клиент: {impersonationLabel || profile.email || ''}</span>
+            <button className="btn ghost small" onClick={logout} type="button">
+              Вернуться в админку
+            </button>
+          </div>
+        ) : null}
         <header className="topbar">
           <div className="topbar-right">
             <button className="nav-toggle" type="button" onClick={() => setDrawerOpen(true)} aria-label="Menu">
