@@ -1,4 +1,6 @@
 .env
+.dump
+*.dump
 .server.log
 local.db
 *.db
@@ -8,4 +10,11 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 node_modules/
+/package-lock.json
+/scripts/migrate_sqlite_to_pg.py
+/scripts/migrate_sqlite_to_pg.sql
+/scripts/migrate_test111.sql
+/scripts/migrate_user_sqlite_to_pg.py
+/web-next/.env.local
+/web-next/.next/
 mediaplan.xlsx

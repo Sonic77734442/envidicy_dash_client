@@ -42,6 +42,7 @@ const state = {
   activePlatform: null,
   planMode: 'smart',
   aiDraft: null,
+  aiDraftApply: false,
   placements: {
     meta: new Set(['fb_feed', 'fb_video_feeds', 'fb_instream', 'fb_reels', 'fb_stories', 'ig_feed', 'ig_reels', 'ig_stories']),
     google: new Set(['google_search', 'google_display_cpm', 'google_display_cpc', 'google_shopping', 'youtube_15s', 'youtube_30s']),
@@ -56,6 +57,11 @@ const state = {
 const usd = (v, d = 0) => `$${(v ?? 0).toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d })}`
 const num = (v, d = 0) => (v ?? 0).toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d })
 const pct = (v) => `${(v * 100).toFixed(1)}%`
+
+function authHeaders() {
+  const token = typeof getAuthToken === 'function' ? getAuthToken() : localStorage.getItem('auth_token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
 
 async function fetchPlan() {
   const payload = readPayload()
@@ -122,10 +128,11 @@ function applyAiDefaults(payload, profileKey) {
 
 async function runAiDraft() {
   const payload = readPayload()
+  state.aiDraftApply = true
   try {
     const res = await fetch(`${apiBase}/plans/assistant`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(payload),
     })
     if (!res.ok) throw new Error('assistant request failed')
@@ -154,6 +161,19 @@ function applyAiAssistantDraft(draft, payload) {
     if (!el || val == null) return
     el.value = val
   }
+  const applyChannelInputs = (inputs) => {
+    if (!inputs || typeof inputs !== 'object') return
+    const meta = inputs.meta || {}
+    setVal('meta-cpm', meta.cpm)
+    setVal('meta-ctr', meta.ctr)
+    setVal('meta-cvr', meta.cvr)
+    const g = inputs.google_search || {}
+    setVal('gsearch-cpc', g.cpc)
+    setVal('gsearch-cvr', g.cvr)
+    const tg = inputs.telegrad_channels || inputs.telegram || {}
+    setVal('tg-cpm', tg.cpm)
+    setVal('tg-ctr', tg.ctr)
+  }
   const profile = draft?.assumption_profile || chooseAiProfile(payload)
   setVal('assumption-profile', profile)
   applyAssumptionProfile(profile)
@@ -167,6 +187,7 @@ function applyAiAssistantDraft(draft, payload) {
   setVal('assumption-history', assumptions.history)
   setVal('assumption-method', assumptions.methodology)
   setVal('assumption-recalc', assumptions.recalc)
+  applyChannelInputs(draft?.channel_inputs)
 
   state.aiDraft = {
     source: draft?.source || 'fallback',
@@ -176,8 +197,17 @@ function applyAiAssistantDraft(draft, payload) {
     periodDays: payload.period_days || 30,
     budget: payload.budget || 0,
     recommendations: Array.isArray(draft?.recommendations) ? draft.recommendations : [],
+    rationale: typeof draft?.rationale === 'string' ? draft.rationale : '',
     confidence: typeof draft?.confidence === 'number' ? draft.confidence : 0.6,
     budgetSplit: draft?.budget_split || {},
+    channelInputs: draft?.channel_inputs || {},
+    factsUsed: Boolean(draft?.facts_used),
+    factsPeriod: draft?.facts_period || null,
+    factsTotals: draft?.facts_totals || {},
+    globalFactsUsed: Boolean(draft?.global_facts_used),
+    globalFactsPeriod: draft?.global_facts_period || null,
+    globalFactsTotals: draft?.global_facts_totals || {},
+    globalFactsDebug: draft?.global_facts_debug || {},
   }
 }
 
@@ -204,9 +234,29 @@ function renderAiAssistant() {
   const cpl = totals.leads ? totals.budget / totals.leads : null
   const cpa = totals.conversions ? totals.budget / totals.conversions : null
   const recommendations = Array.isArray(draft.recommendations) ? draft.recommendations : []
+  const rationale = typeof draft.rationale === 'string' ? draft.rationale : ''
   const recRows = recommendations.length
     ? recommendations.map((r) => `<li>${r}</li>`).join('')
     : '<li>Добавьте фактические данные и запустите AI-черновик снова.</li>'
+  const factsUsed = Boolean(draft.factsUsed)
+  const factsTotals = draft.factsTotals && typeof draft.factsTotals === 'object' ? draft.factsTotals : {}
+  const globalFactsUsed = Boolean(draft.globalFactsUsed)
+  const globalFactsTotals =
+    draft.globalFactsTotals && typeof draft.globalFactsTotals === 'object' ? draft.globalFactsTotals : {}
+  const globalFactsDebug =
+    draft.globalFactsDebug && typeof draft.globalFactsDebug === 'object' ? draft.globalFactsDebug : {}
+  const factsRows = Object.entries(factsTotals)
+    .map(([platform, row]) => {
+      const spend = row && typeof row === 'object' ? Number(row.spend || 0) : 0
+      return `<span class="chip chip-ghost">${platform}: ${usd(spend, 2)}</span>`
+    })
+    .join('')
+  const globalFactsRows = Object.entries(globalFactsTotals)
+    .map(([platform, row]) => {
+      const spend = row && typeof row === 'object' ? Number(row.spend || 0) : 0
+      return `<span class="chip chip-ghost">${platform}: ${usd(spend, 2)}</span>`
+    })
+    .join('')
   box.classList.remove('muted')
   box.innerHTML = `
     <div class="chips small">
@@ -216,26 +266,21 @@ function renderAiAssistant() {
       <span class="chip chip-ghost">Период: ${draft.periodDays || state.plan.period_days || 30} дн.</span>
       <span class="chip chip-ghost">Бюджет: ${usd(draft.budget || state.plan.budget_usd || 0, 2)}</span>
       <span class="chip chip-ghost">Confidence: ${Math.round((draft.confidence || 0) * 100)}%</span>
+      <span class="chip ${factsUsed ? 'chip-good' : 'chip-ghost'}">Факт из аккаунтов: ${factsUsed ? 'учтен' : 'не учтен'}</span>
+      ${draft.factsPeriod ? `<span class="chip chip-ghost">Период факта: ${draft.factsPeriod}</span>` : ''}
+      <span class="chip ${globalFactsUsed ? 'chip-good' : 'chip-ghost'}">Global pool: ${globalFactsUsed ? 'учтен' : 'не учтен'}</span>
+      ${draft.globalFactsPeriod ? `<span class="chip chip-ghost">Период global: ${draft.globalFactsPeriod}</span>` : ''}
     </div>
     <div class="chips small" style="margin-top:8px;">${chips || '<span class="chip chip-ghost">Нет рекомендаций по сплиту</span>'}</div>
+    ${rationale ? `<div style="margin-top:8px;"><strong>Rationale:</strong> ${rationale}</div>` : ''}
     <div style="margin-top:8px;">
       <ul style="margin:0;padding-left:18px;">${recRows}</ul>
     </div>
-    <div class="table-wrapper" style="margin-top:10px;">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Метрика</th>
-            <th>Значение</th>
-            <th>Комментарий</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td>Прогноз CPL</td><td>${cpl ? usd(cpl, 2) : '—'}</td><td>Оценка по текущему сплиту и вводным</td></tr>
-          <tr><td>Прогноз CPA</td><td>${cpa ? usd(cpa, 2) : '—'}</td><td>Оценка по текущему сплиту и вводным</td></tr>
-          <tr><td>Следующий шаг</td><td>Загрузить факт через 7 дней</td><td>Пересчитать план по реальным CTR/CPC/CVR</td></tr>
-        </tbody>
-      </table>
+    ${factsRows ? `<div class="chips small" style="margin-top:8px;"><span class="chip chip-ghost">Факт:</span> ${factsRows}</div>` : ''}
+    ${globalFactsRows ? `<div class="chips small" style="margin-top:8px;"><span class="chip chip-ghost">Global:</span> ${globalFactsRows}</div>` : ''}
+    <div class="chips small" style="margin-top:8px;">
+      <span class="chip chip-ghost">CPL: ${cpl ? usd(cpl, 2) : '—'}</span>
+      <span class="chip chip-ghost">CPA: ${cpa ? usd(cpa, 2) : '—'}</span>
     </div>
   `
 }
@@ -280,6 +325,10 @@ function readPayload() {
   }
   const assumptions = Object.fromEntries(Object.entries(rawAssumptions).filter(([, v]) => v))
   const hasAssumptions = Object.keys(assumptions).length > 0
+  const aiBudgetSplit =
+    state.aiDraftApply && state.aiDraft?.budgetSplit && Object.keys(state.aiDraft.budgetSplit).length
+      ? state.aiDraft.budgetSplit
+      : null
   if (mode === 'smart') {
     const smartGoal = document.getElementById('smart-goal')?.value || 'leads'
     const mappedGoal = smartGoal === 'sales' ? 'conversions' : smartGoal
@@ -300,6 +349,8 @@ function readPayload() {
       date_end: endDate.toISOString().slice(0, 10),
       avg_frequency: 1.6,
       pricing_mode: 'auto',
+      channel_inputs: hasChannelInputs ? channelInputs : null,
+      budget_split: aiBudgetSplit,
     }
   }
 
@@ -354,6 +405,7 @@ function readPayload() {
     channel_inputs: hasChannelInputs ? channelInputs : null,
     assumption_profile: document.getElementById('assumption-profile')?.value || null,
     assumptions: hasAssumptions ? assumptions : null,
+    budget_split: aiBudgetSplit,
   }
 }
 
@@ -539,7 +591,12 @@ async function uploadFact() {
 }
 
 function bind() {
-  document.querySelectorAll('#btn-estimate').forEach((btn) => btn.addEventListener('click', fetchPlan))
+  document.querySelectorAll('#btn-estimate').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      state.aiDraftApply = false
+      fetchPlan()
+    })
+  )
   document.querySelectorAll('#btn-ai-draft').forEach((btn) => btn.addEventListener('click', runAiDraft))
   document.querySelectorAll('#btn-excel').forEach((btn) => btn.addEventListener('click', downloadExcel))
   const modeSelect = document.getElementById('plan-mode')
