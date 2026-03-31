@@ -12,8 +12,6 @@ import {
   isImpersonating,
 } from '../../lib/auth'
 
-const TOPUP_MARKUP = 10
-
 function money(v, d = 2) {
   return Number(v || 0).toLocaleString('ru-RU', {
     minimumFractionDigits: d,
@@ -26,9 +24,12 @@ function authHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
-function withMarkup(rate) {
-  if (!Number.isFinite(Number(rate))) return null
-  return Number(rate) + TOPUP_MARKUP
+function getMarkedRate(entry) {
+  const marked = Number(entry?.sell_marked)
+  if (Number.isFinite(marked)) return marked
+  const sell = Number(entry?.sell)
+  if (Number.isFinite(sell)) return sell
+  return null
 }
 
 export default function AppShell({ eyebrow, title, subtitle, area = 'client', children }) {
@@ -63,6 +64,7 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
         { label: 'Админ · Пополнения', href: '/admin/topups' },
         { label: 'Админ · Кошелек', href: '/admin/wallet' },
         { label: 'Админ · Пользователи', href: '/admin/users' },
+        { label: 'Админ · Агентства', href: '/admin/agencies' },
         { label: 'Админ · Компания', href: '/admin/company' },
         { label: 'Админ · Контрагенты', href: '/admin/legal-entities' },
       ]
@@ -107,8 +109,8 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
         const wallet = walletRes.ok ? await walletRes.json() : null
         const ratesData = ratesRes.ok ? await ratesRes.json() : null
         const balanceKzt = Number(wallet?.balance || 0)
-        const usdRate = withMarkup(ratesData?.rates?.USD?.sell)
-        const eurRate = withMarkup(ratesData?.rates?.EUR?.sell)
+        const usdRate = getMarkedRate(ratesData?.rates?.USD)
+        const eurRate = getMarkedRate(ratesData?.rates?.EUR)
 
         if (usdRate && eurRate) {
           setWalletText(

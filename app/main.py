@@ -232,7 +232,8 @@ def _fetch_bcc_rates() -> Dict[str, object]:
             sell_value = float(sell) if sell is not None else None
         except (TypeError, ValueError):
             continue
-        rates[code] = {"sell": sell_value, "buy": buy_value}
+        marked_sell_value = sell_value * (1 + (_BCC_DEFAULT_MARKUP_PERCENT / 100.0)) if sell_value is not None else None
+        rates[code] = {"sell": sell_value, "sell_marked": marked_sell_value, "buy": buy_value}
         dt = item.get("dateTime") or item.get("datetime") or item.get("date")
         if isinstance(dt, str) and dt:
             if updated_at is None or dt > updated_at:
@@ -272,6 +273,13 @@ def _get_marked_bcc_sell_rate(code: str, rates_data: Optional[Dict[str, object]]
         return None
     if sell_value is None:
         return None
+    marked_sell = entry.get("sell_marked")
+    try:
+        marked_sell_value = float(marked_sell) if marked_sell is not None else None
+    except (TypeError, ValueError):
+        marked_sell_value = None
+    if marked_sell_value is not None:
+        return marked_sell_value
     return sell_value * (1 + (_BCC_DEFAULT_MARKUP_PERCENT / 100.0))
 
 

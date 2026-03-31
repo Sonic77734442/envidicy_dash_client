@@ -6,7 +6,6 @@ import { apiFetch } from '../../lib/api'
 import { clearAuth, getAuthToken } from '../../lib/auth'
 import AppShell from '../../components/layout/AppShell'
 
-const MARKUP_PERCENT = 5
 const PAGE_SIZE = 5
 
 const PLATFORMS = [
@@ -69,9 +68,12 @@ function authHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
-function withMarkup(rate) {
-  if (!Number.isFinite(Number(rate))) return null
-  return Number(rate) * (1 + MARKUP_PERCENT / 100)
+function getMarkedRate(entry) {
+  const marked = Number(entry?.sell_marked)
+  if (Number.isFinite(marked)) return marked
+  const sell = Number(entry?.sell)
+  if (Number.isFinite(sell)) return sell
+  return null
 }
 
 function accountDisplayCurrency(platform, currency) {
@@ -385,8 +387,8 @@ export default function TopupPage() {
       setFees(feesData || null)
       setWalletKzt(Number(walletData?.balance || 0))
       setRates({
-        USD: withMarkup(ratesData?.rates?.USD?.sell),
-        EUR: withMarkup(ratesData?.rates?.EUR?.sell),
+        USD: getMarkedRate(ratesData?.rates?.USD),
+        EUR: getMarkedRate(ratesData?.rates?.EUR),
       })
       setAccountRequests(Array.isArray(requestsData) ? requestsData : [])
 

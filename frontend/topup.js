@@ -42,7 +42,6 @@ const state = {
 
 let accounts = { meta: [], google: [], tiktok: [], yandex: [], telegram: [], monochrome: [] }
 let bccRatesCache = { ts: 0, data: null }
-const BCC_DEFAULT_MARKUP_PERCENT = 5
 const SIDEBAR_RATES_PANEL_ID = 'sidebar-rates-panel'
 
 const platforms = [
@@ -250,15 +249,18 @@ function getPeriodFromPreset(preset) {
   return getCurrentMonthPeriod()
 }
 
-function withDefaultMarkup(rate) {
-  if (rate == null || Number.isNaN(Number(rate))) return null
-  return Number(rate) * (1 + BCC_DEFAULT_MARKUP_PERCENT / 100)
+function getMarkedRateFromEntry(entry) {
+  const marked = Number(entry?.sell_marked)
+  if (Number.isFinite(marked)) return marked
+  const sell = Number(entry?.sell)
+  if (Number.isFinite(sell)) return sell
+  return null
 }
 
 function getMarkedRateByCode(code) {
   const rates = bccRatesCache.data?.rates
   if (!rates) return null
-  return withDefaultMarkup(rates[String(code || '').toUpperCase()]?.sell)
+  return getMarkedRateFromEntry(rates[String(code || '').toUpperCase()])
 }
 
 function getAccountById(accountId) {
@@ -290,7 +292,7 @@ function getAccountRate(account) {
 
 function getEffectiveRate(account) {
   const row = getAccountRate(account)
-  return withDefaultMarkup(row?.sell)
+  return getMarkedRateFromEntry(row)
 }
 
 function setTopupError(message) {
@@ -365,8 +367,8 @@ function updateSidebarRatesPanel() {
   }
   const usd = data.rates.USD
   const eur = data.rates.EUR
-  const usdMarked = usd ? withDefaultMarkup(usd.sell) : null
-  const eurMarked = eur ? withDefaultMarkup(eur.sell) : null
+  const usdMarked = usd ? getMarkedRateFromEntry(usd) : null
+  const eurMarked = eur ? getMarkedRateFromEntry(eur) : null
   usdRow.textContent = usdMarked == null ? 'USD: —' : `USD: ${formatRateValue(usdMarked)} ₸`
   eurRow.textContent = eurMarked == null ? 'EUR: —' : `EUR: ${formatRateValue(eurMarked)} ₸`
 }

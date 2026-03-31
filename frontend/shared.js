@@ -322,10 +322,12 @@ function loadWalletBalance() {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       })
+      const usdMarked = Number(ratesData?.rates?.USD?.sell_marked)
+      const eurMarked = Number(ratesData?.rates?.EUR?.sell_marked)
       const usdSell = Number(ratesData?.rates?.USD?.sell)
       const eurSell = Number(ratesData?.rates?.EUR?.sell)
-      const usdRate = Number.isFinite(usdSell) ? usdSell + TOPUP_MARKUP : null
-      const eurRate = Number.isFinite(eurSell) ? eurSell + TOPUP_MARKUP : null
+      const usdRate = Number.isFinite(usdMarked) ? usdMarked : Number.isFinite(usdSell) ? usdSell : null
+      const eurRate = Number.isFinite(eurMarked) ? eurMarked : Number.isFinite(eurSell) ? eurSell : null
       const usdText =
         usdRate && usdRate > 0
           ? (balanceKzt / usdRate).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -353,10 +355,12 @@ function loadSidebarRates() {
   fetch(`${apiBase}/rates/bcc`)
     .then((res) => (res.ok ? res.json() : null))
     .then((data) => {
+      const usdMarked = Number(data?.rates?.USD?.sell_marked)
+      const eurMarked = Number(data?.rates?.EUR?.sell_marked)
       const usdSell = Number(data?.rates?.USD?.sell)
       const eurSell = Number(data?.rates?.EUR?.sell)
-      const usdRate = Number.isFinite(usdSell) ? usdSell + TOPUP_MARKUP : null
-      const eurRate = Number.isFinite(eurSell) ? eurSell + TOPUP_MARKUP : null
+      const usdRate = Number.isFinite(usdMarked) ? usdMarked : Number.isFinite(usdSell) ? usdSell : null
+      const eurRate = Number.isFinite(eurMarked) ? eurMarked : Number.isFinite(eurSell) ? eurSell : null
       applyRatesPanel(desktopPanel, usdRate, eurRate)
       applyRatesPanel(mobilePanel, usdRate, eurRate)
     })
