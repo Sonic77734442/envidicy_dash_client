@@ -9286,13 +9286,17 @@ def invoice_preview():
 
 
 @app.get("/accounts")
-def list_accounts(current_user=Depends(get_current_user)):
+def list_accounts(include_live_billing: int = 0, current_user=Depends(get_current_user)):
     if not get_conn:
         return []
     with get_conn() as conn:
         rows = _list_accessible_accounts(conn, current_user)
         conn.commit()
-        return _attach_live_billing_many(rows)
+        if include_live_billing:
+            return _attach_live_billing_many(rows)
+        for row in rows:
+            row["live_billing"] = None
+        return rows
 
 
 @app.get("/agencies/mine")
@@ -9749,3 +9753,4 @@ def invoice_by_topup(
 
 
 # Local run: uvicorn app.main:app --reload
+
