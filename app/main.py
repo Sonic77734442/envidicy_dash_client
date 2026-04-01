@@ -3632,65 +3632,84 @@ def _get_or_create_default_agency(conn, user_id: int) -> Optional[Dict[str, obje
 
 
 def _list_user_agency_memberships(conn, user_id: int) -> List[Dict[str, object]]:
-    rows = conn.execute(
-        """
-        SELECT
-          m.*,
-          a.name as agency_name,
-          a.slug as agency_slug,
-          a.owner_user_id,
-          a.status as agency_status
-        FROM agency_members m
-        JOIN agencies a ON a.id = m.agency_id
-        WHERE m.user_id=? AND COALESCE(m.status, 'active')='active'
-        ORDER BY m.id
-        """,
-        (user_id,),
-    ).fetchall()
-    return [dict(row) for row in rows]
+    try:
+        rows = conn.execute(
+            """
+            SELECT
+              m.*,
+              a.name as agency_name,
+              a.slug as agency_slug,
+              a.owner_user_id,
+              a.status as agency_status
+            FROM agency_members m
+            JOIN agencies a ON a.id = m.agency_id
+            WHERE m.user_id=? AND COALESCE(m.status, 'active')='active'
+            ORDER BY m.id
+            """,
+            (user_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+    except Exception:
+        logging.exception("Failed to list agency memberships for user_id=%s", user_id)
+        return []
 
 
 def _list_accessible_accounts(conn, current_user) -> List[Dict[str, object]]:
+    user_id = current_user["id"]
+    fallback_rows = conn.execute("SELECT * FROM ad_accounts WHERE user_id=? ORDER BY created_at DESC", (user_id,)).fetchall()
+    fallback_accounts = [dict(row) for row in fallback_rows]
+
     if current_user["email"] in ADMIN_EMAILS or current_user.get("primary_email") in ADMIN_EMAILS:
         rows = conn.execute("SELECT * FROM ad_accounts ORDER BY created_at DESC").fetchall()
         return [dict(row) for row in rows]
 
-    memberships = _list_user_agency_memberships(conn, current_user["id"])
+    memberships = _list_user_agency_memberships(conn, user_id)
     if not memberships:
-        _get_or_create_default_agency(conn, current_user["id"])
-        memberships = _list_user_agency_memberships(conn, current_user["id"])
+        try:
+            _get_or_create_default_agency(conn, user_id)
+            memberships = _list_user_agency_memberships(conn, user_id)
+        except Exception:
+            logging.exception("Agency bootstrap failed for user_id=%s; fallback to direct accounts", user_id)
+            memberships = []
 
     if not memberships:
-        rows = conn.execute("SELECT * FROM ad_accounts WHERE user_id=? ORDER BY created_at DESC", (current_user["id"],)).fetchall()
-        return [dict(row) for row in rows]
+        return fallback_accounts
 
     admin_agency_ids = [int(row["agency_id"]) for row in memberships if row.get("role") in {"owner", "agency_admin"}]
     if admin_agency_ids:
-        placeholders = ",".join(["?"] * len(admin_agency_ids))
+        try:
+            placeholders = ",".join(["?"] * len(admin_agency_ids))
+            rows = conn.execute(
+                f"""
+                SELECT DISTINCT a.*
+                FROM ad_accounts a
+                JOIN agency_ad_accounts aa ON aa.ad_account_id = a.id
+                WHERE aa.agency_id IN ({placeholders})
+                ORDER BY a.created_at DESC
+                """,
+                admin_agency_ids,
+            ).fetchall()
+            return [dict(row) for row in rows]
+        except Exception:
+            logging.exception("Failed to list agency admin accounts for user_id=%s; fallback to direct accounts", user_id)
+            return fallback_accounts
+
+    try:
         rows = conn.execute(
-            f"""
+            """
             SELECT DISTINCT a.*
             FROM ad_accounts a
             JOIN agency_ad_accounts aa ON aa.ad_account_id = a.id
-            WHERE aa.agency_id IN ({placeholders})
+            JOIN agency_user_account_access aua ON aua.agency_ad_account_id = aa.id
+            WHERE aua.user_id=?
             ORDER BY a.created_at DESC
             """,
-            admin_agency_ids,
+            (user_id,),
         ).fetchall()
         return [dict(row) for row in rows]
-
-    rows = conn.execute(
-        """
-        SELECT DISTINCT a.*
-        FROM ad_accounts a
-        JOIN agency_ad_accounts aa ON aa.ad_account_id = a.id
-        JOIN agency_user_account_access aua ON aua.agency_ad_account_id = aa.id
-        WHERE aua.user_id=?
-        ORDER BY a.created_at DESC
-        """,
-        (current_user["id"],),
-    ).fetchall()
-    return [dict(row) for row in rows]
+    except Exception:
+        logging.exception("Failed to list delegated agency accounts for user_id=%s; fallback to direct accounts", user_id)
+        return fallback_accounts
 
 
 def _get_bearer_token(authorization: Optional[str]) -> Optional[str]:
@@ -9753,4 +9772,3 @@ def invoice_by_topup(
 
 
 # Local run: uvicorn app.main:app --reload
-
