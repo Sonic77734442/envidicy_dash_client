@@ -212,6 +212,23 @@ export default function AdminClientsPage() {
     }
   }
 
+  async function deleteClientDocument(docId) {
+    if (!selected) return
+    const ok = window.confirm('Удалить документ?')
+    if (!ok) return
+    try {
+      const res = await safeFetch(`/admin/clients/${selected.id}/documents/${docId}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.detail || 'Ошибка удаления документа.')
+      setClientDocuments((prev) => prev.filter((row) => row.id !== docId))
+      setModalStatus('Документ удален.')
+    } catch (e) {
+      setModalStatus(e?.message || 'Ошибка удаления документа.')
+    }
+  }
+
   async function openClientModal(row) {
     setSelected(row)
     setActiveTab('requests')
@@ -638,7 +655,10 @@ export default function AdminClientsPage() {
                                   <td>{row.amount != null ? `${formatMoney(row.amount)} ${row.currency || ''}` : '—'}</td>
                                   <td>{row.file_name || '—'}</td>
                                   <td style={{ textAlign: 'right' }}>
-                                    <a className="btn ghost small" href={href} target="_blank" rel="noopener">Скачать</a>
+                                    <div className="inline-actions" style={{ justifyContent: 'flex-end' }}>
+                                      <a className="btn ghost small" href={href} target="_blank" rel="noopener">Скачать</a>
+                                      <button className="btn ghost small" type="button" onClick={() => deleteClientDocument(row.id)}>Удалить</button>
+                                    </div>
                                   </td>
                                 </tr>
                               )

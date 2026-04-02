@@ -6100,6 +6100,37 @@ def admin_upload_client_finance_document(
         return dict(row)
 
 
+@app.delete("/admin/clients/{user_id}/documents/{doc_id}")
+def admin_delete_client_finance_document(
+    user_id: int,
+    doc_id: int,
+    admin_user=Depends(get_admin_user),
+):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM client_finance_documents WHERE id=? AND user_id=?",
+            (doc_id, user_id),
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Document not found")
+        payload = dict(row)
+        conn.execute(
+            "DELETE FROM client_finance_documents WHERE id=? AND user_id=?",
+            (doc_id, user_id),
+        )
+        conn.commit()
+    file_path = payload.get("file_path")
+    if file_path and not _r2_parse_path(file_path):
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except Exception:
+            logging.exception("Failed to delete finance document file: %s", file_path)
+    return {"status": "ok", "id": doc_id}
+
+
 @app.get("/meta/insights", response_model=MetaInsightsResponse)
 def meta_insights(
     date_from: str,
