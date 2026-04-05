@@ -5093,34 +5093,57 @@ def _google_resolve_geo_names_by_id(client: GoogleAdsClient, customer_id: str, c
 def _google_fetch_daily(customer_id: str, date_from: str, date_to: str) -> List[Dict[str, object]]:
     client = _google_ads_client()
     ga_service = client.get_service("GoogleAdsService")
-    query = f"""
-        SELECT
-          segments.date,
-          metrics.impressions,
-          metrics.clicks,
-          metrics.ctr,
-          metrics.average_cpc,
-          metrics.average_cpm,
-          metrics.cost_micros
-        FROM customer
-        WHERE segments.date BETWEEN '{date_from}' AND '{date_to}'
-    """
-    rows = ga_service.search(customer_id=customer_id, query=query)
-    daily: List[Dict[str, object]] = []
-    for row in rows:
-        metrics = row.metrics
-        daily.append(
-            {
-                "date": str(row.segments.date),
-                "impressions": int(metrics.impressions or 0),
-                "clicks": int(metrics.clicks or 0),
-                "ctr": float(metrics.ctr or 0),
-                "cpc": float(metrics.average_cpc or 0) / 1_000_000 if metrics.average_cpc else 0,
-                "cpm": float(metrics.average_cpm or 0) / 1_000_000 if metrics.average_cpm else 0,
-                "spend": float(metrics.cost_micros or 0) / 1_000_000,
-            }
-        )
-    return daily
+    queries = [
+        f"""
+            SELECT
+              segments.date,
+              metrics.impressions,
+              metrics.clicks,
+              metrics.ctr,
+              metrics.average_cpc,
+              metrics.average_cpm,
+              metrics.cost_micros
+            FROM customer
+            WHERE segments.date BETWEEN '{date_from}' AND '{date_to}'
+        """,
+        f"""
+            SELECT
+              segments.date,
+              metrics.impressions,
+              metrics.clicks,
+              metrics.ctr,
+              metrics.average_cpc,
+              metrics.average_cpm,
+              metrics.cost_micros
+            FROM campaign
+            WHERE segments.date BETWEEN '{date_from}' AND '{date_to}'
+        """,
+    ]
+    last_error = None
+    for query in queries:
+        try:
+            rows = ga_service.search(customer_id=customer_id, query=query)
+            daily: List[Dict[str, object]] = []
+            for row in rows:
+                metrics = row.metrics
+                daily.append(
+                    {
+                        "date": str(row.segments.date),
+                        "impressions": int(metrics.impressions or 0),
+                        "clicks": int(metrics.clicks or 0),
+                        "ctr": float(metrics.ctr or 0),
+                        "cpc": float(metrics.average_cpc or 0) / 1_000_000 if metrics.average_cpc else 0,
+                        "cpm": float(metrics.average_cpm or 0) / 1_000_000 if metrics.average_cpm else 0,
+                        "spend": float(metrics.cost_micros or 0) / 1_000_000,
+                    }
+                )
+            return daily
+        except Exception as exc:
+            last_error = exc
+            continue
+    if last_error:
+        raise last_error
+    return []
 
 
 def _tiktok_access_token() -> str:
