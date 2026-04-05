@@ -231,7 +231,6 @@ export default function AdminClientsPage() {
 
   async function openClientModal(row) {
     setSelected(row)
-    setActiveTab('requests')
     setModalOpen(true)
     setModalStatus('Загрузка карточки клиента...')
     try {

@@ -140,6 +140,32 @@ def _r2_upload_bytes(key: str, data: bytes, content_type: str = "application/pdf
     return f"r2://{bucket_name}/{key}"
 
 
+def _r2_delete_object(key: str, bucket: Optional[str] = None) -> None:
+    client = _r2_client()
+    if not client:
+        return
+    bucket_name = bucket or _r2_bucket()
+    client.delete_object(Bucket=bucket_name, Key=key)
+
+
+def _delete_stored_file(file_path: Optional[str]) -> None:
+    if not file_path:
+        return
+    r2_ref = _r2_parse_path(file_path)
+    if r2_ref:
+        bucket, key = r2_ref
+        try:
+            _r2_delete_object(key, bucket=bucket)
+        except Exception:
+            logging.exception("Failed to delete R2 file: %s", file_path)
+        return
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    except Exception:
+        logging.exception("Failed to delete local file: %s", file_path)
+
+
 def _fetch_bcc_rates() -> Dict[str, object]:
     now = time.time()
     cached = _BCC_RATES_CACHE.get("data")
@@ -6049,55 +6075,60 @@ def admin_upload_client_finance_document(
         raise HTTPException(status_code=400, detail="title is required")
     if not file:
         raise HTTPException(status_code=400, detail="file is required")
+    file_path = None
     with get_conn() as conn:
-        user = conn.execute("SELECT id, email FROM users WHERE id=?", (user_id,)).fetchone()
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        file_path = _save_finance_document(file)
-        cur = conn.execute(
-            """
-            INSERT INTO client_finance_documents
-            (user_id, document_type, title, document_number, document_date, amount, currency, note, file_name, file_path, mime_type, uploaded_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                user_id,
-                doc_type,
-                safe_title,
-                (document_number or "").strip() or None,
-                (document_date or "").strip() or None,
-                amount,
-                (currency or "KZT").strip().upper(),
-                (note or "").strip() or None,
-                file.filename or None,
-                file_path,
-                file.content_type or "application/octet-stream",
-                admin_user.get("email"),
-            ),
-        )
-        conn.commit()
-        row = conn.execute(
-            """
-            SELECT
-              id,
-              document_type,
-              title,
-              document_number,
-              document_date,
-              amount,
-              currency,
-              note,
-              file_name,
-              mime_type,
-              uploaded_by,
-              created_at,
-              updated_at
-            FROM client_finance_documents
-            WHERE id=?
-            """,
-            (cur.lastrowid,),
-        ).fetchone()
-        return dict(row)
+        try:
+            user = conn.execute("SELECT id, email FROM users WHERE id=?", (user_id,)).fetchone()
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            file_path = _save_finance_document(file)
+            cur = conn.execute(
+                """
+                INSERT INTO client_finance_documents
+                (user_id, document_type, title, document_number, document_date, amount, currency, note, file_name, file_path, mime_type, uploaded_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    user_id,
+                    doc_type,
+                    safe_title,
+                    (document_number or "").strip() or None,
+                    (document_date or "").strip() or None,
+                    amount,
+                    (currency or "KZT").strip().upper(),
+                    (note or "").strip() or None,
+                    file.filename or None,
+                    file_path,
+                    file.content_type or "application/octet-stream",
+                    admin_user.get("email"),
+                ),
+            )
+            conn.commit()
+            row = conn.execute(
+                """
+                SELECT
+                  id,
+                  document_type,
+                  title,
+                  document_number,
+                  document_date,
+                  amount,
+                  currency,
+                  note,
+                  file_name,
+                  mime_type,
+                  uploaded_by,
+                  created_at,
+                  updated_at
+                FROM client_finance_documents
+                WHERE id=?
+                """,
+                (cur.lastrowid,),
+            ).fetchone()
+            return dict(row)
+        except Exception:
+            _delete_stored_file(file_path)
+            raise
 
 
 @app.delete("/admin/clients/{user_id}/documents/{doc_id}")
@@ -6121,13 +6152,7 @@ def admin_delete_client_finance_document(
             (doc_id, user_id),
         )
         conn.commit()
-    file_path = payload.get("file_path")
-    if file_path and not _r2_parse_path(file_path):
-        try:
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        except Exception:
-            logging.exception("Failed to delete finance document file: %s", file_path)
+    _delete_stored_file(payload.get("file_path"))
     return {"status": "ok", "id": doc_id}
 
 
