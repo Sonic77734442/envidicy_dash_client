@@ -6,6 +6,7 @@ import { getAuthToken } from '../../../lib/auth'
 import AdminShell from '../../../components/admin/AdminShell'
 import styles from '../../../components/admin/admin.module.css'
 import { adminFetch } from '../../../lib/admin'
+import { useI18n } from '../../../lib/i18n/client'
 
 const PAGE_SIZE = 12
 const ACCOUNT_STATUS_OPTIONS = ['active', 'pending', 'paused', 'archived', 'closed']
@@ -79,9 +80,10 @@ function StatCard({ label, value, hint }) {
 
 export default function AdminRequestsPage() {
   const router = useRouter()
+  const { tr } = useI18n()
   const [rows, setRows] = useState([])
   const [accountRows, setAccountRows] = useState([])
-  const [status, setStatus] = useState('Loading requests…')
+  const [status, setStatus] = useState(tr('Loading requests…', 'Загрузка запросов…'))
   const [accountsStatus, setAccountsStatus] = useState('')
   const [workbenchMode, setWorkbenchMode] = useState('accounts')
   const [page, setPage] = useState(1)
@@ -116,14 +118,14 @@ export default function AdminRequestsPage() {
   async function fetchRequests() {
     try {
       const res = await safeFetch('/admin/account-requests')
-      if (!res.ok) throw new Error('Failed to load requests.')
+      if (!res.ok) throw new Error(tr('Failed to load requests.', 'Не удалось загрузить запросы.'))
       const data = await res.json()
       const items = Array.isArray(data) ? data : []
       setRows(items)
       setStatus('')
       if (!selectedId && items.length) setSelectedId(String(items[0].id))
     } catch (error) {
-      setStatus(error?.message || 'Failed to load requests.')
+      setStatus(error?.message || tr('Failed to load requests.', 'Не удалось загрузить запросы.'))
     }
   }
 
@@ -136,11 +138,11 @@ export default function AdminRequestsPage() {
         cache: 'no-store',
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.detail || 'Failed to load accounts.')
+      if (!res.ok) throw new Error(data?.detail || tr('Failed to load accounts.', 'Не удалось загрузить аккаунты.'))
       setAccountRows(Array.isArray(data?.items) ? data.items : [])
       setAccountsStatus('')
     } catch (error) {
-      setAccountsStatus(error?.message || 'Failed to load accounts.')
+      setAccountsStatus(error?.message || tr('Failed to load accounts.', 'Не удалось загрузить аккаунты.'))
     }
   }
 
@@ -149,14 +151,14 @@ export default function AdminRequestsPage() {
     const budgetRaw = String(form.budget_total || '').trim()
     const budgetTotal = budgetRaw === '' ? null : Number(budgetRaw)
     if (budgetRaw !== '' && Number.isNaN(budgetTotal)) {
-      setStatus('Enter a valid budget.')
+      setStatus(tr('Enter a valid budget.', 'Введите корректный бюджет.'))
       return
     }
 
     try {
       if (action === 'comment') {
         if (!form.comment.trim() && !form.manager_email.trim()) {
-          setStatus('Add a comment or manager email.')
+          setStatus(tr('Add a comment or manager email.', 'Добавьте комментарий или email менеджера.'))
           return
         }
         const commentRes = await safeFetch(`/admin/account-requests/${row.id}/events`, {
@@ -168,7 +170,7 @@ export default function AdminRequestsPage() {
             manager_email: form.manager_email.trim() || null,
           }),
         })
-        if (!commentRes.ok) throw new Error('Failed to add comment.')
+        if (!commentRes.ok) throw new Error(tr('Failed to add comment.', 'Не удалось добавить комментарий.'))
         setForm((prev) => ({ ...prev, comment: '' }))
         return
       }
@@ -186,10 +188,10 @@ export default function AdminRequestsPage() {
           budget_total: budgetTotal,
         }),
       })
-      if (!res.ok) throw new Error('Failed to update request.')
+      if (!res.ok) throw new Error(tr('Failed to update request.', 'Не удалось обновить запрос.'))
       await fetchRequests()
     } catch (error) {
-      setStatus(error?.message || 'Failed to update request.')
+      setStatus(error?.message || tr('Failed to update request.', 'Не удалось обновить запрос.'))
     }
   }
 
@@ -198,7 +200,7 @@ export default function AdminRequestsPage() {
       const token = getAuthToken()
       if (!token) return
       const res = await fetch('/api/admin/export/requests', { headers: { Authorization: `Bearer ${token}` } })
-      if (!res.ok) throw new Error('Export unavailable')
+      if (!res.ok) throw new Error(tr('Export unavailable', 'Экспорт недоступен'))
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -209,13 +211,13 @@ export default function AdminRequestsPage() {
       link.remove()
       URL.revokeObjectURL(url)
     } catch (error) {
-      setStatus(error?.message || 'Export failed.')
+      setStatus(error?.message || tr('Export failed.', 'Ошибка экспорта.'))
     }
   }
 
   async function saveAccountCard() {
     if (!accountForm.user_id || !accountForm.name.trim()) {
-      setAccountsStatus('Select client and account name.')
+      setAccountsStatus(tr('Select client and account name.', 'Выберите клиента и название аккаунта.'))
       return
     }
     try {
@@ -243,21 +245,21 @@ export default function AdminRequestsPage() {
         body: JSON.stringify(payload),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.detail || 'Failed to save account.')
-      setAccountsStatus('Account saved.')
+      if (!res.ok) throw new Error(data?.detail || tr('Failed to save account.', 'Не удалось сохранить аккаунт.'))
+      setAccountsStatus(tr('Account saved.', 'Аккаунт сохранен.'))
       await fetchAccounts()
     } catch (error) {
-      setAccountsStatus(error?.message || 'Failed to save account.')
+      setAccountsStatus(error?.message || tr('Failed to save account.', 'Не удалось сохранить аккаунт.'))
     }
   }
 
   async function deleteAccountCard() {
     const accountId = String(accountForm.id || selectedAccount?.id || '').trim()
     if (!accountId) {
-      setAccountsStatus('Account id is missing.')
+      setAccountsStatus(tr('Account id is missing.', 'Отсутствует ID аккаунта.'))
       return
     }
-    if (!window.confirm('Delete this account? It will be removed from client portal lists.')) return
+    if (!window.confirm(tr('Delete this account? It will be removed from client portal lists.', 'Удалить этот аккаунт? Он будет скрыт в клиентском кабинете.'))) return
 
     try {
       const token = getAuthToken()
@@ -267,13 +269,13 @@ export default function AdminRequestsPage() {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.detail || 'Failed to delete account.')
-      setAccountsStatus('Account deleted.')
+      if (!res.ok) throw new Error(data?.detail || tr('Failed to delete account.', 'Не удалось удалить аккаунт.'))
+      setAccountsStatus(tr('Account deleted.', 'Аккаунт удален.'))
       setAccountCardOpen(false)
       await fetchAccounts()
       setSelectedAccountItemKey('')
     } catch (error) {
-      setAccountsStatus(error?.message || 'Failed to delete account.')
+      setAccountsStatus(error?.message || tr('Failed to delete account.', 'Не удалось удалить аккаунт.'))
     }
   }
 
@@ -452,24 +454,24 @@ export default function AdminRequestsPage() {
   }, [selectedAccount?.id])
 
   return (
-    <AdminShell title="Account Requests" subtitle="Compact queue with review panel and controlled lifecycle actions." actionLabel="Export Excel" actionOnClick={exportRequests}>
+    <AdminShell title={tr('Account Requests', 'Запросы аккаунтов')} subtitle={tr('Compact queue with review panel and controlled lifecycle actions.', 'Компактная очередь с панелью проверки и контролируемыми действиями.')} actionLabel={tr('Export Excel', 'Экспорт Excel')} actionOnClick={exportRequests}>
       <section className={styles.statsGrid}>
-        <StatCard label="Total" value={stats.total} hint="All account requests" />
-        <StatCard label="New" value={stats.fresh} hint="Need first action" />
-        <StatCard label="In Progress" value={stats.processing} hint="Review in process" />
-        <StatCard label="Funding Review" value={stats.needsFundingReview} hint="Budget exceeds completed topups" />
+        <StatCard label={tr('Total', 'Всего')} value={stats.total} hint={tr('All account requests', 'Все запросы на аккаунты')} />
+        <StatCard label={tr('New', 'Новые')} value={stats.fresh} hint={tr('Need first action', 'Требуют первого действия')} />
+        <StatCard label={tr('In Progress', 'В работе')} value={stats.processing} hint={tr('Review in process', 'Проверка в процессе')} />
+        <StatCard label={tr('Funding Review', 'Проверка бюджета')} value={stats.needsFundingReview} hint={tr('Budget exceeds completed topups', 'Бюджет превышает завершенные пополнения')} />
       </section>
 
       <section className={styles.card}>
         <div className={styles.cardHeader}>
           <div className={styles.modeSwitch}>
-            <button className={workbenchMode === 'requests' ? styles.modeSwitchActive : styles.modeSwitchButton} type="button" onClick={() => setWorkbenchMode('requests')}>Requests</button>
-            <button className={workbenchMode === 'accounts' ? styles.modeSwitchActive : styles.modeSwitchButton} type="button" onClick={() => setWorkbenchMode('accounts')}>Accounts</button>
+            <button className={workbenchMode === 'requests' ? styles.modeSwitchActive : styles.modeSwitchButton} type="button" onClick={() => setWorkbenchMode('requests')}>{tr('Requests', 'Запросы')}</button>
+            <button className={workbenchMode === 'accounts' ? styles.modeSwitchActive : styles.modeSwitchButton} type="button" onClick={() => setWorkbenchMode('accounts')}>{tr('Accounts', 'Аккаунты')}</button>
           </div>
           <div className={styles.tableActions} style={{ justifyContent: 'flex-start' }}>
-            <span className={styles.statusChipMuted}>Client Queue</span>
-            <span className={styles.statusChipMuted}>Accounts</span>
-            <span className={styles.statusChipMuted}>New Requests</span>
+            <span className={styles.statusChipMuted}>{tr('Client Queue', 'Очередь клиентов')}</span>
+            <span className={styles.statusChipMuted}>{tr('Accounts', 'Аккаунты')}</span>
+            <span className={styles.statusChipMuted}>{tr('New Requests', 'Новые запросы')}</span>
           </div>
         </div>
 
@@ -479,15 +481,15 @@ export default function AdminRequestsPage() {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>Client</th>
-                    <th>Queue</th>
-                    <th>Accounts Requested</th>
-                    <th>Last Activity</th>
+                    <th>{tr('Client', 'Клиент')}</th>
+                    <th>{tr('Queue', 'Очередь')}</th>
+                    <th>{tr('Accounts Requested', 'Запрошенные аккаунты')}</th>
+                    <th>{tr('Last Activity', 'Последняя активность')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {!pageClients.length ? (
-                    <tr><td colSpan={4}>No requests found.</td></tr>
+                    <tr><td colSpan={4}>{tr('No requests found.', 'Запросов нет.')}</td></tr>
                   ) : (
                     pageClients.map((group) => {
                       const statuses = group.requests.reduce(
@@ -515,7 +517,7 @@ export default function AdminRequestsPage() {
                         >
                           <td>
                             <span className={styles.tableStrong}>{group.email}</span>
-                            <span className={styles.tableMeta}>{group.managerEmail || 'Manager not assigned'}</span>
+                            <span className={styles.tableMeta}>{group.managerEmail || tr('Manager not assigned', 'Менеджер не назначен')}</span>
                           </td>
                           <td>
                             <div className={styles.tableActions} style={{ justifyContent: 'flex-start' }}>
@@ -541,8 +543,8 @@ export default function AdminRequestsPage() {
                   Showing {(page - 1) * PAGE_SIZE + (pageClients.length ? 1 : 0)}-{(page - 1) * PAGE_SIZE + pageClients.length} of {groupedClients.length} clients
                 </p>
                 <div className={styles.tableActions}>
-                  <button className={styles.buttonGhost} type="button" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Previous</button>
-                  <button className={styles.buttonGhost} type="button" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Next</button>
+                  <button className={styles.buttonGhost} type="button" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>{tr('Previous', 'Назад')}</button>
+                  <button className={styles.buttonGhost} type="button" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>{tr('Next', 'Далее')}</button>
                 </div>
               </div>
             </div>
@@ -551,17 +553,17 @@ export default function AdminRequestsPage() {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>Type</th>
-                    <th>Platform</th>
-                    <th>Account</th>
-                    <th>State</th>
+                    <th>{tr('Type', 'Тип')}</th>
+                    <th>{tr('Platform', 'Платформа')}</th>
+                    <th>{tr('Account', 'Аккаунт')}</th>
+                    <th>{tr('State', 'Состояние')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {!selectedClientGroup ? (
-                    <tr><td colSpan={4}>Select client in Requests tab.</td></tr>
+                    <tr><td colSpan={4}>{tr('Select client in Requests tab.', 'Выберите клиента во вкладке Запросы.')}</td></tr>
                   ) : !accountWorkbenchItems.length ? (
-                    <tr><td colSpan={4}>No accounts or active requests.</td></tr>
+                    <tr><td colSpan={4}>{tr('No accounts or active requests.', 'Нет аккаунтов или активных запросов.')}</td></tr>
                   ) : (
                     accountWorkbenchItems.map((item) => (
                       <tr
@@ -597,7 +599,7 @@ export default function AdminRequestsPage() {
           <aside className={styles.sidePanel}>
             {!selectedClientGroup ? (
               <div className={styles.payloadCard}>
-                <p className={styles.muted}>Select a client and account/request item.</p>
+                <p className={styles.muted}>{tr('Select a client and account/request item.', 'Выберите клиента и элемент аккаунта/запроса.')}</p>
               </div>
             ) : selectedAccountItem?.kind === 'request' && selectedAccountRequest ? (
               <>
@@ -612,31 +614,31 @@ export default function AdminRequestsPage() {
                 <div className={styles.formStack}>
                   {workbenchMode === 'accounts' ? (
                     <label className={styles.field}>
-                      <span className={styles.fieldLabel}>Account ID</span>
+                      <span className={styles.fieldLabel}>{tr('Account ID', 'ID аккаунта')}</span>
                       <input className={styles.input} value={form.account_code} onChange={(e) => setForm((s) => ({ ...s, account_code: e.target.value }))} />
                     </label>
                   ) : (
                     <label className={styles.field}>
-                      <span className={styles.fieldLabel}>Contract Code</span>
+                      <span className={styles.fieldLabel}>{tr('Contract Code', 'Код договора')}</span>
                       <input className={styles.input} value={form.contract_code} onChange={(e) => setForm((s) => ({ ...s, contract_code: e.target.value }))} />
                     </label>
                   )}
                   <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Manager Email</span>
+                    <span className={styles.fieldLabel}>{tr('Manager Email', 'Email менеджера')}</span>
                     <input className={styles.input} value={form.manager_email} onChange={(e) => setForm((s) => ({ ...s, manager_email: e.target.value }))} />
                   </label>
                   <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Comment</span>
+                    <span className={styles.fieldLabel}>{tr('Comment', 'Комментарий')}</span>
                     <textarea className={styles.textarea} value={form.comment} onChange={(e) => setForm((s) => ({ ...s, comment: e.target.value }))} />
                   </label>
                 </div>
 
                 <div className={styles.buttonRow}>
-                  <button className={styles.buttonGhost} type="button" onClick={() => submitSideAction('save', selectedAccountRequest)}>Save</button>
-                  <button className={styles.buttonGhost} type="button" onClick={() => submitSideAction('processing', selectedAccountRequest)}>Move to In Progress</button>
-                  <button className={styles.buttonPrimary} type="button" onClick={() => submitSideAction('approved', selectedAccountRequest)}>Approve</button>
-                  <button className={styles.buttonGhost} type="button" onClick={() => submitSideAction('rejected', selectedAccountRequest)}>Reject</button>
-                  <button className={styles.buttonGhost} type="button" onClick={() => setRequestCardOpen(true)}>Open Full Request Card</button>
+                  <button className={styles.buttonGhost} type="button" onClick={() => submitSideAction('save', selectedAccountRequest)}>{tr('Save', 'Сохранить')}</button>
+                  <button className={styles.buttonGhost} type="button" onClick={() => submitSideAction('processing', selectedAccountRequest)}>{tr('Move to In Progress', 'Перевести в работу')}</button>
+                  <button className={styles.buttonPrimary} type="button" onClick={() => submitSideAction('approved', selectedAccountRequest)}>{tr('Approve', 'Одобрить')}</button>
+                  <button className={styles.buttonGhost} type="button" onClick={() => submitSideAction('rejected', selectedAccountRequest)}>{tr('Reject', 'Отклонить')}</button>
+                  <button className={styles.buttonGhost} type="button" onClick={() => setRequestCardOpen(true)}>{tr('Open Full Request Card', 'Открыть полную карточку запроса')}</button>
                 </div>
               </>
             ) : selectedAccountItem?.kind === 'account' && selectedAccount ? (
@@ -670,19 +672,19 @@ export default function AdminRequestsPage() {
                 </div>
 
                 <div className={styles.buttonRow}>
-                  <button className={styles.buttonPrimary} type="button" onClick={() => setAccountCardOpen(true)}>Open Full Account Card</button>
+                  <button className={styles.buttonPrimary} type="button" onClick={() => setAccountCardOpen(true)}>{tr('Open Full Account Card', 'Открыть полную карточку аккаунта')}</button>
                 </div>
               </>
             ) : (
               <div className={styles.payloadCard}>
-                <p className={styles.muted}>Select an account or request row.</p>
+                <p className={styles.muted}>{tr('Select an account or request row.', 'Выберите строку аккаунта или запроса.')}</p>
               </div>
             )}
           </aside>
         </div>
 
         <div className={styles.cardHeader}>
-          <p className={styles.muted}>{accountsStatus || status || 'Accounts and requests are managed in one flow.'}</p>
+          <p className={styles.muted}>{accountsStatus || status || tr('Accounts and requests are managed in one flow.', 'Аккаунты и запросы управляются в одном потоке.')}</p>
         </div>
       </section>
 
@@ -695,12 +697,12 @@ export default function AdminRequestsPage() {
                 <h3 className={styles.modalTitle}>{accountForm.name || selectedAccount.name || 'Account'}</h3>
                 <p className={styles.modalSubtitle}>{selectedClientGroup?.email || selectedAccount.user_email || ''}</p>
               </div>
-              <button className={styles.buttonGhost} type="button" onClick={() => setAccountCardOpen(false)}>Close</button>
+              <button className={styles.buttonGhost} type="button" onClick={() => setAccountCardOpen(false)}>{tr('Close', 'Закрыть')}</button>
             </header>
             <div style={{ padding: '14px 24px 24px', display: 'grid', gap: 12 }}>
               <div className={styles.formStack}>
                 <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Platform</span>
+                  <span className={styles.fieldLabel}>{tr('Platform', 'Платформа')}</span>
                   <select className={styles.select} value={accountForm.platform} onChange={(e) => setAccountForm((s) => ({ ...s, platform: e.target.value }))}>
                     <option value="meta">Meta</option>
                     <option value="google">Google</option>
@@ -711,23 +713,23 @@ export default function AdminRequestsPage() {
                   </select>
                 </label>
                 <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Account Name</span>
+                  <span className={styles.fieldLabel}>{tr('Account Name', 'Название аккаунта')}</span>
                   <input className={styles.input} value={accountForm.name} onChange={(e) => setAccountForm((s) => ({ ...s, name: e.target.value }))} />
                 </label>
                 <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Account ID</span>
+                  <span className={styles.fieldLabel}>{tr('Account ID', 'ID аккаунта')}</span>
                   <input className={styles.input} value={accountForm.account_code} onChange={(e) => setAccountForm((s) => ({ ...s, account_code: e.target.value }))} />
                 </label>
                 <label className={styles.field}>
-                  <span className={styles.fieldLabel}>External ID</span>
+                  <span className={styles.fieldLabel}>{tr('External ID', 'Внешний ID')}</span>
                   <input className={styles.input} value={accountForm.external_id} onChange={(e) => setAccountForm((s) => ({ ...s, external_id: e.target.value }))} />
                 </label>
                 <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Currency</span>
+                  <span className={styles.fieldLabel}>{tr('Currency', 'Валюта')}</span>
                   <input className={styles.input} value={accountForm.currency} onChange={(e) => setAccountForm((s) => ({ ...s, currency: e.target.value.toUpperCase() }))} />
                 </label>
                 <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Status</span>
+                  <span className={styles.fieldLabel}>{tr('Status', 'Статус')}</span>
                   <select className={styles.select} value={accountForm.status} onChange={(e) => setAccountForm((s) => ({ ...s, status: e.target.value }))}>
                     {ACCOUNT_STATUS_OPTIONS.map((value) => (
                       <option key={value} value={value}>{value}</option>
@@ -735,7 +737,7 @@ export default function AdminRequestsPage() {
                   </select>
                 </label>
                 <label className={styles.field} style={{ alignItems: 'start' }}>
-                  <span className={styles.fieldLabel}>Visible In Client Portal</span>
+                  <span className={styles.fieldLabel}>{tr('Visible In Client Portal', 'Видим в клиентском кабинете')}</span>
                   <input
                     type="checkbox"
                     checked={!!accountForm.visible_to_client}
@@ -745,8 +747,8 @@ export default function AdminRequestsPage() {
                 </label>
               </div>
               <div className={styles.buttonRow}>
-                <button className={styles.buttonPrimary} type="button" onClick={saveAccountCard}>Save Account</button>
-                <button className={styles.buttonGhost} type="button" onClick={deleteAccountCard}>Delete Account</button>
+                <button className={styles.buttonPrimary} type="button" onClick={saveAccountCard}>{tr('Save Account', 'Сохранить аккаунт')}</button>
+                <button className={styles.buttonGhost} type="button" onClick={deleteAccountCard}>{tr('Delete Account', 'Удалить аккаунт')}</button>
               </div>
             </div>
           </article>
@@ -762,7 +764,7 @@ export default function AdminRequestsPage() {
                 <h3 className={styles.modalTitle}>#{selectedAccountRequest.id} · {platformLabel(selectedAccountRequest.platform)}</h3>
                 <p className={styles.modalSubtitle}>{selectedClientGroup?.email || selectedAccountRequest.user_email || ''}</p>
               </div>
-              <button className={styles.buttonGhost} type="button" onClick={() => setRequestCardOpen(false)}>Close</button>
+              <button className={styles.buttonGhost} type="button" onClick={() => setRequestCardOpen(false)}>{tr('Close', 'Закрыть')}</button>
             </header>
             <div style={{ padding: '14px 24px 24px', display: 'grid', gap: 12 }}>
               <div className={styles.payloadCard}>
@@ -775,7 +777,7 @@ export default function AdminRequestsPage() {
                     </div>
                   ))
                 ) : (
-                  <p className={styles.muted}>No additional opening fields.</p>
+                  <p className={styles.muted}>{tr('No additional opening fields.', 'Нет дополнительных полей открытия.')}</p>
                 )}
               </div>
             </div>

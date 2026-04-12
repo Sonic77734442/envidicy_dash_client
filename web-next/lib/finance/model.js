@@ -50,11 +50,11 @@ export function getAccountStatusKey(status) {
 export function normalizeAccountStatus(status, locale = 'en') {
   const key = getAccountStatusKey(status)
   if (locale === 'ru') {
-    if (key === 'active') return 'Активен'
-    if (key === 'pending') return 'На модерации'
-    if (key === 'paused') return 'Приостановлен'
-    if (key === 'closed') return 'Закрыт'
-    return String(status || 'На модерации')
+    if (key === 'active') return 'Active'
+    if (key === 'pending') return 'Under review'
+    if (key === 'paused') return 'Paused'
+    if (key === 'closed') return 'Closed'
+    return String(status || 'Under review')
   }
 
   if (key === 'active') return 'Active'

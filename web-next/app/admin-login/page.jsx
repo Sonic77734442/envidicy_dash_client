@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AuthShell from '../../components/auth/AuthShell'
 import { apiFetch } from '../../lib/api'
+import { useI18n } from '../../lib/i18n/client'
 
 export default function AdminLoginPage() {
   const router = useRouter()
-  const [status, setStatus] = useState('Нужен админ-токен для сброса.')
+  const { tr } = useI18n()
+  const [status, setStatus] = useState(tr('Admin token is required for password reset.', 'Нужен админ-токен для сброса.'))
   const [pending, setPending] = useState(false)
   const [allowed, setAllowed] = useState(false)
 
@@ -24,7 +26,7 @@ export default function AdminLoginPage() {
         if (!res.ok) throw new Error('invalid')
         if (active) {
           setAllowed(true)
-          setStatus('Ключ подтвержден. Можно сбрасывать пароль.')
+          setStatus(tr('Key verified. You can reset the password.', 'Ключ подтвержден. Можно сбрасывать пароль.'))
         }
       } catch {
         router.replace('/login')
@@ -44,12 +46,12 @@ export default function AdminLoginPage() {
     const token = String(form.get('token') || '').trim()
 
     if (!email || !newPassword || !token) {
-      setStatus('Заполните все поля.')
+      setStatus(tr('Fill in all fields.', 'Заполните все поля.'))
       return
     }
 
     setPending(true)
-    setStatus('Сбрасываем пароль...')
+    setStatus(tr('Resetting password...', 'Сбрасываем пароль...'))
     try {
       const res = await apiFetch('/admin/reset-password', {
         method: 'POST',
@@ -57,27 +59,27 @@ export default function AdminLoginPage() {
         body: JSON.stringify({ email, new_password: newPassword }),
       })
       if (!res.ok) throw new Error('bad')
-      setStatus('Пароль обновлен. Теперь можно войти.')
+      setStatus(tr('Password updated. You can now log in.', 'Пароль обновлен. Теперь можно войти.'))
     } catch {
-      setStatus('Не удалось сбросить пароль. Проверьте токен.')
+      setStatus(tr('Failed to reset password. Check the token.', 'Не удалось сбросить пароль. Проверьте токен.'))
     } finally {
       setPending(false)
     }
   }
 
   if (!allowed) {
-    return <AuthShell eyebrow="Админ" title="Сброс пароля" status={status} right="Private" />
+    return <AuthShell eyebrow={tr('Admin', 'Админ')} title={tr('Password Reset', 'Сброс пароля')} status={status} right="Private" />
   }
 
   return (
-    <AuthShell eyebrow="Админ" title="Сброс пароля" status={status} right="Private">
+    <AuthShell eyebrow={tr('Admin', 'Админ')} title={tr('Password Reset', 'Сброс пароля')} status={status} right="Private">
       <form className="auth-form" onSubmit={onSubmit}>
         <label>
           <span>Email</span>
           <input name="email" type="email" placeholder="name@gmail.com" required />
         </label>
         <label>
-          <span>Новый пароль</span>
+          <span>{tr('New password', 'Новый пароль')}</span>
           <input name="password" type="password" placeholder="••••••••" required />
         </label>
         <label>
@@ -85,10 +87,10 @@ export default function AdminLoginPage() {
           <input name="token" type="text" placeholder="Bearer token" required />
         </label>
         <button disabled={pending} className="auth-primary" type="submit">
-          {pending ? 'Сбрасываем...' : 'Сбросить пароль'}
+          {pending ? tr('Resetting...', 'Сбрасываем...') : tr('Reset password', 'Сбросить пароль')}
         </button>
         <a className="auth-secondary" href="/login">
-          Вернуться ко входу
+          {tr('Back to login', 'Вернуться ко входу')}
         </a>
       </form>
     </AuthShell>

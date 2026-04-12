@@ -5,16 +5,17 @@ import { useRouter } from 'next/navigation'
 import AdminShell from '../../../components/admin/AdminShell'
 import styles from '../../../components/admin/admin.module.css'
 import { clearAuth, getAuthToken } from '../../../lib/auth'
+import { useI18n } from '../../../lib/i18n/client'
 
-function formatMoney(value) {
+function formatMoney(value, locale = 'en') {
   const num = Number(value || 0)
-  return num.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return num.toLocaleString(locale === 'ru' ? 'ru-RU' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-function formatFxRate(value) {
+function formatFxRate(value, locale = 'en') {
   const num = Number(value)
   if (!Number.isFinite(num) || num <= 0) return 'Not applied'
-  return num.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+  return num.toLocaleString(locale === 'ru' ? 'ru-RU' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
 }
 
 function statusLabel(value) {
@@ -71,9 +72,10 @@ function topupRiskFlags(row) {
 
 export default function AdminTopupsPage() {
   const router = useRouter()
+  const { tr, locale } = useI18n()
   const [rows, setRows] = useState([])
   const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0, failed: 0, completedGross: 0 })
-  const [status, setStatus] = useState('Loading topups...')
+  const [status, setStatus] = useState(tr('Loading topups...', 'Загрузка пополнений...'))
   const [filters, setFilters] = useState({
     status: '',
     email: '',
@@ -110,7 +112,7 @@ export default function AdminTopupsPage() {
   async function fetchTopups() {
     try {
       const res = await adminRouteFetch('/api/admin/topups')
-      if (!res.ok) throw new Error('Failed to load topups.')
+      if (!res.ok) throw new Error(tr('Failed to load topups.', 'Не удалось загрузить пополнения.'))
       const data = await res.json()
       const nextRows = Array.isArray(data?.items) ? data.items : []
       setRows(nextRows)
@@ -120,7 +122,7 @@ export default function AdminTopupsPage() {
       }
       setStatus('')
     } catch (e) {
-      setStatus(e?.message || 'Failed to load topups.')
+      setStatus(e?.message || tr('Failed to load topups.', 'Не удалось загрузить пополнения.'))
     }
   }
 
@@ -131,10 +133,10 @@ export default function AdminTopupsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus }),
       })
-      if (!res.ok) throw new Error('Failed to update topup status.')
+      if (!res.ok) throw new Error(tr('Failed to update topup status.', 'Не удалось обновить статус пополнения.'))
       await fetchTopups()
     } catch (e) {
-      setStatus(e?.message || 'Failed to update topup status.')
+      setStatus(e?.message || tr('Failed to update topup status.', 'Не удалось обновить статус пополнения.'))
     }
   }
 
@@ -154,7 +156,7 @@ export default function AdminTopupsPage() {
       const res = await adminRouteFetch(`/api/admin/export/topups${query}`)
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}))
-        throw new Error(payload?.detail || 'Export unavailable')
+        throw new Error(payload?.detail || tr('Export unavailable', 'Экспорт недоступен'))
       }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -167,9 +169,9 @@ export default function AdminTopupsPage() {
       a.click()
       a.remove()
       URL.revokeObjectURL(url)
-      setStatus('Topups export downloaded.')
+      setStatus(tr('Topups export downloaded.', 'Экспорт пополнений скачан.'))
     } catch (e) {
-      setStatus(e?.message || 'Export failed.')
+      setStatus(e?.message || tr('Export failed.', 'Ошибка экспорта.'))
     } finally {
       setExporting(false)
     }
@@ -217,54 +219,54 @@ export default function AdminTopupsPage() {
   const selectedRisk = selected ? topupRiskFlags(selected) : []
 
   return (
-    <AdminShell title="Topups" subtitle="Payment registry, workflow statuses and manual financial review.">
+    <AdminShell title={tr('Topups', 'Пополнения')} subtitle={tr('Payment registry, workflow statuses and manual financial review.', 'Реестр платежей, статусы workflow и ручная финансовая проверка.')}>
       <section className={styles.statsGrid}>
-        <StatCard label="Total Topups" value={stats.total} hint="All payment intents from clients" />
-        <StatCard label="Pending" value={stats.pending} hint="Require payment confirmation or review" />
-        <StatCard label="Completed" value={stats.completed} hint="Already credited to the workflow" />
-        <StatCard label="Completed Gross" value={`${formatMoney(stats.completedGross)} KZT`} hint="Input amount with fee and VAT" />
+        <StatCard label={tr('Total Topups', 'Всего пополнений')} value={stats.total} hint={tr('All payment intents from clients', 'Все платежные намерения клиентов')} />
+        <StatCard label={tr('Pending', 'Ожидают')} value={stats.pending} hint={tr('Require payment confirmation or review', 'Требуют подтверждения оплаты или проверки')} />
+        <StatCard label={tr('Completed', 'Завершено')} value={stats.completed} hint={tr('Already credited to the workflow', 'Уже зачислены в workflow')} />
+        <StatCard label={tr('Completed Gross', 'Завершено (gross)')} value={`${formatMoney(stats.completedGross, locale)} KZT`} hint={tr('Input amount with fee and VAT', 'Сумма входа с комиссией и VAT')} />
       </section>
 
       <section className={styles.card}>
         <div className={styles.cardHeader}>
           <div>
-            <h3 className={styles.cardTitle}>Topup Queue</h3>
-            <p className={styles.cardSubtle}>Filter payment requests by workflow status or client email.</p>
+            <h3 className={styles.cardTitle}>{tr('Topup Queue', 'Очередь пополнений')}</h3>
+            <p className={styles.cardSubtle}>{tr('Filter payment requests by workflow status or client email.', 'Фильтруйте платежные запросы по статусу workflow и email клиента.')}</p>
           </div>
           <div className={styles.tableActions}>
             <button className={styles.buttonGhost} type="button" onClick={exportTopups} disabled={exporting}>
-              {exporting ? 'Exporting...' : 'Export Excel'}
+              {exporting ? tr('Exporting...', 'Экспорт...') : tr('Export Excel', 'Экспорт Excel')}
             </button>
           </div>
         </div>
 
         <div className={styles.cardHeader} style={{ borderBottom: 0, paddingTop: 8 }}>
           <div className={styles.tableActions} style={{ justifyContent: 'flex-start' }}>
-            <button className={styles.buttonGhost} type="button" onClick={() => setActiveView('all')} aria-pressed={activeView === 'all'}>All Transactions</button>
-            <button className={styles.buttonGhost} type="button" onClick={() => setActiveView('pending')} aria-pressed={activeView === 'pending'}>Pending Review</button>
-            <button className={styles.buttonGhost} type="button" onClick={() => setActiveView('high')} aria-pressed={activeView === 'high'}>High Amount</button>
-            <button className={styles.buttonGhost} type="button" onClick={() => setActiveView('manual')} aria-pressed={activeView === 'manual'}>Manual Review</button>
+            <button className={styles.buttonGhost} type="button" onClick={() => setActiveView('all')} aria-pressed={activeView === 'all'}>{tr('All Transactions', 'Все транзакции')}</button>
+            <button className={styles.buttonGhost} type="button" onClick={() => setActiveView('pending')} aria-pressed={activeView === 'pending'}>{tr('Pending Review', 'Ожидают проверки')}</button>
+            <button className={styles.buttonGhost} type="button" onClick={() => setActiveView('high')} aria-pressed={activeView === 'high'}>{tr('High Amount', 'Крупные суммы')}</button>
+            <button className={styles.buttonGhost} type="button" onClick={() => setActiveView('manual')} aria-pressed={activeView === 'manual'}>{tr('Manual Review', 'Ручная проверка')}</button>
           </div>
         </div>
 
         <div className={styles.filters}>
           <label className={styles.field}>
-            <span className={styles.fieldLabel}>Status</span>
+            <span className={styles.fieldLabel}>{tr('Status', 'Статус')}</span>
             <select className={styles.select} value={filters.status} onChange={(e) => setFilters((s) => ({ ...s, status: e.target.value }))}>
-              <option value="">All</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-              <option value="failed">Failed</option>
+              <option value="">{tr('All', 'Все')}</option>
+              <option value="pending">{tr('Pending', 'Ожидают')}</option>
+              <option value="completed">{tr('Completed', 'Завершено')}</option>
+              <option value="failed">{tr('Failed', 'Ошибка')}</option>
             </select>
           </label>
           <label className={styles.field}>
-            <span className={styles.fieldLabel}>Client Email</span>
+            <span className={styles.fieldLabel}>{tr('Client Email', 'Email клиента')}</span>
             <input className={styles.input} value={filters.email} onChange={(e) => setFilters((s) => ({ ...s, email: e.target.value }))} placeholder="client@email.com" />
           </label>
           <label className={styles.field}>
-            <span className={styles.fieldLabel}>Platform</span>
+            <span className={styles.fieldLabel}>{tr('Platform', 'Платформа')}</span>
             <select className={styles.select} value={filters.platform} onChange={(e) => setFilters((s) => ({ ...s, platform: e.target.value }))}>
-              <option value="">All</option>
+              <option value="">{tr('All', 'Все')}</option>
               <option value="meta">Meta</option>
               <option value="google">Google</option>
               <option value="tiktok">TikTok</option>
@@ -274,15 +276,15 @@ export default function AdminTopupsPage() {
             </select>
           </label>
           <label className={styles.field}>
-            <span className={styles.fieldLabel}>Date From</span>
+            <span className={styles.fieldLabel}>{tr('Date From', 'Дата с')}</span>
             <input className={styles.input} type="date" value={filters.dateFrom} onChange={(e) => setFilters((s) => ({ ...s, dateFrom: e.target.value }))} />
           </label>
           <label className={styles.field}>
-            <span className={styles.fieldLabel}>Date To</span>
+            <span className={styles.fieldLabel}>{tr('Date To', 'Дата по')}</span>
             <input className={styles.input} type="date" value={filters.dateTo} onChange={(e) => setFilters((s) => ({ ...s, dateTo: e.target.value }))} />
           </label>
           <label className={styles.field}>
-            <span className={styles.fieldLabel}>Amount Min</span>
+            <span className={styles.fieldLabel}>{tr('Amount Min', 'Мин. сумма')}</span>
             <input className={styles.input} type="number" min="0" value={filters.amountMin} onChange={(e) => setFilters((s) => ({ ...s, amountMin: e.target.value }))} placeholder="10000" />
           </label>
         </div>
@@ -308,18 +310,18 @@ export default function AdminTopupsPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Ref ID</th>
-                  <th>Client</th>
-                  <th>Platform</th>
-                  <th>FX Rate</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                  <th>{tr('Date', 'Дата')}</th>
+                  <th>{tr('Ref ID', 'Ref ID')}</th>
+                  <th>{tr('Client', 'Клиент')}</th>
+                  <th>{tr('Platform', 'Платформа')}</th>
+                  <th>{tr('FX Rate', 'FX курс')}</th>
+                  <th>{tr('Status', 'Статус')}</th>
+                  <th style={{ textAlign: 'right' }}>{tr('Actions', 'Действия')}</th>
                 </tr>
               </thead>
               <tbody>
                 {!filtered.length ? (
-                  <tr><td colSpan={7}>No topups found.</td></tr>
+                  <tr><td colSpan={7}>{tr('No topups found.', 'Пополнений не найдено.')}</td></tr>
                 ) : (
                   filtered.map((row) => {
                     const isSelected = String(row.id) === String(selected?.id)
@@ -342,15 +344,15 @@ export default function AdminTopupsPage() {
                           <span className={styles.tableMeta}>{row.account_name || 'Ad Account'}</span>
                         </td>
                         <td><span className={styles.platformBadge}>{row.account_platform_label || '—'}</span></td>
-                        <td>{formatFxRate((row.breakdown || {}).fxRate || row.fx_rate)}</td>
+                        <td>{formatFxRate((row.breakdown || {}).fxRate || row.fx_rate, locale)}</td>
                         <td><span className={statusClass(row.status)}>{statusLabel(row.status)}</span></td>
                         <td style={{ textAlign: 'right' }}>
                           {row.status === 'pending' ? (
                             <button className={styles.buttonPrimary} type="button" onClick={() => setSelectedId(String(row.id))}>
-                              Review
+                              {tr('Review', 'Проверить')}
                             </button>
                           ) : (
-                            <span className={styles.statusChipMuted}>Done</span>
+                            <span className={styles.statusChipMuted}>{tr('Done', 'Готово')}</span>
                           )}
                         </td>
                       </tr>

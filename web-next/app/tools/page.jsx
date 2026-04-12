@@ -85,7 +85,7 @@ export default function ToolsPage() {
 
   const placeholder = useMemo(
     () =>
-      'Автозамены: {platform}, {source}, {medium}, {date}, {date_ymd}, {date_ym}, {time}, {rand4}, {rand6}',
+      'Auto replacements: {platform}, {source}, {medium}, {date}, {date_ymd}, {date_ym}, {time}, {rand4}, {rand6}',
     []
   )
 
@@ -115,7 +115,7 @@ export default function ToolsPage() {
 
   function buildSingle() {
     if (!single.url.trim()) {
-      setStatus('Введите базовую ссылку.')
+      setStatus('Enter a base URL.')
       return
     }
     try {
@@ -129,22 +129,22 @@ export default function ToolsPage() {
       }
       const result = buildUrl(single.url, params)
       setSingle((s) => ({ ...s, result }))
-      setStatus('Ссылка сгенерирована.')
+      setStatus('URL generated.')
     } catch {
-      setStatus('Некорректная базовая ссылка.')
+      setStatus('Invalid base URL.')
     }
   }
 
   async function copyText(text, okMessage) {
     if (!text) {
-      setStatus('Сначала сгенерируйте ссылки.')
+      setStatus('Generate URLs first.')
       return
     }
     try {
       await navigator.clipboard.writeText(text)
       setStatus(okMessage)
     } catch {
-      setStatus('Не удалось скопировать.')
+      setStatus('Failed to copy.')
     }
   }
 
@@ -154,7 +154,7 @@ export default function ToolsPage() {
       .map((v) => v.trim())
       .filter(Boolean)
     if (!lines.length) {
-      setStatus('Добавьте хотя бы одну ссылку.')
+      setStatus('Add at least one URL.')
       return
     }
     const ctx = { platform: bulkPreset, source: bulk.source.trim(), medium: bulk.medium.trim() }
@@ -173,7 +173,7 @@ export default function ToolsPage() {
       }
     })
     setBulk((s) => ({ ...s, result: out.join('\n') }))
-    setStatus(`Сгенерировано: ${out.length}`)
+    setStatus(`Generated: ${out.length}`)
   }
 
   function exportCsv() {
@@ -182,7 +182,7 @@ export default function ToolsPage() {
       .map((v) => v.trim())
       .filter(Boolean)
     if (!rows.length) {
-      setStatus('Сначала сгенерируйте ссылки.')
+      setStatus('Generate URLs first.')
       return
     }
     const csvRows = ['base_url,utm_url']
@@ -196,16 +196,16 @@ export default function ToolsPage() {
     link.download = 'utm_links.csv'
     link.click()
     URL.revokeObjectURL(link.href)
-    setStatus('CSV экспортирован.')
+    setStatus('CSV exported.')
   }
 
   return (
-    <AppShell eyebrow="Envidicy · Tools" title="Инструменты" subtitle="UTM генератор и будущий сокращатель ссылок.">
+    <AppShell eyebrow="Envidicy · Tools" title="Tools" subtitle="UTM generator and future short-link tool.">
       <section className="panel">
         <div className="panel-head">
           <div>
-            <p className="eyebrow">Инструменты</p>
-            <h2>UTM генератор</h2>
+            <p className="eyebrow">Tools</p>
+            <h2>UTM Generator</h2>
           </div>
           <span className="chip chip-ghost">utm</span>
         </div>
@@ -213,10 +213,10 @@ export default function ToolsPage() {
         <div className="tabs">
           <div className="tab-buttons">
             <button className={`tab-button ${tab === 'single' ? 'active' : ''}`} type="button" onClick={() => setTab('single')}>
-              Одна ссылка
+              Single URL
             </button>
             <button className={`tab-button ${tab === 'bulk' ? 'active' : ''}`} type="button" onClick={() => setTab('bulk')}>
-              Массово
+              Bulk
             </button>
           </div>
 
@@ -232,22 +232,22 @@ export default function ToolsPage() {
               <p className="muted small">{placeholder}</p>
 
               <div className="form-grid">
-                <label className="field"><span>Базовая ссылка</span><input value={single.url} onChange={(e) => setSingle((s) => ({ ...s, url: e.target.value }))} type="url" placeholder="https://example.com/landing" /></label>
-                <label className="field"><span>Источник (utm_source)</span><input value={single.source} onChange={(e) => setSingle((s) => ({ ...s, source: e.target.value }))} type="text" placeholder="google" /></label>
-                <label className="field"><span>Канал (utm_medium)</span><input value={single.medium} onChange={(e) => setSingle((s) => ({ ...s, medium: e.target.value }))} type="text" placeholder="cpc" /></label>
-                <label className="field"><span>Кампания (utm_campaign)</span><input value={single.campaign} onChange={(e) => setSingle((s) => ({ ...s, campaign: e.target.value }))} type="text" placeholder="brand_launch" /></label>
-                <label className="field"><span>Контент (utm_content)</span><input value={single.content} onChange={(e) => setSingle((s) => ({ ...s, content: e.target.value }))} type="text" placeholder="banner_a" /></label>
-                <label className="field"><span>Ключевое слово (utm_term)</span><input value={single.term} onChange={(e) => setSingle((s) => ({ ...s, term: e.target.value }))} type="text" placeholder="buy_now" /></label>
+                <label className="field"><span>Base URL</span><input value={single.url} onChange={(e) => setSingle((s) => ({ ...s, url: e.target.value }))} type="url" placeholder="https://example.com/landing" /></label>
+                <label className="field"><span>Source (utm_source)</span><input value={single.source} onChange={(e) => setSingle((s) => ({ ...s, source: e.target.value }))} type="text" placeholder="google" /></label>
+                <label className="field"><span>Medium (utm_medium)</span><input value={single.medium} onChange={(e) => setSingle((s) => ({ ...s, medium: e.target.value }))} type="text" placeholder="cpc" /></label>
+                <label className="field"><span>Campaign (utm_campaign)</span><input value={single.campaign} onChange={(e) => setSingle((s) => ({ ...s, campaign: e.target.value }))} type="text" placeholder="brand_launch" /></label>
+                <label className="field"><span>Content (utm_content)</span><input value={single.content} onChange={(e) => setSingle((s) => ({ ...s, content: e.target.value }))} type="text" placeholder="banner_a" /></label>
+                <label className="field"><span>Keyword (utm_term)</span><input value={single.term} onChange={(e) => setSingle((s) => ({ ...s, term: e.target.value }))} type="text" placeholder="buy_now" /></label>
               </div>
 
               <div className="panel-actions">
-                <button className="btn primary" type="button" onClick={buildSingle}>Сгенерировать</button>
-                <button className="btn ghost" type="button" onClick={() => copyText(single.result, 'Ссылка скопирована.')}>Скопировать</button>
-                <button className="btn ghost" type="button" onClick={() => setSingle({ url: '', source: '', medium: '', campaign: '', content: '', term: '', result: '' })}>Очистить</button>
+                <button className="btn primary" type="button" onClick={buildSingle}>Generate</button>
+                <button className="btn ghost" type="button" onClick={() => copyText(single.result, 'URL copied.')}>Copy</button>
+                <button className="btn ghost" type="button" onClick={() => setSingle({ url: '', source: '', medium: '', campaign: '', content: '', term: '', result: '' })}>Clear</button>
               </div>
 
               <label className="field">
-                <span>Результат</span>
+                <span>Result</span>
                 <textarea className="field-input textarea utm-result" readOnly value={single.result} />
               </label>
             </div>
@@ -263,29 +263,29 @@ export default function ToolsPage() {
               <p className="muted small">{placeholder}</p>
 
               <div className="form-grid">
-                <label className="field"><span>Ссылки (по одной в строке)</span><textarea value={bulk.urls} onChange={(e) => setBulk((s) => ({ ...s, urls: e.target.value }))} className="field-input small textarea" placeholder={'https://site.com/one\nhttps://site.com/two'} /></label>
-                <label className="field"><span>Источник (utm_source)</span><input value={bulk.source} onChange={(e) => setBulk((s) => ({ ...s, source: e.target.value }))} type="text" placeholder="google" /></label>
-                <label className="field"><span>Канал (utm_medium)</span><input value={bulk.medium} onChange={(e) => setBulk((s) => ({ ...s, medium: e.target.value }))} type="text" placeholder="cpc" /></label>
-                <label className="field"><span>Кампания (utm_campaign)</span><input value={bulk.campaign} onChange={(e) => setBulk((s) => ({ ...s, campaign: e.target.value }))} type="text" placeholder="brand_launch" /></label>
-                <label className="field"><span>Контент (utm_content)</span><input value={bulk.content} onChange={(e) => setBulk((s) => ({ ...s, content: e.target.value }))} type="text" placeholder="banner_a" /></label>
-                <label className="field"><span>Ключевое слово (utm_term)</span><input value={bulk.term} onChange={(e) => setBulk((s) => ({ ...s, term: e.target.value }))} type="text" placeholder="buy_now" /></label>
+                <label className="field"><span>URLs (one per line)</span><textarea value={bulk.urls} onChange={(e) => setBulk((s) => ({ ...s, urls: e.target.value }))} className="field-input small textarea" placeholder={'https://site.com/one\nhttps://site.com/two'} /></label>
+                <label className="field"><span>Source (utm_source)</span><input value={bulk.source} onChange={(e) => setBulk((s) => ({ ...s, source: e.target.value }))} type="text" placeholder="google" /></label>
+                <label className="field"><span>Medium (utm_medium)</span><input value={bulk.medium} onChange={(e) => setBulk((s) => ({ ...s, medium: e.target.value }))} type="text" placeholder="cpc" /></label>
+                <label className="field"><span>Campaign (utm_campaign)</span><input value={bulk.campaign} onChange={(e) => setBulk((s) => ({ ...s, campaign: e.target.value }))} type="text" placeholder="brand_launch" /></label>
+                <label className="field"><span>Content (utm_content)</span><input value={bulk.content} onChange={(e) => setBulk((s) => ({ ...s, content: e.target.value }))} type="text" placeholder="banner_a" /></label>
+                <label className="field"><span>Keyword (utm_term)</span><input value={bulk.term} onChange={(e) => setBulk((s) => ({ ...s, term: e.target.value }))} type="text" placeholder="buy_now" /></label>
               </div>
 
               <div className="panel-actions">
-                <button className="btn primary" type="button" onClick={buildBulk}>Сгенерировать</button>
-                <button className="btn ghost" type="button" onClick={() => copyText(bulk.result, 'Ссылки скопированы.')}>Скопировать все</button>
-                <button className="btn ghost" type="button" onClick={exportCsv}>Экспорт CSV</button>
+                <button className="btn primary" type="button" onClick={buildBulk}>Generate</button>
+                <button className="btn ghost" type="button" onClick={() => copyText(bulk.result, 'URLs copied.')}>Copy all</button>
+                <button className="btn ghost" type="button" onClick={exportCsv}>Export CSV</button>
               </div>
 
               <label className="field">
-                <span>Результат</span>
+                <span>Result</span>
                 <textarea className="field-input textarea utm-result" readOnly value={bulk.result} />
               </label>
             </div>
           )}
         </div>
 
-        <p className="muted small">{status || 'Скоро тут появится сокращатель ссылок.'}</p>
+        <p className="muted small">{status || 'Short-link tool will be added here soon.'}</p>
       </section>
     </AppShell>
   )

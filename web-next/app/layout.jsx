@@ -1,4 +1,5 @@
 import './globals.css'
+import { I18nProvider } from '../lib/i18n/client'
 
 export const metadata = {
   title: 'Envidicy Next',
@@ -12,8 +13,10 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="ru">
-      <body>{children}</body>
+    <html lang="en">
+      <body>
+        <I18nProvider>{children}</I18nProvider>
+      </body>
     </html>
   )
 }

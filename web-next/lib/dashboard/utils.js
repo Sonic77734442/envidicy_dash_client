@@ -85,7 +85,7 @@ export function platformLabel(v) {
   if (v === 'meta') return 'Meta'
   if (v === 'google') return 'Google'
   if (v === 'tiktok') return 'TikTok'
-  return 'Платформа'
+  return 'Platform'
 }
 
 export function buildDateRange(startStr, endStr) {

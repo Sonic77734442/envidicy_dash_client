@@ -11,9 +11,10 @@ import {
   getImpersonationReturnUrl,
   isImpersonating,
 } from '../../lib/auth'
+import { useI18n } from '../../lib/i18n/client'
 
-function money(v, d = 2) {
-  return Number(v || 0).toLocaleString('en-US', {
+function money(v, locale, d = 2) {
+  return Number(v || 0).toLocaleString(locale === 'ru' ? 'ru-RU' : 'en-US', {
     minimumFractionDigits: d,
     maximumFractionDigits: d,
   })
@@ -35,11 +36,12 @@ function getMarkedRate(entry) {
 export default function AppShell({ eyebrow, title, subtitle, area = 'client', children }) {
   const router = useRouter()
   const pathname = usePathname()
+  const { locale, setLocale, t } = useI18n()
 
   const [profile, setProfile] = useState({ email: '', name: '' })
-  const [walletText, setWalletText] = useState('Balance: —')
-  const [rateUsd, setRateUsd] = useState('USD: rate unavailable')
-  const [rateEur, setRateEur] = useState('EUR: rate unavailable')
+  const [walletText, setWalletText] = useState(`${t('shell.balanceLabel')}: —`)
+  const [rateUsd, setRateUsd] = useState(`USD: ${t('shell.rateUnavailable')}`)
+  const [rateEur, setRateEur] = useState(`EUR: ${t('shell.rateUnavailable')}`)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
@@ -58,26 +60,26 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
   const navItems = useMemo(() => {
     if (area === 'admin') {
       return [
-        { label: 'Admin · Requests', href: '/admin/requests' },
-        { label: 'Admin · Clients', href: '/admin/clients' },
-        { label: 'Admin · Accounts', href: '/admin/accounts' },
-        { label: 'Admin · Top-ups', href: '/admin/topups' },
-        { label: 'Admin · Wallet', href: '/admin/wallet' },
-        { label: 'Admin · Users', href: '/admin/users' },
-        { label: 'Admin · Agencies', href: '/admin/agencies' },
-        { label: 'Admin · Company', href: '/admin/company' },
-        { label: 'Admin · Entities', href: '/admin/legal-entities' },
+        { label: t('shell.nav.adminRequests'), href: '/admin/requests' },
+        { label: t('shell.nav.adminClients'), href: '/admin/clients' },
+        { label: t('shell.nav.adminAccounts'), href: '/admin/accounts' },
+        { label: t('shell.nav.adminTopups'), href: '/admin/topups' },
+        { label: t('shell.nav.adminWallet'), href: '/admin/wallet' },
+        { label: t('shell.nav.adminUsers'), href: '/admin/users' },
+        { label: t('shell.nav.adminAgencies'), href: '/admin/agencies' },
+        { label: t('shell.nav.adminCompany'), href: '/admin/company' },
+        { label: t('shell.nav.adminEntities'), href: '/admin/legal-entities' },
       ]
     }
     return [
-      { label: 'Top-up Accounts', href: '/funds' },
-      { label: 'Finance', href: '/funds' },
-      { label: 'Planning', href: '/plan' },
-      { label: 'Dashboard', href: '/dashboard' },
-      { label: 'Tools', href: '/tools' },
-      { label: 'Settings', href: '/settings' },
+      { label: t('shell.nav.topupAccounts'), href: '/funds' },
+      { label: t('shell.nav.finance'), href: '/funds' },
+      { label: t('shell.nav.planning'), href: '/plan' },
+      { label: t('shell.nav.dashboard'), href: '/dashboard' },
+      { label: t('shell.nav.tools'), href: '/tools' },
+      { label: t('shell.nav.settings'), href: '/settings' },
     ]
-  }, [area])
+  }, [area, t])
 
   useEffect(() => {
     setImpersonationActive(isImpersonating())
@@ -92,7 +94,7 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
         const data = await res.json()
         setProfile({
           email: data.email || '',
-          name: data.name || data.company || 'Profile',
+          name: data.name || data.company || t('shell.profile'),
         })
       } catch {
         // ignore
@@ -114,13 +116,13 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
 
         if (usdRate && eurRate) {
           setWalletText(
-            `Balance: ₸${money(balanceKzt, 0)} · $${money(balanceKzt / usdRate)} · €${money(balanceKzt / eurRate)}`
+            `${t('shell.balanceLabel')}: ₸${money(balanceKzt, locale, 0)} · $${money(balanceKzt / usdRate, locale)} · €${money(balanceKzt / eurRate, locale)}`
           )
         } else {
-          setWalletText(`Balance: ₸${money(balanceKzt, 0)}`)
+          setWalletText(`${t('shell.balanceLabel')}: ₸${money(balanceKzt, locale, 0)}`)
         }
-        setRateUsd(usdRate ? `USD: 1$ = ${money(usdRate)} ₸` : 'USD: rate unavailable')
-        setRateEur(eurRate ? `EUR: 1€ = ${money(eurRate)} ₸` : 'EUR: rate unavailable')
+        setRateUsd(usdRate ? `USD: 1$ = ${money(usdRate, locale)} ₸` : `USD: ${t('shell.rateUnavailable')}`)
+        setRateEur(eurRate ? `EUR: 1€ = ${money(eurRate, locale)} ₸` : `EUR: ${t('shell.rateUnavailable')}`)
       } catch {
         // ignore
       }
@@ -128,7 +130,7 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
 
     loadProfile()
     loadWalletAndRates()
-  }, [area])
+  }, [area, locale, t])
 
   useEffect(() => {
     function onDocClick(event) {
@@ -158,6 +160,24 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
     }
   }, [])
 
+  async function switchLocale(nextLocale) {
+    setLocale(nextLocale)
+    const token = getAuthToken()
+    if (!token) return
+    try {
+      await apiFetch('/profile', {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ language: nextLocale }),
+      })
+    } catch {
+      // ignore sync errors
+    }
+  }
+
   function logout() {
     if (isImpersonating()) {
       const returnUrl = getImpersonationReturnUrl()
@@ -181,8 +201,8 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
           ))}
         </div>
         {area === 'client' ? (
-          <div className="sidebar-rates-panel">
-            <div className="sidebar-rates-title">Top-up rates</div>
+            <div className="sidebar-rates-panel">
+            <div className="sidebar-rates-title">{t('shell.ratesTitle')}</div>
             <div className="sidebar-rate-row">{rateUsd}</div>
             <div className="sidebar-rate-row">{rateEur}</div>
           </div>
@@ -190,11 +210,11 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
         <div className="nav-footer">
           {isAdmin && area === 'client' ? (
             <a className="nav-link" href="/admin/requests">
-              Admin panel
+              {t('shell.adminPanel')}
             </a>
           ) : null}
           <button className="nav-link nav-exit" onClick={logout} type="button">
-            Log out
+            {t('shell.logout')}
           </button>
         </div>
       </nav>
@@ -204,7 +224,7 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
           <div className="nav-drawer-head">
             <span>Envidicy</span>
             <button className="btn ghost small" type="button" onClick={() => setDrawerOpen(false)}>
-              Close
+              {t('shell.close')}
             </button>
           </div>
           <div className="nav-drawer-links">
@@ -216,14 +236,14 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
           </div>
           {area === 'client' ? (
             <div className="sidebar-rates-panel">
-              <div className="sidebar-rates-title">Top-up rates</div>
+              <div className="sidebar-rates-title">{t('shell.ratesTitle')}</div>
               <div className="sidebar-rate-row">{rateUsd}</div>
               <div className="sidebar-rate-row">{rateEur}</div>
             </div>
           ) : null}
           <div className="nav-drawer-footer">
             <button className="nav-link nav-exit" onClick={logout} type="button">
-              Log out
+              {t('shell.logout')}
             </button>
           </div>
         </div>
@@ -233,9 +253,9 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
         <div className="bg-blur" />
         {impersonationActive ? (
           <div className="impersonation-banner">
-            <span>Impersonating client: {impersonationLabel || profile.email || ''}</span>
+            <span>{t('shell.impersonatingClient')}: {impersonationLabel || profile.email || ''}</span>
             <button className="btn ghost small" onClick={logout} type="button">
-              Return to admin
+              {t('shell.returnToAdmin')}
             </button>
           </div>
         ) : null}
@@ -245,11 +265,27 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
               ☰
             </button>
             <span className="topbar-context">{eyebrow || 'Envidicy'}</span>
+            <div className="topbar-locale" aria-label={t('locale.switchAria')}>
+              <button
+                type="button"
+                className={`topbar-locale-btn ${locale === 'en' ? 'active' : ''}`}
+                onClick={() => switchLocale('en')}
+              >
+                {t('locale.en')}
+              </button>
+              <button
+                type="button"
+                className={`topbar-locale-btn ${locale === 'ru' ? 'active' : ''}`}
+                onClick={() => switchLocale('ru')}
+              >
+                {t('locale.ru')}
+              </button>
+            </div>
             {area === 'client' ? (
               <>
                 <div className="balance-pill">{walletText}</div>
                 <a className="topbar-topup-btn" href="/funds?action=topup-balance">
-                  Top up balance
+                  {t('shell.topUpBalance')}
                 </a>
               </>
             ) : null}
@@ -257,8 +293,8 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
               <button
                 className="topbar-icon-btn"
                 type="button"
-                aria-label="Notifications"
-                title="Notifications"
+                aria-label={t('shell.notifications')}
+                title={t('shell.notifications')}
                 aria-expanded={notificationsOpen}
                 onClick={() => {
                   setNotificationsOpen((v) => !v)
@@ -272,9 +308,9 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
               </button>
               <span className="topbar-icon-badge" aria-hidden="true" />
               {notificationsOpen ? (
-                <div className="topbar-popover" role="dialog" aria-label="Notifications">
-                  <div className="topbar-popover-title">Notifications</div>
-                  <div className="topbar-popover-item">No new notifications.</div>
+                <div className="topbar-popover" role="dialog" aria-label={t('shell.notifications')}>
+                  <div className="topbar-popover-title">{t('shell.notifications')}</div>
+                  <div className="topbar-popover-item">{t('shell.noNotifications')}</div>
                 </div>
               ) : null}
             </div>
@@ -282,8 +318,8 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
               <button
                 className="topbar-icon-btn"
                 type="button"
-                aria-label="Support"
-                title="Support"
+                aria-label={t('shell.support')}
+                title={t('shell.support')}
                 aria-expanded={supportOpen}
                 onClick={() => {
                   setSupportOpen((v) => !v)
@@ -296,8 +332,8 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
                 </svg>
               </button>
               {supportOpen ? (
-                <div className="topbar-popover" role="dialog" aria-label="Support">
-                  <div className="topbar-popover-title">Support</div>
+                <div className="topbar-popover" role="dialog" aria-label={t('shell.support')}>
+                  <div className="topbar-popover-title">{t('shell.support')}</div>
                   <a className="topbar-popover-link" href="https://t.me/envidicy" target="_blank" rel="noreferrer">
                     Telegram
                   </a>
@@ -321,14 +357,14 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
               >
                 <span className="avatar">{(profile.email || 'U').trim().charAt(0).toUpperCase()}</span>
                 <span className="profile-meta">
-                  <span>{profile.name || 'Profile'}</span>
+                  <span>{profile.name || t('shell.profile')}</span>
                   <span>{profile.email || ''}</span>
                 </span>
               </button>
               {profileMenuOpen ? (
                 <div className="profile-menu" role="menu">
                   <a className="profile-menu-item" href="/settings" onClick={() => setProfileMenuOpen(false)} role="menuitem">
-                    Settings
+                    {t('shell.settings')}
                   </a>
                   {isAdmin ? (
                     <a
@@ -337,7 +373,7 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
                       onClick={() => setProfileMenuOpen(false)}
                       role="menuitem"
                     >
-                      {area === 'admin' ? 'Client area' : 'Admin panel'}
+                      {area === 'admin' ? t('shell.clientArea') : t('shell.adminPanel')}
                     </a>
                   ) : null}
                   <button
@@ -349,7 +385,7 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
                       logout()
                     }}
                   >
-                    Log out
+                    {t('shell.logout')}
                   </button>
                 </div>
               ) : null}

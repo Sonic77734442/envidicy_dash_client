@@ -585,6 +585,36 @@ body {
   background: rgba(15, 19, 34, 0.82);
 }
 
+.topbar-locale {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(15, 19, 34, 0.82);
+}
+
+.topbar-locale-btn {
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.topbar-locale-btn:last-child {
+  border-right: 0;
+}
+
+.topbar-locale-btn.active {
+  color: var(--text);
+  background: rgba(105, 227, 255, 0.14);
+}
+
 .topbar-icon-btn {
   border: 1px solid var(--line);
   background: rgba(15, 19, 34, 0.82);

@@ -6,6 +6,7 @@ import AccountRequestModal from './AccountRequestModal'
 import ClientShell from './ClientShell'
 import styles from './client.module.css'
 import { getAuthToken } from '../../lib/auth'
+import { useI18n } from '../../lib/i18n/client'
 
 const METRICS = [
   { label: 'Available Balance', value: '$428,950.00', hint: '+12.5% from last month', tone: 'good' },
@@ -94,6 +95,7 @@ function MetricCard({ card }) {
 
 export default function FinancePage() {
   const router = useRouter()
+  const { tr } = useI18n()
   const [metrics, setMetrics] = useState(METRICS)
   const [tab, setTab] = useState('Transactions')
   const [tabMeta, setTabMeta] = useState([
@@ -110,7 +112,7 @@ export default function FinancePage() {
   })
   const [selectedId, setSelectedId] = useState(TRANSACTIONS[0] ? `${TRANSACTIONS[0].date}-${TRANSACTIONS[0].title}` : null)
   const [detail, setDetail] = useState(DETAIL_FALLBACK)
-  const [statusAlerts, setStatusAlerts] = useState('2 Alerts')
+  const [statusAlerts, setStatusAlerts] = useState(tr('2 Alerts', '2 уведомления'))
   const [statusRows, setStatusRows] = useState([
     { icon: '$', label: 'USD/KZT 471.2' },
     { icon: '€', label: 'EUR/USD 1.08' },
@@ -119,7 +121,7 @@ export default function FinancePage() {
     { label: 'USD/KZT', value: '471.2' },
     { label: 'EUR/USD', value: '1.08' },
   ])
-  const [pagerLabel, setPagerLabel] = useState('Showing 1-10 of 142 transactions')
+  const [pagerLabel, setPagerLabel] = useState(tr('Showing 1-10 of 142 transactions', 'Показано 1-10 из 142 транзакций'))
   const [accountRequestOpen, setAccountRequestOpen] = useState(false)
   const [actionStatus, setActionStatus] = useState('')
   const [exportingTopups, setExportingTopups] = useState(false)
@@ -137,7 +139,7 @@ export default function FinancePage() {
       const contentType = res.headers.get('content-type') || 'application/octet-stream'
       if (!res.ok) {
         const payload = contentType.includes('application/json') ? await res.json().catch(() => ({})) : {}
-        throw new Error(payload?.detail || 'Failed to open document')
+        throw new Error(payload?.detail || tr('Failed to open document', 'Не удалось открыть документ'))
       }
 
       const blob = await res.blob()
@@ -158,11 +160,11 @@ export default function FinancePage() {
       const opened = window.open(objectUrl, '_blank', 'noopener')
       if (!opened) {
         URL.revokeObjectURL(objectUrl)
-        throw new Error('Popup blocked while opening document')
+        throw new Error(tr('Popup blocked while opening document', 'Браузер заблокировал открытие окна'))
       }
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60000)
     } catch (e) {
-      setActionStatus(e?.message || 'Failed to open document')
+      setActionStatus(e?.message || tr('Failed to open document', 'Не удалось открыть документ'))
     }
   }
 
@@ -188,7 +190,7 @@ export default function FinancePage() {
       const contentType = res.headers.get('content-type') || ''
       if (!res.ok) {
         const payload = contentType.includes('application/json') ? await res.json().catch(() => ({})) : {}
-        throw new Error(payload?.detail || 'Failed to export topups')
+        throw new Error(payload?.detail || tr('Failed to export topups', 'Не удалось выгрузить пополнения'))
       }
 
       const blob = await res.blob()
@@ -204,7 +206,7 @@ export default function FinancePage() {
       link.remove()
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
     } catch (e) {
-      setActionStatus(e?.message || 'Failed to export topups')
+      setActionStatus(e?.message || tr('Failed to export topups', 'Не удалось выгрузить пополнения'))
     } finally {
       setExportingTopups(false)
     }
@@ -227,7 +229,7 @@ export default function FinancePage() {
           router.replace('/login')
           return
         }
-        if (!res.ok) throw new Error('Failed to load finance')
+        if (!res.ok) throw new Error(tr('Failed to load finance', 'Не удалось загрузить финансы'))
         const payload = await res.json()
         if (Array.isArray(payload.metrics) && payload.metrics.length) setMetrics(payload.metrics)
         const nextDatasets = {
@@ -277,12 +279,12 @@ export default function FinancePage() {
       legalEntity: selectedRow.entity || '—',
       account: selectedRow.account || '—',
       category: selectedRow.type || tab,
-      note: selectedRow.note || 'No additional note is available for this item.',
-      primaryAction: selectedRow.primaryAction || (selectedRow.status === 'Action Required' ? 'Resolve Issue' : 'Raise a Question'),
-      secondaryAction: selectedRow.secondaryAction || (tab === 'Finance docs' ? 'Open Document' : 'Download Document'),
+      note: selectedRow.note || tr('No additional note is available for this item.', 'Для этого элемента нет дополнительного комментария.'),
+      primaryAction: selectedRow.primaryAction || (selectedRow.status === 'Action Required' ? tr('Resolve Issue', 'Решить проблему') : tr('Raise a Question', 'Задать вопрос')),
+      secondaryAction: selectedRow.secondaryAction || (tab === 'Finance docs' ? tr('Open Document', 'Открыть документ') : tr('Download Document', 'Скачать документ')),
       primaryActionHref: selectedRow.primaryActionHref || '#',
       secondaryActionHref: selectedRow.secondaryActionHref || '#',
-      documentName: selectedRow.title || 'No document attached',
+      documentName: selectedRow.title || tr('No document attached', 'Документ не прикреплен'),
       documentMeta: selectedRow.date || '—',
       documentUrl: selectedRow.documentUrl || '#',
       extraRows: Array.isArray(selectedRow.extraRows) ? selectedRow.extraRows : [],
@@ -299,9 +301,9 @@ export default function FinancePage() {
   return (
     <ClientShell
       activeNav="finance"
-      pageTitle="Finance"
-      pageSubtitle="Manage balances, transactions, invoices and financial documents."
-      headerActionLabel="Create Request"
+      pageTitle={tr('Finance', 'Финансы')}
+      pageSubtitle={tr('Manage balances, transactions, invoices and financial documents.', 'Управляйте балансами, транзакциями, счетами и финансовыми документами.')}
+      headerActionLabel={tr('Create Request', 'Создать запрос')}
       headerActionOnClick={() => setAccountRequestOpen(true)}
       searchPlaceholder="Search Entity..."
       ticks={ticks}
@@ -336,7 +338,7 @@ export default function FinancePage() {
                 className={styles.toolButton}
                 disabled={tab !== 'Topups' || exportingTopups}
                 onClick={exportTopups}
-                title={tab === 'Topups' ? 'Export Topups to Excel' : 'Export is available on Topups tab'}
+                title={tab === 'Topups' ? tr('Export Topups to Excel', 'Экспорт пополнений в Excel') : tr('Export is available on Topups tab', 'Экспорт доступен во вкладке Пополнения')}
                 type="button"
               >
                 ↓
@@ -349,12 +351,12 @@ export default function FinancePage() {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>Transaction Date</th>
-                    <th>Description</th>
-                    <th>Type</th>
-                    <th>Entity</th>
-                    <th>Amount</th>
-                    <th>Status</th>
+                    <th>{tr('Transaction Date', 'Дата транзакции')}</th>
+                    <th>{tr('Description', 'Описание')}</th>
+                    <th>{tr('Type', 'Тип')}</th>
+                    <th>{tr('Entity', 'Юрлицо')}</th>
+                    <th>{tr('Amount', 'Сумма')}</th>
+                    <th>{tr('Status', 'Статус')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -402,8 +404,8 @@ export default function FinancePage() {
             <div className={styles.pager}>
               <span>{`${tab}: ${activeRows.length} items`}</span>
               <div className={styles.pagerButtons}>
-                <button type="button">Previous</button>
-                <button type="button">Next</button>
+                <button type="button">{tr('Previous', 'Назад')}</button>
+                <button type="button">{tr('Next', 'Далее')}</button>
               </div>
             </div>
           </article>
@@ -419,26 +421,26 @@ export default function FinancePage() {
             </div>
 
             <div className={styles.detailBlock}>
-              <p className={styles.detailBlockLabel}>Core Information</p>
+              <p className={styles.detailBlockLabel}>{tr('Core Information', 'Основная информация')}</p>
               <div className={styles.detailList}>
                 <div className={styles.detailRow}>
-                  <span>Status</span>
+                  <span>{tr('Status', 'Статус')}</span>
                   <strong>{detail.status}</strong>
                 </div>
                 <div className={styles.detailRow}>
-                  <span>Reference ID</span>
+                  <span>{tr('Reference ID', 'ID ссылки')}</span>
                   <strong>{detail.referenceId}</strong>
                 </div>
                 <div className={styles.detailRow}>
-                  <span>Legal Entity</span>
+                  <span>{tr('Legal Entity', 'Юрлицо')}</span>
                   <strong>{detail.legalEntity}</strong>
                 </div>
                 <div className={styles.detailRow}>
-                  <span>Account</span>
+                  <span>{tr('Account', 'Аккаунт')}</span>
                   <strong>{detail.account}</strong>
                 </div>
                 <div className={styles.detailRow}>
-                  <span>Category</span>
+                  <span>{tr('Category', 'Категория')}</span>
                   <strong>{detail.category}</strong>
                 </div>
               </div>
@@ -446,7 +448,7 @@ export default function FinancePage() {
 
             {detail.extraRows && detail.extraRows.length ? (
               <div className={styles.detailBlock}>
-                <p className={styles.detailBlockLabel}>Funding Terms</p>
+                <p className={styles.detailBlockLabel}>{tr('Funding Terms', 'Условия пополнения')}</p>
                 <div className={styles.detailList}>
                   {detail.extraRows.map((row) => (
                     <div className={styles.detailRow} key={`${row.label}-${row.value}`}>
@@ -459,7 +461,7 @@ export default function FinancePage() {
             ) : null}
 
             <div className={styles.detailBlock}>
-              <p className={styles.detailBlockLabel}>Processing Note</p>
+              <p className={styles.detailBlockLabel}>{tr('Processing Note', 'Комментарий')}</p>
               <p className={styles.processingNote}>{detail.note}</p>
             </div>
 
@@ -481,7 +483,7 @@ export default function FinancePage() {
             </div>
 
             <div className={styles.docCard}>
-              <p className={styles.detailBlockLabel}>Attached Document</p>
+              <p className={styles.detailBlockLabel}>{tr('Attached Document', 'Прикрепленный документ')}</p>
               <div className={styles.docMeta}>
                 <div className={styles.docIcon}>PDF</div>
                 <div className={styles.docText}>
@@ -494,7 +496,7 @@ export default function FinancePage() {
                 onClick={() => openProtectedAsset(detail.documentUrl, 'open', detail.documentName || detail.referenceId)}
                 type="button"
               >
-                Open Document
+                {tr('Open Document', 'Открыть документ')}
               </button>
             </div>
             {actionStatus ? <p className={styles.processingNote}>{actionStatus}</p> : null}

@@ -13,56 +13,56 @@ export default function LandingPage() {
         <div className="panel-head">
           <div>
             <p className="eyebrow">Digital Launch Lab</p>
-            <h2>Запускаем трафик, который продаёт курс, вебинар или клуб</h2>
-            <p className="muted">Лендинг перенесен в Next.js. Основной продуктовый вход: /login</p>
+            <h2>We launch traffic that sells courses, webinars, and memberships</h2>
+            <p className="muted">Landing page migrated to Next.js. Primary product entry: /login</p>
           </div>
-          <a className="btn primary" href="/login">Открыть кабинет</a>
+          <a className="btn primary" href="/login">Open workspace</a>
         </div>
 
         <div className="grid-cards" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
           <article className="panel">
-            <p className="eyebrow">01 · Аудит</p>
-            <h3>Цепляем аудиторию с первых 3 секунд</h3>
-            <p className="muted">CustDev, карта возражений, сценарии для контента.</p>
+            <p className="eyebrow">01 · Audit</p>
+            <h3>Hook audience attention in the first 3 seconds</h3>
+            <p className="muted">CustDev, objections map, and content scenarios.</p>
           </article>
           <article className="panel">
-            <p className="eyebrow">02 · Запуск</p>
-            <h3>Плотная тестовая неделя</h3>
-            <p className="muted">10–15 связок креатив + оффер + лендинг.</p>
+            <p className="eyebrow">02 · Launch</p>
+            <h3>Intensive testing week</h3>
+            <p className="muted">10-15 creative + offer + landing combinations.</p>
           </article>
           <article className="panel">
-            <p className="eyebrow">03 · Масштаб</p>
-            <h3>Стабильные заявки и продажи</h3>
-            <p className="muted">Масштабируем только окупаемые каналы.</p>
+            <p className="eyebrow">03 · Scale</p>
+            <h3>Stable leads and sales</h3>
+            <p className="muted">Scale only ROI-positive channels.</p>
           </article>
         </div>
 
         <div className="form-grid" style={{ marginTop: 16 }}>
           <label className="field">
-            <span>Email для медиакита</span>
+            <span>Email for media kit</span>
             <input type="email" placeholder="you@example.com" />
           </label>
           <button
             className="btn ghost"
             type="button"
-            onClick={() => setMagnetStatus('Готово! Отправим PDF и чек-лист в течение нескольких минут.')}
+            onClick={() => setMagnetStatus('Done! We will send the PDF and checklist in a few minutes.')}
           >
-            Получить медиакит
+            Get media kit
           </button>
         </div>
         <p className="muted small">{magnetStatus}</p>
 
         <div className="form-grid" style={{ marginTop: 8 }}>
           <label className="field">
-            <span>Контакт для связи</span>
+            <span>Contact</span>
             <input type="text" placeholder="Telegram / WhatsApp" />
           </label>
           <button
             className="btn primary"
             type="button"
-            onClick={() => setCtaStatus('Заявка получена. Свяжемся в ближайшие 15 минут в мессенджере.')}
+            onClick={() => setCtaStatus('Request received. We will contact you in messenger within 15 minutes.')}
           >
-            Записаться на разбор
+            Book strategy call
           </button>
         </div>
         <p className="muted small">{ctaStatus}</p>

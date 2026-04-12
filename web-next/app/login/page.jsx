@@ -1,46 +1,42 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { apiFetch } from '../../lib/api'
 import { setAuth } from '../../lib/auth'
+import { useI18n } from '../../lib/i18n/client'
 import styles from './login.module.css'
 
 const ADMIN_EMAILS = new Set(['romant997@gmail.com', 'kolyadov.denis@gmail.com'])
 
-const FEATURES = [
-  {
-    icon: 'speed',
-    title: 'Real-time Financial Velocity',
-    text: 'Instant reconciliation for high-volume advertising spends.',
-  },
-  {
-    icon: 'verified_user',
-    title: 'Enterprise Governance',
-    text: 'Deep compliance monitoring and immutable audit logs.',
-  },
-  {
-    icon: 'architecture',
-    title: 'The Architectural Ledger',
-    text: 'Structured financial operations designed for scale.',
-  },
-]
-
 export default function LoginPage() {
   const router = useRouter()
+  const { locale, t } = useI18n()
   const [mode, setMode] = useState('login')
   const [pending, setPending] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [status, setStatus] = useState('Enter your credentials to access your ledger.')
+  const [status, setStatus] = useState(t('login.statusLogin'))
 
   const helperText = useMemo(
     () =>
       mode === 'login'
-        ? 'Enter your credentials to access your ledger.'
-        : 'Set a password for the invited email to activate access.',
-    [mode]
+        ? t('login.statusLogin')
+        : t('login.statusSetPassword'),
+    [mode, t]
   )
+  const features = useMemo(
+    () => [
+      { icon: 'speed', title: t('login.feature1Title'), text: t('login.feature1Text') },
+      { icon: 'verified_user', title: t('login.feature2Title'), text: t('login.feature2Text') },
+      { icon: 'architecture', title: t('login.feature3Title'), text: t('login.feature3Text') },
+    ],
+    [t]
+  )
+
+  useEffect(() => {
+    setStatus(mode === 'login' ? t('login.statusLogin') : t('login.statusSetPassword'))
+  }, [locale, mode, t])
 
   async function onLoginSubmit(event) {
     event.preventDefault()
@@ -49,12 +45,12 @@ export default function LoginPage() {
     const password = String(form.get('password') || '').trim()
 
     if (!email || !password) {
-      setStatus('Fill in both email and password.')
+      setStatus(t('login.fillEmailPassword'))
       return
     }
 
     setPending(true)
-    setStatus('Signing in...')
+    setStatus(t('login.signingIn'))
     try {
       const res = await apiFetch('/auth/login', {
         method: 'POST',
@@ -64,11 +60,11 @@ export default function LoginPage() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.detail || 'Could not sign in')
       setAuth(data)
-      setStatus('Access granted. Redirecting...')
+      setStatus(t('login.accessGranted'))
       const nextEmail = String(data?.email || email || '').toLowerCase()
       router.push(ADMIN_EMAILS.has(nextEmail) ? '/admin/requests' : '/dashboard')
     } catch (error) {
-      setStatus(error?.message || 'Could not sign in. Check your email and password.')
+      setStatus(error?.message || t('login.signInFailed'))
     } finally {
       setPending(false)
     }
@@ -82,16 +78,16 @@ export default function LoginPage() {
     const confirm = String(form.get('confirm_password') || '').trim()
 
     if (!email || !next) {
-      setStatus('Fill in email and new password.')
+      setStatus(t('login.fillEmailNewPassword'))
       return
     }
     if (next !== confirm) {
-      setStatus('Passwords do not match.')
+      setStatus(t('login.passwordsMismatch'))
       return
     }
 
     setPending(true)
-    setStatus('Saving password...')
+    setStatus(t('login.savingPassword'))
     try {
       const res = await apiFetch('/auth/set-password', {
         method: 'POST',
@@ -101,9 +97,9 @@ export default function LoginPage() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.detail || 'Could not set password')
       setMode('login')
-      setStatus('Password saved. You can sign in now.')
+      setStatus(t('login.passwordSaved'))
     } catch (error) {
-      setStatus(error?.message || 'Could not set password.')
+      setStatus(error?.message || t('login.passwordSetFailed'))
     } finally {
       setPending(false)
     }
@@ -118,11 +114,11 @@ export default function LoginPage() {
             Envidicy
           </Link>
 
-          <h1 className={styles.heroTitle}>Control your ad operations</h1>
-          <p className={styles.heroSubtitle}>Accounts, funding, planning and reporting in one place</p>
+          <h1 className={styles.heroTitle}>{t('login.heroTitle')}</h1>
+          <p className={styles.heroSubtitle}>{t('login.heroSubtitle')}</p>
 
           <div className={styles.featureList}>
-            {FEATURES.map((item) => (
+            {features.map((item) => (
               <div className={styles.feature} key={item.title}>
                 <span className={`material-symbols-outlined ${styles.featureIcon}`}>{item.icon}</span>
                 <div>
@@ -135,7 +131,7 @@ export default function LoginPage() {
         </div>
 
         <div className={styles.heroFooter}>
-          <span>Trusted by leading platforms</span>
+          <span>{t('login.trustedBy')}</span>
           <div className={styles.heroLine} />
         </div>
       </aside>
@@ -145,7 +141,7 @@ export default function LoginPage() {
           <span className={styles.mobileBrand}>Envidicy</span>
 
           <div className={styles.panelHead}>
-            <h2 className={styles.panelTitle}>{mode === 'login' ? 'Sign In' : 'Set Password'}</h2>
+            <h2 className={styles.panelTitle}>{mode === 'login' ? t('login.signIn') : t('login.setPassword')}</h2>
             <p className={styles.panelText}>{helperText}</p>
           </div>
 
@@ -153,12 +149,12 @@ export default function LoginPage() {
             {mode === 'login' ? (
               <form className={styles.form} onSubmit={onLoginSubmit}>
                 <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Email Address</span>
+                  <span className={styles.fieldLabel}>{t('login.emailAddress')}</span>
                   <input className={styles.fieldInput} name="email" type="email" placeholder="name@company.com" required />
                 </label>
 
                 <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Password</span>
+                  <span className={styles.fieldLabel}>{t('login.password')}</span>
                   <span className={styles.fieldInputWrap}>
                     <input
                       name="password"
@@ -170,7 +166,7 @@ export default function LoginPage() {
                       className={styles.visibilityButton}
                       type="button"
                       onClick={() => setShowPassword((value) => !value)}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
                     >
                       <span className="material-symbols-outlined">
                         {showPassword ? 'visibility_off' : 'visibility'}
@@ -180,29 +176,29 @@ export default function LoginPage() {
                 </label>
 
                 <button className={styles.submit} type="submit" disabled={pending}>
-                  <span>{pending ? 'Signing In...' : 'Sign In'}</span>
+                  <span>{pending ? t('login.signingIn') : t('login.signIn')}</span>
                   <span className="material-symbols-outlined">arrow_forward</span>
                 </button>
               </form>
             ) : (
               <form className={styles.form} onSubmit={onSetPasswordSubmit}>
                 <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Email Address</span>
+                  <span className={styles.fieldLabel}>{t('login.emailAddress')}</span>
                   <input className={styles.fieldInput} name="email" type="email" placeholder="name@company.com" required />
                 </label>
 
                 <label className={styles.field}>
-                  <span className={styles.fieldLabel}>New Password</span>
+                  <span className={styles.fieldLabel}>{t('login.newPassword')}</span>
                   <input className={styles.fieldInput} name="new_password" type="password" placeholder="••••••••" required />
                 </label>
 
                 <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Confirm Password</span>
+                  <span className={styles.fieldLabel}>{t('login.confirmPassword')}</span>
                   <input className={styles.fieldInput} name="confirm_password" type="password" placeholder="••••••••" required />
                 </label>
 
                 <button className={styles.submit} type="submit" disabled={pending}>
-                  <span>{pending ? 'Saving...' : 'Save Password'}</span>
+                  <span>{pending ? t('login.savingPassword') : t('login.savePassword')}</span>
                   <span className="material-symbols-outlined">arrow_forward</span>
                 </button>
               </form>
@@ -211,12 +207,12 @@ export default function LoginPage() {
 
           <div className={styles.bottomLinks}>
             <button type="button" onClick={() => setMode('set-password')}>
-              <span>Set password</span>
+              <span>{t('login.setPassword')}</span>
               <span className="material-symbols-outlined">chevron_right</span>
             </button>
             <span className={styles.dot} />
             <Link href="/register">
-              <span>Need access?</span>
+              <span>{t('login.needAccess')}</span>
               <span className="material-symbols-outlined">chevron_right</span>
             </Link>
           </div>

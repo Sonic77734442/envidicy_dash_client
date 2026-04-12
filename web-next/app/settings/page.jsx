@@ -46,11 +46,11 @@ export default function SettingsPage() {
 
   const visibleTabs = useMemo(
     () => [
-      { key: 'profile', label: 'Профиль' },
-      { key: 'security', label: 'Безопасность' },
-      ...(canManageAccesses ? [{ key: 'accesses', label: 'Доступы' }] : []),
-      { key: 'fees', label: 'Комиссии' },
-      { key: 'docs', label: 'Документы' },
+      { key: 'profile', label: 'Profile' },
+      { key: 'security', label: 'Security' },
+      ...(canManageAccesses ? [{ key: 'accesses', label: 'Accesses' }] : []),
+      { key: 'fees', label: 'Fees' },
+      { key: 'docs', label: 'Documents' },
     ],
     [canManageAccesses]
   )
@@ -83,7 +83,7 @@ export default function SettingsPage() {
       }))
       if (Boolean(data.can_manage_accesses)) loadAccesses()
     } catch {
-      setProfileStatus('Не удалось загрузить профиль.')
+      setProfileStatus('Failed to load profile.')
     }
   }
 
@@ -96,17 +96,17 @@ export default function SettingsPage() {
       const data = await res.json()
       setAccesses(Array.isArray(data.items) ? data.items : [])
     } catch {
-      setAccessStatus('Не удалось загрузить доступы.')
+      setAccessStatus('Failed to load accesses.')
     }
   }
 
   async function addAccess() {
     const email = accessEmail.trim().toLowerCase()
     if (!email) {
-      setAccessStatus('Укажите email.')
+      setAccessStatus('Enter an email.')
       return
     }
-    setAccessStatus('Добавление доступа...')
+    setAccessStatus('Adding access...')
     try {
       const res = await safeFetch('/profile/accesses', {
         method: 'POST',
@@ -116,30 +116,30 @@ export default function SettingsPage() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.detail || 'create access failed')
       setAccessEmail('')
-      setAccessStatus('Доступ добавлен. Дополнительный email может задать пароль на странице входа.')
+      setAccessStatus('Access added. Secondary email can set a password on the login page.')
       await loadAccesses()
     } catch (e) {
-      setAccessStatus(e?.message || 'Не удалось добавить доступ.')
+      setAccessStatus(e?.message || 'Failed to add access.')
     }
   }
 
   async function deleteAccess(id) {
     if (!id) return
-    if (!window.confirm('Удалить этот дополнительный доступ?')) return
-    setAccessStatus('Удаление доступа...')
+    if (!window.confirm('Delete this secondary access?')) return
+    setAccessStatus('Removing access...')
     try {
       const res = await safeFetch(`/profile/accesses/${id}`, { method: 'DELETE' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.detail || 'delete access failed')
-      setAccessStatus('Доступ удален.')
+      setAccessStatus('Access removed.')
       await loadAccesses()
     } catch (e) {
-      setAccessStatus(e?.message || 'Не удалось удалить доступ.')
+      setAccessStatus(e?.message || 'Failed to remove access.')
     }
   }
 
   async function saveProfile() {
-    setProfileStatus('Сохранение...')
+    setProfileStatus('Saving...')
     try {
       const res = await safeFetch('/profile', {
         method: 'PUT',
@@ -153,18 +153,18 @@ export default function SettingsPage() {
         }),
       })
       if (!res.ok) throw new Error('save failed')
-      setProfileStatus('Профиль сохранен.')
+      setProfileStatus('Profile saved.')
     } catch {
-      setProfileStatus('Не удалось сохранить изменения.')
+      setProfileStatus('Failed to save changes.')
     }
   }
 
   async function uploadAvatar() {
     if (!avatarFile) {
-      setAvatarStatus('Выберите файл.')
+      setAvatarStatus('Choose a file.')
       return
     }
-    setAvatarStatus('Загрузка...')
+    setAvatarStatus('Uploading...')
     const form = new FormData()
     form.append('file', avatarFile)
     try {
@@ -175,9 +175,9 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error('upload failed')
       const data = await res.json()
       setProfile((prev) => ({ ...prev, avatar_url: data.avatar_url || prev.avatar_url }))
-      setAvatarStatus('Фото обновлено.')
+      setAvatarStatus('Avatar updated.')
     } catch {
-      setAvatarStatus('Не удалось загрузить фото.')
+      setAvatarStatus('Failed to upload avatar.')
     }
   }
 
@@ -187,15 +187,15 @@ export default function SettingsPage() {
     const confirm = passwordState.confirm_password.trim()
 
     if (!current || !next) {
-      setPasswordStatus('Заполните текущий и новый пароль.')
+      setPasswordStatus('Fill current and new password.')
       return
     }
     if (next !== confirm) {
-      setPasswordStatus('Пароли не совпадают.')
+      setPasswordStatus('Passwords do not match.')
       return
     }
 
-    setPasswordStatus('Изменение пароля...')
+    setPasswordStatus('Changing password...')
     try {
       const res = await safeFetch('/auth/change-password', {
         method: 'POST',
@@ -210,9 +210,9 @@ export default function SettingsPage() {
       }
 
       setPasswordState({ current_password: '', new_password: '', confirm_password: '' })
-      setPasswordStatus('Пароль изменен.')
+      setPasswordStatus('Password changed.')
     } catch {
-      setPasswordStatus('Не удалось изменить пароль.')
+      setPasswordStatus('Failed to change password.')
     }
   }
 
@@ -236,7 +236,7 @@ export default function SettingsPage() {
       setDocsStatus('')
     } catch {
       setDocuments([])
-      setDocsStatus('Не удалось загрузить документы.')
+      setDocsStatus('Failed to load documents.')
     }
   }
 
@@ -255,15 +255,15 @@ export default function SettingsPage() {
   return (
     <AppShell
       eyebrow="Envidicy · Profile"
-      title="Настройки"
-      subtitle="Обновите профиль, безопасность и документы."
+      title="Settings"
+      subtitle="Update profile, security, and documents."
     >
 
       <section className="panel">
         <div className="panel-head">
           <div>
-            <p className="eyebrow">Профиль</p>
-            <h2>Настройки аккаунта</h2>
+            <p className="eyebrow">Profile</p>
+            <h2>Account settings</h2>
           </div>
           <span className="chip chip-ghost">Private</span>
         </div>
@@ -289,18 +289,18 @@ export default function SettingsPage() {
                 </div>
                 <div className="avatar-actions">
                   <input type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files?.[0] || null)} />
-                  <button className="btn ghost" onClick={uploadAvatar} type="button">Загрузить фото</button>
+                  <button className="btn ghost" onClick={uploadAvatar} type="button">Upload avatar</button>
                   <p className="muted small">{avatarStatus}</p>
                 </div>
               </div>
 
               <div className="form-grid">
                 <label className="field">
-                  <span>Имя</span>
+                  <span>Name</span>
                   <input value={profile.name} onChange={(e) => setProfile((s) => ({ ...s, name: e.target.value }))} type="text" />
                 </label>
                 <label className="field">
-                  <span>Компания</span>
+                  <span>Company</span>
                   <input value={profile.company} onChange={(e) => setProfile((s) => ({ ...s, company: e.target.value }))} type="text" />
                 </label>
                 <label className="field">
@@ -308,9 +308,9 @@ export default function SettingsPage() {
                   <input value={profile.email} type="email" disabled />
                 </label>
                 <label className="field">
-                  <span>Язык</span>
+                  <span>Language</span>
                   <select value={profile.language} onChange={(e) => setProfile((s) => ({ ...s, language: e.target.value }))}>
-                    <option value="ru">Русский</option>
+                    <option value="ru">Russian</option>
                     <option value="en">English</option>
                   </select>
                 </label>
@@ -324,7 +324,7 @@ export default function SettingsPage() {
                 </label>
               </div>
               <div className="panel-actions">
-                <button className="btn primary" onClick={saveProfile} type="button">Сохранить</button>
+                <button className="btn primary" onClick={saveProfile} type="button">Save</button>
               </div>
               <p className="muted small">{profileStatus}</p>
             </div>
@@ -334,20 +334,20 @@ export default function SettingsPage() {
             <div className="tab-panel active">
               <div className="form-grid">
                 <label className="field">
-                  <span>Текущий пароль</span>
+                  <span>Current password</span>
                   <input type="password" value={passwordState.current_password} onChange={(e) => setPasswordState((s) => ({ ...s, current_password: e.target.value }))} />
                 </label>
                 <label className="field">
-                  <span>Новый пароль</span>
+                  <span>New password</span>
                   <input type="password" value={passwordState.new_password} onChange={(e) => setPasswordState((s) => ({ ...s, new_password: e.target.value }))} />
                 </label>
                 <label className="field">
-                  <span>Повторите пароль</span>
+                  <span>Confirm password</span>
                   <input type="password" value={passwordState.confirm_password} onChange={(e) => setPasswordState((s) => ({ ...s, confirm_password: e.target.value }))} />
                 </label>
               </div>
               <div className="panel-actions">
-                <button className="btn primary" onClick={changePassword} type="button">Изменить пароль</button>
+                <button className="btn primary" onClick={changePassword} type="button">Change password</button>
               </div>
               <p className="muted small">{passwordStatus}</p>
             </div>
@@ -357,29 +357,29 @@ export default function SettingsPage() {
             <div className="tab-panel active">
               <div className="form-grid access-row">
                 <label className="field">
-                  <span>Дополнительный email</span>
+                  <span>Secondary email</span>
                   <input value={accessEmail} onChange={(e) => setAccessEmail(e.target.value)} type="email" placeholder="team@company.com" />
                 </label>
               </div>
               <div className="panel-actions">
-                <button className="btn primary" onClick={addAccess} type="button">Добавить доступ</button>
+                <button className="btn primary" onClick={addAccess} type="button">Add access</button>
               </div>
-              <p className="muted small">Добавленный email сможет войти в этот же кабинет после установки пароля на странице входа.</p>
+              <p className="muted small">Added email can access the same workspace after setting a password on the login page.</p>
               <p className="muted small">{accessStatus}</p>
               <div className="table-wrapper">
                 <table className="table">
                   <thead>
                     <tr>
                       <th>Email</th>
-                      <th>Роль</th>
-                      <th>Статус</th>
-                      <th style={{ textAlign: 'right' }}>Действие</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'right' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {!accesses.length ? (
                       <tr>
-                        <td colSpan={4} className="muted">Дополнительных доступов пока нет.</td>
+                        <td colSpan={4} className="muted">No secondary accesses yet.</td>
                       </tr>
                     ) : (
                       accesses.map((row) => {
@@ -387,13 +387,13 @@ export default function SettingsPage() {
                         return (
                           <tr key={row.id}>
                             <td>{row.email || '?'}</td>
-                            <td>{isOwner ? 'Владелец' : 'Дополнительный'}</td>
-                            <td>{row.status === 'active' ? 'Активен' : row.status || '?'}</td>
+                            <td>{isOwner ? 'Owner' : 'Secondary'}</td>
+                            <td>{row.status === 'active' ? 'Active' : row.status || '?'}</td>
                             <td style={{ textAlign: 'right' }}>
                               {isOwner ? (
-                                <span className="muted small">Нельзя удалить</span>
+                                <span className="muted small">Cannot delete</span>
                               ) : (
-                                <button className="btn ghost" onClick={() => deleteAccess(row.id)} type="button">Удалить</button>
+                                <button className="btn ghost" onClick={() => deleteAccess(row.id)} type="button">Delete</button>
                               )}
                             </td>
                           </tr>
@@ -412,21 +412,21 @@ export default function SettingsPage() {
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Платформа</th>
-                      <th>Комиссия</th>
-                      <th>Комментарий</th>
+                      <th>Platform</th>
+                      <th>Fee</th>
+                      <th>Note</th>
                     </tr>
                   </thead>
                   <tbody>
                     {fees?.__error ? (
                       <tr>
-                        <td colSpan={3} className="muted">Не удалось загрузить комиссии.</td>
+                        <td colSpan={3} className="muted">Failed to load fees.</td>
                       </tr>
                     ) : (
                       [
                         { key: 'meta', platform: 'Meta', note: 'Facebook / Instagram' },
                         { key: 'google', platform: 'Google Ads', note: 'Search / Display / YouTube' },
-                        { key: 'yandex', platform: 'Яндекс Директ', note: 'Поиск / СЕТИ' },
+                        { key: 'yandex', platform: 'Yandex Direct', note: 'Search / Network' },
                         { key: 'tiktok', platform: 'TikTok Ads', note: 'Video' },
                         { key: 'telegram', platform: 'Telegram Ads', note: 'Channels / Bots' },
                         { key: 'monochrome', platform: 'Monochrome', note: 'Programmatic' },
@@ -445,21 +445,21 @@ export default function SettingsPage() {
                   </tbody>
                 </table>
               </div>
-              <p className="muted small">Комиссии показываются для отдельных рекламных платформ.</p>
+              <p className="muted small">Fees are shown per advertising platform.</p>
             </div>
           ) : null}
 
           {tab === 'docs' ? (
             <div className="tab-panel active">
               {docsStatus ? <div className="notice">{docsStatus}</div> : null}
-              {!documents.length ? <div className="notice">Документы пока не загружены.</div> : null}
+              {!documents.length ? <div className="notice">No documents uploaded yet.</div> : null}
               <div className="table-wrapper">
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Документ</th>
-                      <th>Дата</th>
-                      <th style={{ textAlign: 'right' }}>Действие</th>
+                      <th>Document</th>
+                      <th>Date</th>
+                      <th style={{ textAlign: 'right' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -471,7 +471,7 @@ export default function SettingsPage() {
                           <td>{row.title}</td>
                           <td>{String(row.created_at || '').split(' ')[0] || '?'}</td>
                           <td style={{ textAlign: 'right' }}>
-                            <a className="btn ghost" href={url} target="_blank" rel="noopener">Скачать</a>
+                            <a className="btn ghost" href={url} target="_blank" rel="noopener">Download</a>
                           </td>
                         </tr>
                       )

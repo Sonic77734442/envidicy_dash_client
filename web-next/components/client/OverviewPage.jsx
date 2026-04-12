@@ -8,6 +8,7 @@ import ClientShell from './ClientShell'
 import FundingModal from './FundingModal'
 import styles from './client.module.css'
 import { getAuthToken } from '../../lib/auth'
+import { useI18n } from '../../lib/i18n/client'
 
 const FALLBACK_METRICS = [
   { label: 'Available Balance', value: '$142,850', hint: 'Ready for allocation', tone: 'good' },
@@ -99,6 +100,7 @@ function MetricCard({ card }) {
 
 export default function OverviewPage() {
   const router = useRouter()
+  const { tr } = useI18n()
   const [loading, setLoading] = useState(true)
   const [metrics, setMetrics] = useState(FALLBACK_METRICS)
   const [pendingSummary, setPendingSummary] = useState({ approvals: 0, funding: 0, documents: 0, total: 0 })
@@ -109,7 +111,7 @@ export default function OverviewPage() {
   const [requests, setRequests] = useState(FALLBACK_REQUESTS)
   const [alerts, setAlerts] = useState(FALLBACK_ALERTS)
   const [mediaPlan, setMediaPlan] = useState(DEFAULT_MEDIA_PLAN)
-  const [statusAlerts, setStatusAlerts] = useState('2 Alerts')
+  const [statusAlerts, setStatusAlerts] = useState(tr('2 Alerts', '2 уведомления'))
   const [statusRows, setStatusRows] = useState([
     { icon: '$', label: 'USD/KZT 471.2' },
     { icon: '€', label: 'EUR/USD 1.08' },
@@ -185,7 +187,7 @@ export default function OverviewPage() {
         router.replace('/login')
         return
       }
-      if (!res.ok) throw new Error('Failed to load overview')
+      if (!res.ok) throw new Error(tr('Failed to load overview', 'Не удалось загрузить overview'))
       const payload = await res.json()
       if (Array.isArray(payload.metrics) && payload.metrics.length) setMetrics(payload.metrics)
       if (payload.pending) setPendingSummary(payload.pending)
@@ -211,11 +213,11 @@ export default function OverviewPage() {
 
   const pendingHint = useMemo(() => {
     const parts = []
-    if (pendingSummary.approvals) parts.push(`${pendingSummary.approvals} approvals`)
-    if (pendingSummary.funding) parts.push(`${pendingSummary.funding} funding`)
-    if (pendingSummary.documents) parts.push(`${pendingSummary.documents} docs`)
-    return parts.join(' · ') || 'No client actions pending'
-  }, [pendingSummary])
+    if (pendingSummary.approvals) parts.push(`${pendingSummary.approvals} ${tr('approvals', 'согласований')}`)
+    if (pendingSummary.funding) parts.push(`${pendingSummary.funding} ${tr('funding', 'пополнений')}`)
+    if (pendingSummary.documents) parts.push(`${pendingSummary.documents} ${tr('docs', 'документов')}`)
+    return parts.join(' · ') || tr('No client actions pending', 'Нет ожидающих действий клиента')
+  }, [pendingSummary, tr])
 
   const displayMetrics = useMemo(
     () =>
@@ -292,14 +294,14 @@ export default function OverviewPage() {
   return (
     <ClientShell
       activeNav="overview"
-      pageTitle="Overview"
-      pageSubtitle="Track your balances, account status, approvals and media plan progress."
-      pageActionLabel="Request Account"
+      pageTitle={tr('Overview', 'Обзор')}
+      pageSubtitle={tr('Track your balances, account status, approvals and media plan progress.', 'Отслеживайте балансы, статусы аккаунтов, согласования и прогресс медиаплана.')}
+      pageActionLabel={tr('Request Account', 'Запросить аккаунт')}
       pageActionOnClick={() => setAccountRequestOpen(true)}
-      headerActionLabel="Create Request"
+      headerActionLabel={tr('Create Request', 'Создать запрос')}
       headerActionOnClick={() => setAccountRequestOpen(true)}
-      entityLabel="Entity Switcher"
-      statusAlerts={loading ? 'Loading…' : statusAlerts}
+      entityLabel={tr('Entity Switcher', 'Переключатель юрлица')}
+      statusAlerts={loading ? tr('Loading…', 'Загрузка…') : statusAlerts}
       statusRows={statusRows}
     >
       <section className={styles.cardGrid4}>
@@ -311,19 +313,19 @@ export default function OverviewPage() {
       <section className={styles.sectionCard} id="accounts-overview">
         <div className={styles.sectionHeader}>
           <div>
-            <h3 className={styles.sectionTitle}>Ad Accounts Overview</h3>
+            <h3 className={styles.sectionTitle}>{tr('Ad Accounts Overview', 'Обзор рекламных аккаунтов')}</h3>
             <div className={styles.tagRow}>
-              <span className={styles.tag}>{accountTags.active} Active</span>
-              <span className={styles.tagDanger}>{accountTags.warn} Need Attention</span>
-              <span className={styles.tagMuted}>{accountTags.pending} Setup Pending</span>
+              <span className={styles.tag}>{accountTags.active} {tr('Active', 'Активны')}</span>
+              <span className={styles.tagDanger}>{accountTags.warn} {tr('Need Attention', 'Требуют внимания')}</span>
+              <span className={styles.tagMuted}>{accountTags.pending} {tr('Setup Pending', 'Ожидают настройки')}</span>
             </div>
           </div>
           <div className={styles.headerControls}>
             <button className={styles.headerPrimaryAction} onClick={() => setAccountRequestOpen(true)} type="button">
-              New Account Request
+              {tr('New Account Request', 'Новый запрос на аккаунт')}
             </button>
             <Link className={styles.outlinedAction} href="/funds">
-              View All Accounts
+              {tr('View All Accounts', 'Все аккаунты')}
             </Link>
           </div>
         </div>
@@ -353,13 +355,13 @@ export default function OverviewPage() {
             </colgroup>
             <thead>
               <tr>
-                <th>Account</th>
-                <th>Platform</th>
-                <th>Status</th>
-                <th>Balance</th>
-                <th>Spend</th>
-                <th>Note</th>
-                <th>Action</th>
+                <th>{tr('Account', 'Аккаунт')}</th>
+                <th>{tr('Platform', 'Платформа')}</th>
+                <th>{tr('Status', 'Статус')}</th>
+                <th>{tr('Balance', 'Баланс')}</th>
+                <th>{tr('Spend', 'Расход')}</th>
+                <th>{tr('Note', 'Комментарий')}</th>
+                <th>{tr('Action', 'Действие')}</th>
               </tr>
             </thead>
             <tbody>
@@ -400,7 +402,7 @@ export default function OverviewPage() {
                         className={styles.accountIconButton}
                         disabled={!row.accountId}
                         onClick={() => openFundingModal(row.accountId)}
-                        title="Top up account"
+                        title={tr('Top up account', 'Пополнить аккаунт')}
                         type="button"
                       >
                         ₸
@@ -408,7 +410,7 @@ export default function OverviewPage() {
                       <button
                         className={styles.accountIconButton}
                         onClick={() => openAccountDashboard(row.accountId)}
-                        title="Open dashboard"
+                        title={tr('Open dashboard', 'Открыть дашборд')}
                         type="button"
                       >
                         □
@@ -417,7 +419,7 @@ export default function OverviewPage() {
                         className={styles.accountIconButton}
                         disabled={!row.accountId || refreshingAccountId === String(row.accountId)}
                         onClick={() => handleOverviewAction('refresh', row.accountId)}
-                        title="Refresh budgets"
+                        title={tr('Refresh budgets', 'Обновить бюджеты')}
                         type="button"
                       >
                         {refreshingAccountId === String(row.accountId) ? '…' : '↻'}
@@ -435,23 +437,23 @@ export default function OverviewPage() {
         <article className={`${styles.sectionCard} ${styles.chartCard}`}>
           <div className={styles.sectionHeader}>
             <div>
-              <h3 className={styles.sectionTitle}>Spend vs Completed Funding</h3>
+              <h3 className={styles.sectionTitle}>{tr('Spend vs Completed Funding', 'Расход vs Завершенные пополнения')}</h3>
               <p className={styles.chartInsight}>{capitalFlow.insight}</p>
             </div>
-            <div className={styles.outlinedAction}>Last 30 Days</div>
+            <div className={styles.outlinedAction}>{tr('Last 30 Days', 'Последние 30 дней')}</div>
           </div>
 
           <div className={styles.chartMetrics}>
             <div className={styles.chartMetric}>
-              <span>Spend</span>
+              <span>{tr('Spend', 'Расход')}</span>
               <strong>{capitalFlow.spend}</strong>
             </div>
             <div className={styles.chartMetric}>
-              <span>Top-ups</span>
+              <span>{tr('Top-ups', 'Пополнения')}</span>
               <strong>{capitalFlow.topups}</strong>
             </div>
             <div className={styles.chartMetric}>
-              <span>Net Flow</span>
+              <span>{tr('Net Flow', 'Чистый поток')}</span>
               <strong>{capitalFlow.net}</strong>
             </div>
           </div>
@@ -471,47 +473,48 @@ export default function OverviewPage() {
           {capitalFlow.topups === '$0' ? (
             <div className={styles.chartEmptyNote}>
               No completed account funding was recorded during this period. Blue bars show spend only.
+              
             </div>
           ) : null}
 
           <div className={styles.chartLegend}>
             <span>
               <span className={styles.legendDotSoft} />
-              Completed Funding
+              {tr('Completed Funding', 'Завершенные пополнения')}
             </span>
             <span>
               <span className={styles.legendDot} />
-              Spend
+              {tr('Spend', 'Расход')}
             </span>
           </div>
         </article>
 
         <div className={styles.rightStack}>
           <article className={styles.smallCard}>
-            <h3 className={styles.smallTitle}>Current Media Plan</h3>
+            <h3 className={styles.smallTitle}>{tr('Current Media Plan', 'Текущий медиаплан')}</h3>
             <div className={styles.detailList}>
               <div className={styles.detailRow}>
-                <span>Status</span>
+                <span>{tr('Status', 'Статус')}</span>
                 <strong>{mediaPlan.status}</strong>
               </div>
               <div className={styles.detailRow}>
-                <span>Budget runway</span>
+                <span>{tr('Budget runway', 'Запас бюджета')}</span>
                 <strong>{mediaPlan.budgetRunway}</strong>
               </div>
               <div className={styles.detailRow}>
-                <span>Last updated</span>
+                <span>{tr('Last updated', 'Последнее обновление')}</span>
                 <strong>{mediaPlan.lastUpdated}</strong>
               </div>
             </div>
             <div style={{ marginTop: 16 }}>
               <Link className={styles.outlinedAction} href="/plan">
-                {mediaPlan.empty ? 'Create Plan' : 'View Plan'}
+                {mediaPlan.empty ? tr('Create Plan', 'Создать план') : tr('View Plan', 'Открыть план')}
               </Link>
             </div>
           </article>
 
           <article className={styles.smallCard}>
-            <h3 className={styles.smallTitle}>Important Alerts</h3>
+            <h3 className={styles.smallTitle}>{tr('Important Alerts', 'Важные уведомления')}</h3>
             <div className={styles.alertList}>
               {alerts.map((item) => (
                 <div className={styles.alertItem} key={item.id || item.title}>
@@ -536,7 +539,7 @@ export default function OverviewPage() {
         <article className={styles.sectionCard}>
           <div className={styles.sectionHeader}>
             <div>
-              <h3 className={styles.sectionTitle}>Recent Activity</h3>
+              <h3 className={styles.sectionTitle}>{tr('Recent Activity', 'Недавняя активность')}</h3>
             </div>
           </div>
           <div className={styles.feedList}>
@@ -566,10 +569,10 @@ export default function OverviewPage() {
         <article className={styles.sectionCard}>
           <div className={styles.sectionHeader}>
             <div>
-              <h3 className={styles.sectionTitle}>Pending Requests</h3>
+              <h3 className={styles.sectionTitle}>{tr('Pending Requests', 'Ожидающие запросы')}</h3>
             </div>
             <Link className={styles.linkAction} href="#">
-              View All
+              {tr('View All', 'Смотреть все')}
             </Link>
           </div>
           <div className={styles.requestList}>

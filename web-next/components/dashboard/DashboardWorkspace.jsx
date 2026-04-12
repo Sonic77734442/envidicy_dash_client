@@ -58,7 +58,7 @@ function PlatformBlock({
         <input className="field-input" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} {...dateProps} />
         <input className="field-input" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} {...dateProps} />
         <select className="field-input" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-          <option value="">Все аккаунты</option>
+          <option value="">All accounts</option>
           {accounts.map((acc) => (
             <option key={acc.id} value={String(acc.id)}>
               {acc.name || `ID ${acc.id}`}
@@ -67,7 +67,7 @@ function PlatformBlock({
           ))}
         </select>
         <button className="btn primary" disabled={pending} onClick={onLoad} type="button">
-          {pending ? 'Загрузка...' : 'Обновить'}
+          {pending ? 'Loading...' : 'Refresh'}
         </button>
       </div>
 
@@ -85,7 +85,7 @@ function PlatformBlock({
         <table className="table">
           <thead>
             <tr>
-              <th>Кампания</th>
+              <th>Campaign</th>
               <th>Spend</th>
               <th>CTR</th>
               <th>CPC</th>
@@ -98,7 +98,7 @@ function PlatformBlock({
           <tbody>
             {!rows.length ? (
               <tr>
-                <td colSpan={8}>Нет данных</td>
+                <td colSpan={8}>No data</td>
               </tr>
             ) : (
               rows.slice(0, 30).map((row, idx) => (
@@ -127,7 +127,7 @@ function Donut({ items, size = 220, centerTop = 'Impr', centerBottom = '' }) {
   const radius = 13
   const stroke = 6
   const total = items.reduce((s, i) => s + i.value, 0)
-  if (!total) return <div className="muted">Нет данных</div>
+  if (!total) return <div className="muted">No data</div>
 
   const circumference = 2 * Math.PI * radius
   let offset = 0
@@ -163,7 +163,7 @@ function Donut({ items, size = 220, centerTop = 'Impr', centerBottom = '' }) {
 
 function RingList({ totals }) {
   const totalSpend = Object.keys(PALETTE).reduce((sum, key) => sum + Number(totals?.[key]?.spend || 0), 0)
-  if (!totalSpend) return <div className="muted">Нет данных</div>
+  if (!totalSpend) return <div className="muted">No data</div>
 
   return (
     <div className="ring-grid">
@@ -198,7 +198,7 @@ function RingList({ totals }) {
 }
 
 function LineChart({ series }) {
-  if (!series.length) return <div className="muted">Нет данных</div>
+  if (!series.length) return <div className="muted">No data</div>
   const width = 720
   const height = 220
   const pad = 24
@@ -255,16 +255,16 @@ function LineChart({ series }) {
         </div>
       ) : null}
       <div className="legend">
-        <div className="legend-item"><span><span className="legend-dot legend-dot-spend" />Spend (итого)</span><span>{formatMoney(totalSpend)}</span></div>
-        <div className="legend-item"><span><span className="legend-dot legend-dot-clicks" />Clicks (итого)</span><span>{formatInt(totalClicks)}</span></div>
-        <div className="legend-item"><span className="muted">Общая шкала</span></div>
+        <div className="legend-item"><span><span className="legend-dot legend-dot-spend" />Spend (total)</span><span>{formatMoney(totalSpend)}</span></div>
+        <div className="legend-item"><span><span className="legend-dot legend-dot-clicks" />Clicks (total)</span><span>{formatInt(totalClicks)}</span></div>
+        <div className="legend-item"><span className="muted">Common scale</span></div>
       </div>
     </div>
   )
 }
 
 function AccountMetricChart({ series, metricLabel, metricType }) {
-  if (!series.length) return <div className="muted">Нет данных</div>
+  if (!series.length) return <div className="muted">No data</div>
   const width = 720
   const height = 220
   const pad = 24
@@ -319,7 +319,7 @@ function AccountMetricChart({ series, metricLabel, metricType }) {
         </div>
       ) : null}
       <div className="legend">
-        <div className="legend-item"><span>{metricLabel} (итого)</span><span>{valueText}</span></div>
+        <div className="legend-item"><span>{metricLabel} (total)</span><span>{valueText}</span></div>
       </div>
     </div>
   )
@@ -348,11 +348,11 @@ export default function DashboardWorkspace() {
   const [vizGoogleAccount, setVizGoogleAccount] = useState('')
   const [vizTiktokAccount, setVizTiktokAccount] = useState('')
 
-  const [meta, setMeta] = useState({ status: 'Ожидание загрузки', summary: {}, rows: [], pending: false })
-  const [google, setGoogle] = useState({ status: 'Ожидание загрузки', summary: {}, rows: [], pending: false })
-  const [tiktok, setTiktok] = useState({ status: 'Ожидание загрузки', summary: {}, rows: [], pending: false })
+  const [meta, setMeta] = useState({ status: 'Waiting for load', summary: {}, rows: [], pending: false })
+  const [google, setGoogle] = useState({ status: 'Waiting for load', summary: {}, rows: [], pending: false })
+  const [tiktok, setTiktok] = useState({ status: 'Waiting for load', summary: {}, rows: [], pending: false })
 
-  const [overview, setOverview] = useState({ status: 'Ожидание загрузки', totals: {}, daily: {}, daily_by_account: {} })
+  const [overview, setOverview] = useState({ status: 'Waiting for load', totals: {}, daily: {}, daily_by_account: {} })
   const [accountTrendPlatform, setAccountTrendPlatform] = useState('meta')
   const [accountTrendAccountId, setAccountTrendAccountId] = useState('')
   const [accountTrendMetric, setAccountTrendMetric] = useState('impressions')
@@ -433,7 +433,7 @@ export default function DashboardWorkspace() {
   }, [vizDateFrom, vizDateTo, accountTrendAccounts, accountTrendAccountId, accountTrendMetric])
 
   const accountTrendMetricLabel =
-    accountTrendMetric === 'clicks' ? 'Клики' : accountTrendMetric === 'spend' ? 'Расход' : 'Показы'
+    accountTrendMetric === 'clicks' ? 'Clicks' : accountTrendMetric === 'spend' ? 'Spend' : 'Impressions'
 
   function authHeaders() {
     const token = getAuthToken()
@@ -480,7 +480,7 @@ export default function DashboardWorkspace() {
       const res = await safeFetch(`/dashboard/export/pdf?${params.toString()}`)
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err?.detail || 'Не удалось сформировать PDF')
+        throw new Error(err?.detail || 'Failed to generate PDF')
       }
       const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
@@ -492,7 +492,7 @@ export default function DashboardWorkspace() {
       link.remove()
       window.URL.revokeObjectURL(url)
     } catch (e) {
-      alert(e?.message || 'Не удалось сформировать PDF')
+      alert(e?.message || 'Failed to generate PDF')
     } finally {
       setExportPending(false)
     }
@@ -528,18 +528,18 @@ export default function DashboardWorkspace() {
 
   async function loadAccounts() {
     try {
-      setAccountsStatus('Загрузка аккаунтов...')
+      setAccountsStatus('Loading accounts...')
       const res = await safeFetch('/accounts')
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err?.detail || `Не удалось загрузить аккаунты (${res.status})`)
+        throw new Error(err?.detail || `Failed to load accounts (${res.status})`)
       }
       const data = await res.json()
       setAccounts(Array.isArray(data) ? data : [])
-      setAccountsStatus('Аккаунты загружены.')
+      setAccountsStatus('Accounts loaded.')
     } catch (e) {
       setAccounts([])
-      setAccountsStatus(e?.message || 'Ошибка загрузки аккаунтов.')
+      setAccountsStatus(e?.message || 'Failed to load accounts.')
       setMeta((s) => ({ ...s, status: e?.message || s.status }))
       setGoogle((s) => ({ ...s, status: e?.message || s.status }))
       setTiktok((s) => ({ ...s, status: e?.message || s.status }))
@@ -556,49 +556,49 @@ export default function DashboardWorkspace() {
 
   async function loadMeta() {
     if (!metaDateFrom || !metaDateTo) return
-    setMeta((s) => ({ ...s, pending: true, status: 'Загрузка...' }))
+    setMeta((s) => ({ ...s, pending: true, status: 'Loading...' }))
     try {
       const res = await safeFetch(`/meta/insights?${buildParams(metaAccount, metaDateFrom, metaDateTo).toString()}`)
-      if (!res.ok) throw new Error('Ошибка загрузки Meta Insights')
+      if (!res.ok) throw new Error('Failed to load Meta Insights')
       const data = await res.json()
-      setMeta({ pending: false, status: 'Данные обновлены.', summary: data.summary || {}, rows: data.campaigns || [] })
+      setMeta({ pending: false, status: 'Data updated.', summary: data.summary || {}, rows: data.campaigns || [] })
     } catch (e) {
-      setMeta({ pending: false, status: e?.message || 'Ошибка загрузки Meta Insights', summary: {}, rows: [] })
+      setMeta({ pending: false, status: e?.message || 'Failed to load Meta Insights', summary: {}, rows: [] })
     }
   }
 
   async function loadGoogle() {
     if (!googleDateFrom || !googleDateTo) return
-    setGoogle((s) => ({ ...s, pending: true, status: 'Загрузка...' }))
+    setGoogle((s) => ({ ...s, pending: true, status: 'Loading...' }))
     try {
       const res = await safeFetch(`/google/insights?${buildParams(googleAccount, googleDateFrom, googleDateTo).toString()}`)
-      if (!res.ok) throw new Error('Ошибка загрузки Google Ads')
+      if (!res.ok) throw new Error('Failed to load Google Ads')
       const data = await res.json()
-      setGoogle({ pending: false, status: 'Данные обновлены.', summary: data.summary || {}, rows: data.campaigns || [] })
+      setGoogle({ pending: false, status: 'Data updated.', summary: data.summary || {}, rows: data.campaigns || [] })
     } catch (e) {
-      setGoogle({ pending: false, status: e?.message || 'Ошибка загрузки Google Ads', summary: {}, rows: [] })
+      setGoogle({ pending: false, status: e?.message || 'Failed to load Google Ads', summary: {}, rows: [] })
     }
   }
 
   async function loadTiktok() {
     if (!tiktokDateFrom || !tiktokDateTo) return
-    setTiktok((s) => ({ ...s, pending: true, status: 'Загрузка...' }))
+    setTiktok((s) => ({ ...s, pending: true, status: 'Loading...' }))
     try {
       const res = await safeFetch(`/tiktok/insights?${buildParams(tiktokAccount, tiktokDateFrom, tiktokDateTo).toString()}`)
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err?.detail || 'Ошибка загрузки TikTok Ads')
+        throw new Error(err?.detail || 'Failed to load TikTok Ads')
       }
       const data = await res.json()
-      setTiktok({ pending: false, status: 'Данные обновлены.', summary: data.summary || {}, rows: data.campaigns || [] })
+      setTiktok({ pending: false, status: 'Data updated.', summary: data.summary || {}, rows: data.campaigns || [] })
     } catch (e) {
-      setTiktok({ pending: false, status: e?.message || 'Ошибка загрузки TikTok Ads', summary: {}, rows: [] })
+      setTiktok({ pending: false, status: e?.message || 'Failed to load TikTok Ads', summary: {}, rows: [] })
     }
   }
 
   async function loadOverview() {
     if (!vizDateFrom || !vizDateTo) return
-    setOverview((s) => ({ ...s, status: 'Загрузка отчета...' }))
+    setOverview((s) => ({ ...s, status: 'Loading overview...' }))
     const params = new URLSearchParams()
     params.set('date_from', vizDateFrom)
     params.set('date_to', vizDateTo)
@@ -607,16 +607,16 @@ export default function DashboardWorkspace() {
     if (vizTiktokAccount || tiktokAccount) params.set('tiktok_account_id', vizTiktokAccount || tiktokAccount)
     try {
       const res = await safeFetch(`/insights/overview?${params.toString()}`)
-      if (!res.ok) throw new Error('Ошибка загрузки overview')
+      if (!res.ok) throw new Error('Failed to load overview')
       const data = await res.json()
       setOverview({
-        status: 'Отчет обновлен.',
+        status: 'Overview updated.',
         totals: data.totals || {},
         daily: data.daily || {},
         daily_by_account: data.daily_by_account || {},
       })
     } catch (e) {
-      setOverview({ status: e?.message || 'Ошибка загрузки overview', totals: {}, daily: {}, daily_by_account: {} })
+      setOverview({ status: e?.message || 'Failed to load overview', totals: {}, daily: {}, daily_by_account: {} })
     }
   }
 
@@ -638,7 +638,7 @@ export default function DashboardWorkspace() {
 
     const parsePayload = async (resp, platform) => {
       if (!resp) {
-        errors.push(`${platform}: запрос не выполнен`)
+        errors.push(`${platform}: request failed`)
         return
       }
       if (!resp.ok) {
@@ -689,7 +689,7 @@ export default function DashboardWorkspace() {
   }
 
   async function refreshVisualizationBundle() {
-    setAudienceStatus('Загрузка визуализации...')
+    setAudienceStatus('Loading visualization...')
     try {
       const [ageData, geoData, deviceData] = await Promise.all([
         loadAudience('age_gender'),
@@ -705,9 +705,9 @@ export default function DashboardWorkspace() {
       if (allErrors.length) {
         console.warn('Audience data warnings:', allErrors)
       }
-      setAudienceStatus(`Срез: Период ${vizDateFrom} — ${vizDateTo}`)
+      setAudienceStatus(`Slice: Period ${vizDateFrom} — ${vizDateTo}`)
     } catch {
-      setAudienceStatus('Ошибка загрузки срезов аудитории.')
+      setAudienceStatus('Failed to load audience slices.')
     }
   }
 
@@ -780,50 +780,50 @@ export default function DashboardWorkspace() {
   const activePlatforms = Object.values(overview.totals || {}).filter((item) => Number(item?.spend || 0) > 0).length
   const selectedWindow = `${vizDateFrom} - ${vizDateTo}`
   const heroCards = [
-    { label: 'Расход', value: `$${formatMoney(totalSpend)}`, note: 'По всем подключенным платформам' },
-    { label: 'Показы', value: formatInt(totalImpressions), note: 'Охват и доставка за выбранный период' },
-    { label: 'Клики', value: formatInt(totalClicks), note: 'Единый срез по трафику со всех платформ' },
-    { label: 'Аккаунты', value: formatInt(totalAccounts), note: `${activePlatforms}/3 платформ активны в сводке` },
+    { label: 'Spend', value: `$${formatMoney(totalSpend)}`, note: 'Across all connected platforms' },
+    { label: 'Impressions', value: formatInt(totalImpressions), note: 'Reach and delivery for selected period' },
+    { label: 'Clicks', value: formatInt(totalClicks), note: 'Unified traffic slice across all platforms' },
+    { label: 'Accounts', value: formatInt(totalAccounts), note: `${activePlatforms}/3 platforms active in summary` },
   ]
 
   return (
     <AppShell
       eyebrow="Envidicy · Insights"
-      title="Универсальный дашборд"
-      subtitle="Сводка по подключенным рекламным кабинетам."
+      title="Unified Dashboard"
+      subtitle="Summary across connected ad accounts."
     >
       <section className="dashboard-hero panel">
         <div className="dashboard-hero-grid">
           <div className="dashboard-hero-main">
-            <p className="eyebrow">Общий обзор</p>
-            <h1>Дашборд эффективности по всем платформам</h1>
+            <p className="eyebrow">Overview</p>
+            <h1>Cross-platform performance dashboard</h1>
             <p className="dashboard-hero-copy">
-              Единый обзор Meta, Google и TikTok с быстрым доступом к spend, delivery, кликам и аудитории за выбранный период.
+              Unified Meta, Google, and TikTok view with quick access to spend, delivery, clicks, and audience for the selected period.
             </p>
             <div className="dashboard-hero-actions">
               <button className="btn primary" onClick={exportDashboardPdf} type="button">
-                {exportPending ? 'Готовим PDF...' : 'Скачать статистику'}
+                {exportPending ? 'Preparing PDF...' : 'Download report'}
               </button>
             </div>
             <div className="dashboard-hero-pills">
-              <span className="chip chip-ghost">Период: {selectedWindow}</span>
-              <span className="chip chip-ghost">Аккаунты: {formatInt(totalAccounts)}</span>
-              <span className="chip chip-ghost">Сводка: {overview.status}</span>
+              <span className="chip chip-ghost">Period: {selectedWindow}</span>
+              <span className="chip chip-ghost">Accounts: {formatInt(totalAccounts)}</span>
+              <span className="chip chip-ghost">Summary: {overview.status}</span>
             </div>
           </div>
           <div className="dashboard-hero-side">
             <div className="dashboard-hero-side-card">
-              <p className="eyebrow">Состояние системы</p>
+              <p className="eyebrow">System status</p>
               <div className="dashboard-hero-side-row">
-                <span>Синхронизация аккаунтов</span>
-                <strong>{accountsStatus || 'В работе'}</strong>
+                <span>Account sync</span>
+                <strong>{accountsStatus || 'In progress'}</strong>
               </div>
               <div className="dashboard-hero-side-row">
-                <span>Срезы аудитории</span>
-                <strong>{audienceStatus || 'Готово к загрузке'}</strong>
+                <span>Audience slices</span>
+                <strong>{audienceStatus || 'Ready to load'}</strong>
               </div>
               <div className="dashboard-hero-side-row">
-                <span>Активные платформы</span>
+                <span>Active platforms</span>
                 <strong>{activePlatforms}/3</strong>
               </div>
             </div>
@@ -895,11 +895,11 @@ export default function DashboardWorkspace() {
       <section className="panel dashboard-analytics-panel">
         <div className="panel-head">
           <div>
-            <p className="eyebrow">Визуализация</p>
-            <h2>Доли и динамика</h2>
+            <p className="eyebrow">Visualization</p>
+            <h2>Shares and trends</h2>
           </div>
           <div className="panel-actions">
-            <button className="btn primary" onClick={reloadAll} type="button">Обновить всё</button>
+            <button className="btn primary" onClick={reloadAll} type="button">Refresh all</button>
             <span className="chip chip-ghost">Charts</span>
           </div>
         </div>
@@ -907,25 +907,25 @@ export default function DashboardWorkspace() {
         <div className="chart-grid">
           <div className="chart-card chart-card-hero">
             <div className="chart-head">
-              <p className="eyebrow">KPI кольца</p>
+              <p className="eyebrow">KPI rings</p>
               <div className="panel-actions">
                 <input className="field-input" type="date" value={vizDateFrom} onChange={(e) => setVizDateFrom(e.target.value)} {...dateProps} />
                 <input className="field-input" type="date" value={vizDateTo} onChange={(e) => setVizDateTo(e.target.value)} {...dateProps} />
                 <select className="field-input" value={vizMetaAccount} onChange={(e) => setVizMetaAccount(e.target.value)}>
-                  <option value="">Meta: все аккаунты</option>
+                  <option value="">Meta: all accounts</option>
                   {metaAccounts.map((acc) => <option key={acc.id} value={String(acc.id)}>{acc.name || `ID ${acc.id}`}</option>)}
                 </select>
                 <select className="field-input" value={vizGoogleAccount} onChange={(e) => setVizGoogleAccount(e.target.value)}>
-                  <option value="">Google: все аккаунты</option>
+                  <option value="">Google: all accounts</option>
                   {googleAccounts.map((acc) => <option key={acc.id} value={String(acc.id)}>{acc.name || `ID ${acc.id}`}</option>)}
                 </select>
                 <select className="field-input" value={vizTiktokAccount} onChange={(e) => setVizTiktokAccount(e.target.value)}>
-                  <option value="">TikTok: все аккаунты</option>
+                  <option value="">TikTok: all accounts</option>
                   {tiktokAccounts.map((acc) => <option key={acc.id} value={String(acc.id)}>{acc.name || `ID ${acc.id}`}</option>)}
                 </select>
-                <button className="btn ghost" onClick={refreshVisualizationBundle} type="button">Обновить</button>
+                <button className="btn ghost" onClick={refreshVisualizationBundle} type="button">Refresh</button>
                 <button className="btn ghost" onClick={exportDashboardPdf} type="button" disabled={exportPending}>
-                  {exportPending ? 'Готовим PDF...' : 'Экспорт PDF'}
+                  {exportPending ? 'Preparing PDF...' : 'Export PDF'}
                 </button>
               </div>
             </div>
@@ -933,7 +933,7 @@ export default function DashboardWorkspace() {
           </div>
 
           <div className="chart-card chart-card-hero">
-            <p className="eyebrow">Доля расходов</p>
+            <p className="eyebrow">Spend share</p>
             <div className="chart-donut">
               <Donut items={spendDonutItems} size={220} centerTop="Spend" />
             </div>
@@ -956,7 +956,7 @@ export default function DashboardWorkspace() {
 
         <div className="chart-card" style={{ marginTop: 12 }}>
           <div className="chart-head">
-            <p className="eyebrow">Динамика по дням</p>
+            <p className="eyebrow">Daily trend</p>
             <div className="chip chip-ghost">Spend vs Clicks</div>
           </div>
           <div className="chart-line">
@@ -966,7 +966,7 @@ export default function DashboardWorkspace() {
 
         <div className="chart-card" style={{ marginTop: 12 }}>
           <div className="chart-head">
-            <p className="eyebrow">Динамика по аккаунту</p>
+            <p className="eyebrow">Account trend</p>
             <div className="panel-actions">
               <select className="field-input" value={accountTrendPlatform} onChange={(e) => setAccountTrendPlatform(e.target.value)}>
                 <option value="meta">Meta</option>
@@ -974,7 +974,7 @@ export default function DashboardWorkspace() {
                 <option value="tiktok">TikTok</option>
               </select>
               <select className="field-input" value={accountTrendAccountId} onChange={(e) => setAccountTrendAccountId(e.target.value)}>
-                {!accountTrendAccounts.length ? <option value="">Нет аккаунтов</option> : null}
+                {!accountTrendAccounts.length ? <option value="">No accounts</option> : null}
                 {accountTrendAccounts.map((row) => (
                   <option key={`${row.platform}-${row.account_id}`} value={String(row.account_id)}>
                     {row.name}
@@ -982,9 +982,9 @@ export default function DashboardWorkspace() {
                 ))}
               </select>
               <select className="field-input" value={accountTrendMetric} onChange={(e) => setAccountTrendMetric(e.target.value)}>
-                <option value="impressions">Показы</option>
-                <option value="clicks">Клики</option>
-                <option value="spend">Расход</option>
+                <option value="impressions">Impressions</option>
+                <option value="clicks">Clicks</option>
+                <option value="spend">Spend</option>
               </select>
             </div>
           </div>
@@ -996,10 +996,10 @@ export default function DashboardWorkspace() {
         <div className="chart-grid" style={{ marginTop: 12 }}>
           <div className="chart-card">
             <div className="chart-head">
-              <p className="eyebrow">Аудитория · Возраст / Пол</p>
+              <p className="eyebrow">Audience · Age / Gender</p>
               <div className="panel-actions">
                 <select className="field-input" value={audienceAgePlatform} onChange={(e) => setAudienceAgePlatform(e.target.value)}>
-                  <option value="all">Все платформы</option>
+                  <option value="all">All platforms</option>
                   <option value="meta">Meta</option>
                   <option value="google">Google</option>
                 </select>
@@ -1020,17 +1020,17 @@ export default function DashboardWorkspace() {
 
           <div className="chart-card">
             <div className="chart-head">
-              <p className="eyebrow">Аудитория · Гео</p>
+              <p className="eyebrow">Audience · Geo</p>
               <div className="panel-actions">
                 <select className="field-input" value={audienceGeoPlatform} onChange={(e) => setAudienceGeoPlatform(e.target.value)}>
-                  <option value="all">Все платформы</option>
+                  <option value="all">All platforms</option>
                   <option value="meta">Meta</option>
                   <option value="google">Google</option>
                 </select>
                 <select className="field-input" value={audienceGeoLevel} onChange={(e) => setAudienceGeoLevel(e.target.value)}>
-                  <option value="country">Страны</option>
-                  <option value="region">Регионы</option>
-                  <option value="city">Города</option>
+                  <option value="country">Countries</option>
+                  <option value="region">Regions</option>
+                  <option value="city">Cities</option>
                 </select>
               </div>
             </div>
@@ -1050,10 +1050,10 @@ export default function DashboardWorkspace() {
 
           <div className="chart-card">
             <div className="chart-head">
-              <p className="eyebrow">Аудитория · Девайсы</p>
+              <p className="eyebrow">Audience · Devices</p>
               <div className="panel-actions">
                 <select className="field-input" value={audienceDevicePlatform} onChange={(e) => setAudienceDevicePlatform(e.target.value)}>
-                  <option value="all">Все платформы</option>
+                  <option value="all">All platforms</option>
                   <option value="meta">Meta</option>
                   <option value="google">Google</option>
                 </select>
@@ -1075,7 +1075,7 @@ export default function DashboardWorkspace() {
         </div>
 
         <p className="muted small" style={{ marginTop: 12 }}>
-          {audienceStatus || `Доли аудитории считаются по impressions за выбранный период.`}
+          {audienceStatus || `Audience shares are calculated by impressions for the selected period.`}
         </p>
       </section>
     </AppShell>

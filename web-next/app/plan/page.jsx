@@ -34,8 +34,8 @@ const PLACEMENT_OPTIONS = {
     { key: 'telegrad_search', label: 'Search' },
   ],
   yandex: [
-    { key: 'yandex_search', label: 'Поиск' },
-    { key: 'yandex_display', label: 'РСЯ/Директ' },
+    { key: 'yandex_search', label: 'Search' },
+    { key: 'yandex_display', label: 'RSYA/Direct' },
   ],
 }
 
@@ -155,7 +155,7 @@ function platformLabel(key) {
   if (key === 'google') return 'Google Ads'
   if (key === 'tiktok') return 'TikTok Ads'
   if (key === 'telegram') return 'Telegram Ads'
-  if (key === 'yandex') return 'Яндекс Ads'
+  if (key === 'yandex') return 'Yandex Ads'
   if (key === 'google_search') return 'Google Search'
   if (key === 'google_display_cpm') return 'Google Display CPM'
   if (key === 'google_display_cpc') return 'Google Display CPC'
@@ -166,8 +166,8 @@ function platformLabel(key) {
   if (key === 'telegrad_users') return 'Telegram Users'
   if (key === 'telegrad_bots') return 'Telegram Bots'
   if (key === 'telegrad_search') return 'Telegram Search'
-  if (key === 'yandex_search') return 'Яндекс Поиск'
-  if (key === 'yandex_display') return 'Яндекс РСЯ'
+  if (key === 'yandex_search') return 'Yandex Search'
+  if (key === 'yandex_display') return 'Yandex RSYA'
   return key
 }
 
@@ -404,7 +404,7 @@ export default function PlanPage() {
   const [pendingEstimate, setPendingEstimate] = useState(false)
   const [pendingAssistant, setPendingAssistant] = useState(false)
   const [pendingExcel, setPendingExcel] = useState(false)
-  const [status, setStatus] = useState('Заполните вводные и нажмите «Рассчитать план».')
+  const [status, setStatus] = useState('Fill in the inputs and click "Estimate plan".')
 
   const aiSplit = useMemo(() => {
     if (!assistant?.budgetSplit) return null
@@ -435,19 +435,19 @@ export default function PlanPage() {
     const items = []
     const t = plan.totals
     const totalFreq = t.reach ? t.impressions / t.reach : null
-    if (totalFreq && totalFreq > 8) items.push('Частота > 8: возможен перегрев аудитории.')
-    if ((t.clicks || 0) > (t.impressions || 0)) items.push('Клики больше показов: проверьте вводные CTR/CPC.')
-    if ((t.leads || 0) > (t.clicks || 0)) items.push('Лидов больше кликов: проверьте CVR.')
-    if ((t.conversions || 0) > (t.leads || 0)) items.push('Конверсий больше лидов: проверьте post-click/CVR.')
+    if (totalFreq && totalFreq > 8) items.push('Frequency > 8: audience may be overheated.')
+    if ((t.clicks || 0) > (t.impressions || 0)) items.push('Clicks exceed impressions: check CTR/CPC inputs.')
+    if ((t.leads || 0) > (t.clicks || 0)) items.push('Leads exceed clicks: check CVR.')
+    if ((t.conversions || 0) > (t.leads || 0)) items.push('Conversions exceed leads: check post-click/CVR.')
 
     plan.lines.forEach((line) => {
       const ctr = line.impressions ? line.clicks / line.impressions : 0
       const cvr = line.clicks ? line.leads / line.clicks : 0
       const cpa = line.leads ? line.budget / line.leads : null
-      if (ctr > 0.1) items.push(`${line.name}: CTR > 10% — проверьте реалистичность.`)
-      if (cvr > 0.4) items.push(`${line.name}: CVR > 40% — проверьте реалистичность.`)
+      if (ctr > 0.1) items.push(`${line.name}: CTR > 10% — check realism.`)
+      if (cvr > 0.4) items.push(`${line.name}: CVR > 40% — check realism.`)
       if (line.reach && line.impressions / line.reach > 8) items.push(`${line.name}: Frequency > 8.`)
-      if (cpa && cpa < 0.5) items.push(`${line.name}: CPA < $0.5 — проверьте реалистичность.`)
+      if (cpa && cpa < 0.5) items.push(`${line.name}: CPA < $0.5 — check realism.`)
     })
 
     return items
@@ -470,22 +470,22 @@ export default function PlanPage() {
     const budgetPerWeek = periodDays ? totals.budget / Math.max(1, Math.ceil(periodDays / 7)) : null
 
     return [
-      ['Budget (net/client)', usd(totals.budget), 'Гарантия'],
-      ['Комиссия/VAT', usd(totalOverhead), 'Гарантия'],
-      ['Budget (gross)', usd(totalGross), 'Гарантия'],
-      ['CPM', cpm ? usd(cpm, 2) : '—', 'Прогноз'],
-      ['CPC', cpc ? usd(cpc, 2) : '—', 'Прогноз'],
-      ['CPL', cpl ? usd(cpl, 2) : '—', 'Прогноз'],
-      ['CPA', cpa ? usd(cpa, 2) : '—', 'Прогноз'],
-      ['Impressions', num(impressions), 'Прогноз'],
-      ['Reach', num(reach), 'Прогноз'],
-      ['Clicks', num(clicks), 'Прогноз'],
-      ['Leads', num(leads), 'Прогноз'],
-      ['Purchases', num(conversions), 'Прогноз'],
-      ['Frequency', freq ? freq.toFixed(2) : '—', 'Прогноз'],
-      ['Pacing / day', budgetPerDay ? usd(budgetPerDay, 2) : '—', 'Прогноз'],
-      ['Pacing / week', budgetPerWeek ? usd(budgetPerWeek, 2) : '—', 'Прогноз'],
-      ['Assumption profile', strategyForm.assumption_profile || '—', 'Прогноз'],
+      ['Budget (net/client)', usd(totals.budget), 'Guaranteed'],
+      ['Fee/VAT', usd(totalOverhead), 'Guaranteed'],
+      ['Budget (gross)', usd(totalGross), 'Guaranteed'],
+      ['CPM', cpm ? usd(cpm, 2) : '—', 'Forecast'],
+      ['CPC', cpc ? usd(cpc, 2) : '—', 'Forecast'],
+      ['CPL', cpl ? usd(cpl, 2) : '—', 'Forecast'],
+      ['CPA', cpa ? usd(cpa, 2) : '—', 'Forecast'],
+      ['Impressions', num(impressions), 'Forecast'],
+      ['Reach', num(reach), 'Forecast'],
+      ['Clicks', num(clicks), 'Forecast'],
+      ['Leads', num(leads), 'Forecast'],
+      ['Purchases', num(conversions), 'Forecast'],
+      ['Frequency', freq ? freq.toFixed(2) : '—', 'Forecast'],
+      ['Pacing / day', budgetPerDay ? usd(budgetPerDay, 2) : '—', 'Forecast'],
+      ['Pacing / week', budgetPerWeek ? usd(budgetPerWeek, 2) : '—', 'Forecast'],
+      ['Assumption profile', strategyForm.assumption_profile || '—', 'Forecast'],
     ]
   }, [totals, planMode, payload.period_days, totalOverhead, totalGross, strategyForm.assumption_profile])
 
@@ -536,7 +536,7 @@ export default function PlanPage() {
 
   async function runEstimate() {
     setPendingEstimate(true)
-    setStatus('Считаем медиаплан...')
+    setStatus('Estimating media plan...')
     try {
       const res = await apiFetch('/plans/estimate', {
         method: 'POST',
@@ -544,11 +544,11 @@ export default function PlanPage() {
         body: JSON.stringify(payload),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.detail || 'Не удалось рассчитать медиаплан')
+      if (!res.ok) throw new Error(data?.detail || 'Failed to estimate media plan')
       setPlan(data)
-      setStatus('Расчет выполнен.')
+      setStatus('Estimate completed.')
     } catch (error) {
-      setStatus(error?.message || 'Ошибка расчета медиаплана')
+      setStatus(error?.message || 'Media plan estimate failed')
     } finally {
       setPendingEstimate(false)
     }
@@ -556,7 +556,7 @@ export default function PlanPage() {
 
   async function runAssistant() {
     setPendingAssistant(true)
-    setStatus('AI ассистент готовит черновик...')
+    setStatus('AI assistant is preparing draft...')
 
     const token = getAuthToken()
     const headers = { 'Content-Type': 'application/json' }
@@ -570,7 +570,7 @@ export default function PlanPage() {
         body: JSON.stringify(basePayload),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.detail || 'Не удалось получить AI-черновик')
+      if (!res.ok) throw new Error(data?.detail || 'Failed to generate AI draft')
 
       const draft = readAssistantDraftForUI(data, basePayload)
       setAssistant(draft)
@@ -589,7 +589,7 @@ export default function PlanPage() {
       const draftOverrides = draftChannelsToOverrides(data)
       if (draftOverrides) setOverrides((prev) => ({ ...prev, ...draftOverrides }))
 
-      setStatus('AI-черновик применен. Пересчитываем итог...')
+      setStatus('AI draft applied. Recalculating final output...')
 
       const nextPayload = planMode === 'smart'
         ? buildSmartPayload(smartForm, draft?.budgetSplit || null, draftOverrides || overrides)
@@ -615,11 +615,11 @@ export default function PlanPage() {
         body: JSON.stringify(nextPayload),
       })
       const planData = await planRes.json().catch(() => ({}))
-      if (!planRes.ok) throw new Error(planData?.detail || 'Черновик получен, но итоговый расчет не удался')
+      if (!planRes.ok) throw new Error(planData?.detail || 'Draft received, but final estimate failed')
       setPlan(planData)
-      setStatus('AI-черновик применен и рассчитан.')
+      setStatus('AI draft applied and estimated.')
     } catch (error) {
-      setStatus(error?.message || 'Ошибка AI ассистента')
+      setStatus(error?.message || 'AI assistant error')
     } finally {
       setPendingAssistant(false)
     }
@@ -635,7 +635,7 @@ export default function PlanPage() {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err?.detail || `Ошибка экспорта Excel: ${res.status}`)
+        throw new Error(err?.detail || `Excel export error: ${res.status}`)
       }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -644,9 +644,9 @@ export default function PlanPage() {
       a.download = 'mediaplan.xlsx'
       a.click()
       URL.revokeObjectURL(url)
-      setStatus('Excel выгружен.')
+      setStatus('Excel exported.')
     } catch (error) {
-      setStatus(error?.message || 'Не удалось выгрузить Excel')
+      setStatus(error?.message || 'Failed to export Excel')
     } finally {
       setPendingExcel(false)
     }
@@ -693,36 +693,36 @@ export default function PlanPage() {
   const actions = (
     <div className="panel-actions">
       <button className="btn primary" disabled={pendingEstimate || pendingAssistant || pendingExcel} onClick={runEstimate} type="button">
-        {pendingEstimate ? 'Считаем...' : 'Рассчитать план'}
+        {pendingEstimate ? 'Estimating...' : 'Estimate plan'}
       </button>
       <button className="btn ghost" disabled={pendingEstimate || pendingAssistant || pendingExcel} onClick={runAssistant} type="button">
-        {pendingAssistant ? 'Готовим...' : 'AI-черновик'}
+        {pendingAssistant ? 'Preparing...' : 'AI draft'}
       </button>
       <button className="btn ghost" disabled={pendingEstimate || pendingAssistant || pendingExcel} onClick={downloadExcel} type="button">
-        {pendingExcel ? 'Экспорт...' : 'Скачать Excel'}
+        {pendingExcel ? 'Exporting...' : 'Download Excel'}
       </button>
     </div>
   )
 
   return (
-    <AppShell eyebrow="Envidicy · Media Planner" title="План, факт и сценарии" subtitle="MVP переноса страницы медиаплана на Next.js без изменения API-логики.">
+    <AppShell eyebrow="Envidicy · Media Planner" title="Plan, Actuals, and Scenarios" subtitle="MVP migration of media planner to Next.js without API logic changes.">
       <section className="panel" id="strategy-form">
         <div className="panel-head">
           <div>
-            <p className="eyebrow">Тип планирования</p>
-            <h2>Smart Plan или Strategy Plan</h2>
+            <p className="eyebrow">Planning type</p>
+            <h2>Smart Plan or Strategy Plan</h2>
           </div>
         </div>
         <div className="form-grid">
           <label className="field">
-            <span>Режим</span>
+            <span>Mode</span>
             <select value={planMode} onChange={(e) => setPlanMode(e.target.value)}>
               <option value="smart">Smart Plan (SMB)</option>
               <option value="strategy">Strategy Plan (Agency)</option>
             </select>
           </label>
           <div className="field">
-            <span>Статус</span>
+            <span>Status</span>
             <input value={status} readOnly />
           </div>
         </div>
@@ -733,16 +733,16 @@ export default function PlanPage() {
           <div className="panel-head">
             <div>
               <p className="eyebrow">Smart Plan</p>
-              <h2>Минимум вводов, система подбирает каналы</h2>
+              <h2>Minimal inputs, system selects channels</h2>
             </div>
             {actions}
           </div>
           <div className="form-grid">
-            <label className="field"><span>Бюджет, USD</span><input value={smartForm.budget} onChange={(e) => onSmartChange('budget', e.target.value)} type="number" min="1" /></label>
-            <label className="field"><span>Период, дней</span><input value={smartForm.period_days} onChange={(e) => onSmartChange('period_days', e.target.value)} type="number" min="1" /></label>
-            <label className="field"><span>Гео</span><select value={smartForm.country} onChange={(e) => onSmartChange('country', e.target.value)}><option value="kz">Kazakhstan</option><option value="uz">Uzbekistan</option><option value="ru">Russia</option></select></label>
-            <label className="field"><span>Цель</span><select value={smartForm.goal} onChange={(e) => onSmartChange('goal', e.target.value)}><option value="leads">Заявки</option><option value="sales">Продажи</option><option value="traffic">Трафик</option></select></label>
-            <label className="field"><span>Тип бизнеса</span><select value={smartForm.business_type} onChange={(e) => onSmartChange('business_type', e.target.value)}><option value="services">Услуги</option><option value="ecom">Ecom</option><option value="b2b">B2B</option><option value="local">Локальный бизнес</option><option value="content">Контент/медиа</option></select></label>
+            <label className="field"><span>Budget, USD</span><input value={smartForm.budget} onChange={(e) => onSmartChange('budget', e.target.value)} type="number" min="1" /></label>
+            <label className="field"><span>Period, days</span><input value={smartForm.period_days} onChange={(e) => onSmartChange('period_days', e.target.value)} type="number" min="1" /></label>
+            <label className="field"><span>Geo</span><select value={smartForm.country} onChange={(e) => onSmartChange('country', e.target.value)}><option value="kz">Kazakhstan</option><option value="uz">Uzbekistan</option><option value="ru">Russia</option></select></label>
+            <label className="field"><span>Goal</span><select value={smartForm.goal} onChange={(e) => onSmartChange('goal', e.target.value)}><option value="leads">Leads</option><option value="sales">Sales</option><option value="traffic">Traffic</option></select></label>
+            <label className="field"><span>Business type</span><select value={smartForm.business_type} onChange={(e) => onSmartChange('business_type', e.target.value)}><option value="services">Services</option><option value="ecom">Ecom</option><option value="b2b">B2B</option><option value="local">Local business</option><option value="content">Content/media</option></select></label>
           </div>
         </section>
       ) : (
@@ -751,7 +751,7 @@ export default function PlanPage() {
             <div className="panel-head">
               <div>
                 <p className="eyebrow">Strategy Plan</p>
-                <h2>Расширенные вводные и агентские параметры</h2>
+                <h2>Advanced inputs and agency parameters</h2>
               </div>
               {actions}
             </div>
@@ -760,21 +760,21 @@ export default function PlanPage() {
               <label className="field"><span>Client</span><input value={strategyForm.client_name} onChange={(e) => onStrategyChange('client_name', e.target.value)} type="text" placeholder="ACME Holding" /></label>
               <label className="field"><span>Brand</span><input value={strategyForm.brand} onChange={(e) => onStrategyChange('brand', e.target.value)} type="text" placeholder="ACME Corp" /></label>
               <label className="field"><span>Product</span><input value={strategyForm.product} onChange={(e) => onStrategyChange('product', e.target.value)} type="text" placeholder="ACME App" /></label>
-              <label className="field"><span>Бюджет</span><input value={strategyForm.budget} onChange={(e) => onStrategyChange('budget', e.target.value)} type="number" min="1" /></label>
-              <label className="field"><span>Период, дней</span><input value={strategyForm.period_days} onChange={(e) => onStrategyChange('period_days', e.target.value)} type="number" min="1" /></label>
-              <label className="field"><span>Цель</span><select value={strategyForm.goal} onChange={(e) => onStrategyChange('goal', e.target.value)}><option value="leads">Leads</option><option value="traffic">Traffic</option><option value="conversions">Conversions</option><option value="reach">Reach</option></select></label>
+              <label className="field"><span>Budget</span><input value={strategyForm.budget} onChange={(e) => onStrategyChange('budget', e.target.value)} type="number" min="1" /></label>
+              <label className="field"><span>Period, days</span><input value={strategyForm.period_days} onChange={(e) => onStrategyChange('period_days', e.target.value)} type="number" min="1" /></label>
+              <label className="field"><span>Goal</span><select value={strategyForm.goal} onChange={(e) => onStrategyChange('goal', e.target.value)}><option value="leads">Leads</option><option value="traffic">Traffic</option><option value="conversions">Conversions</option><option value="reach">Reach</option></select></label>
               <label className="field"><span>Market</span><select value={strategyForm.market} onChange={(e) => { onStrategyChange('market', e.target.value); onStrategyChange('country', e.target.value) }}><option value="kz">Kazakhstan</option><option value="uz">Uzbekistan</option><option value="ru">Russia</option><option value="other">Other</option></select></label>
-              <label className="field"><span>Валюта</span><select value={strategyForm.currency} onChange={(e) => onStrategyChange('currency', e.target.value)}><option value="USD">USD</option><option value="KZT">KZT</option></select></label>
+              <label className="field"><span>Currency</span><select value={strategyForm.currency} onChange={(e) => onStrategyChange('currency', e.target.value)}><option value="USD">USD</option><option value="KZT">KZT</option></select></label>
             </div>
 
             <details className="field details" style={{ marginTop: 12 }}>
-              <summary>KPI и Аудитория</summary>
+              <summary>KPI and Audience</summary>
               <div className="form-grid" style={{ marginTop: 10 }}>
-                <label className="field"><span>KPI тип</span><select value={strategyForm.kpi_type} onChange={(e) => onStrategyChange('kpi_type', e.target.value)}><option value="cpl">CPL</option><option value="cpa">CPA</option><option value="cpc">CPC</option><option value="cpm">CPM</option></select></label>
-                <label className="field"><span>KPI цель, $</span><input value={strategyForm.kpi_target} onChange={(e) => onStrategyChange('kpi_target', e.target.value)} type="number" step="0.1" /></label>
-                <label className="field"><span>Возраст min</span><input value={strategyForm.age_min} onChange={(e) => onStrategyChange('age_min', e.target.value)} type="number" /></label>
-                <label className="field"><span>Возраст max</span><input value={strategyForm.age_max} onChange={(e) => onStrategyChange('age_max', e.target.value)} type="number" /></label>
-                <label className="field"><span>Индустрия</span><select value={strategyForm.industry} onChange={(e) => onStrategyChange('industry', e.target.value)}><option value="fmcg">FMCG</option><option value="pharma">Pharma</option><option value="finance">Finance</option><option value="travel">Travel</option><option value="ecommerce">E-commerce</option><option value="auto">Auto</option><option value="real_estate">Real estate</option><option value="education">Education</option><option value="other">Other</option></select></label>
+                <label className="field"><span>KPI type</span><select value={strategyForm.kpi_type} onChange={(e) => onStrategyChange('kpi_type', e.target.value)}><option value="cpl">CPL</option><option value="cpa">CPA</option><option value="cpc">CPC</option><option value="cpm">CPM</option></select></label>
+                <label className="field"><span>KPI target, $</span><input value={strategyForm.kpi_target} onChange={(e) => onStrategyChange('kpi_target', e.target.value)} type="number" step="0.1" /></label>
+                <label className="field"><span>Age min</span><input value={strategyForm.age_min} onChange={(e) => onStrategyChange('age_min', e.target.value)} type="number" /></label>
+                <label className="field"><span>Age max</span><input value={strategyForm.age_max} onChange={(e) => onStrategyChange('age_max', e.target.value)} type="number" /></label>
+                <label className="field"><span>Industry</span><select value={strategyForm.industry} onChange={(e) => onStrategyChange('industry', e.target.value)}><option value="fmcg">FMCG</option><option value="pharma">Pharma</option><option value="finance">Finance</option><option value="travel">Travel</option><option value="ecommerce">E-commerce</option><option value="auto">Auto</option><option value="real_estate">Real estate</option><option value="education">Education</option><option value="other">Other</option></select></label>
                 <label className="field"><span>Geo split</span><input value={strategyForm.geo_split} onChange={(e) => onStrategyChange('geo_split', e.target.value)} type="text" placeholder="KZ 60% / UZ 40%" /></label>
                 <label className="field"><span>Cities</span><input value={strategyForm.cities} onChange={(e) => onStrategyChange('cities', e.target.value)} type="text" placeholder="Almaty, Astana" /></label>
                 <label className="field"><span>Interests</span><input value={strategyForm.interests} onChange={(e) => onStrategyChange('interests', e.target.value)} type="text" placeholder="travel, fitness" /></label>
@@ -785,33 +785,33 @@ export default function PlanPage() {
             </details>
 
             <details className="field details" style={{ marginTop: 12 }}>
-              <summary>Финансы и Атрибуция</summary>
+              <summary>Finance and Attribution</summary>
               <div className="form-grid" style={{ marginTop: 10 }}>
-                <label className="field"><span>Дата начала</span><input value={strategyForm.date_start} onChange={(e) => onStrategyChange('date_start', e.target.value)} type="date" /></label>
-                <label className="field"><span>Дата конца</span><input value={strategyForm.date_end} onChange={(e) => onStrategyChange('date_end', e.target.value)} type="date" /></label>
-                <label className="field"><span>Курс (KZT→USD)</span><input value={strategyForm.fx_rate} onChange={(e) => onStrategyChange('fx_rate', e.target.value)} type="number" step="0.01" placeholder="460" /></label>
-                <label className="field"><span>Частота</span><input value={strategyForm.avg_frequency} onChange={(e) => onStrategyChange('avg_frequency', e.target.value)} type="number" min="1" step="0.1" /></label>
-                <label className="field"><span>Таргетинг</span><select value={strategyForm.targeting_depth} onChange={(e) => onStrategyChange('targeting_depth', e.target.value)}><option value="balanced">Сбаланс.</option><option value="broad">Широкий</option><option value="focused">Узкий</option></select></label>
-                <label className="field"><span>Сезонность</span><input value={strategyForm.seasonality} onChange={(e) => onStrategyChange('seasonality', e.target.value)} type="number" step="0.02" /></label>
-                <label className="field"><span>Match стратегия</span><select value={strategyForm.match_strategy} onChange={(e) => onStrategyChange('match_strategy', e.target.value)}><option value="account">ad_account_id</option><option value="campaign">campaign_name</option><option value="platform">platform</option></select></label>
+                <label className="field"><span>Start date</span><input value={strategyForm.date_start} onChange={(e) => onStrategyChange('date_start', e.target.value)} type="date" /></label>
+                <label className="field"><span>End date</span><input value={strategyForm.date_end} onChange={(e) => onStrategyChange('date_end', e.target.value)} type="date" /></label>
+                <label className="field"><span>Rate (KZT to USD)</span><input value={strategyForm.fx_rate} onChange={(e) => onStrategyChange('fx_rate', e.target.value)} type="number" step="0.01" placeholder="460" /></label>
+                <label className="field"><span>Frequency</span><input value={strategyForm.avg_frequency} onChange={(e) => onStrategyChange('avg_frequency', e.target.value)} type="number" min="1" step="0.1" /></label>
+                <label className="field"><span>Targeting</span><select value={strategyForm.targeting_depth} onChange={(e) => onStrategyChange('targeting_depth', e.target.value)}><option value="balanced">Balanced</option><option value="broad">Broad</option><option value="focused">Narrow</option></select></label>
+                <label className="field"><span>Seasonality</span><input value={strategyForm.seasonality} onChange={(e) => onStrategyChange('seasonality', e.target.value)} type="number" step="0.02" /></label>
+                <label className="field"><span>Match strategy</span><select value={strategyForm.match_strategy} onChange={(e) => onStrategyChange('match_strategy', e.target.value)}><option value="account">ad_account_id</option><option value="campaign">campaign_name</option><option value="platform">platform</option></select></label>
                 <label className="field"><span>UTM template</span><input value={strategyForm.utm_template} onChange={(e) => onStrategyChange('utm_template', e.target.value)} type="text" placeholder="utm_source={{platform}}&utm_campaign={{name}}" /></label>
-                <label className="field"><span>Комиссия, %</span><input value={strategyForm.agency_fee_percent} onChange={(e) => onStrategyChange('agency_fee_percent', e.target.value)} type="number" min="0" step="0.1" placeholder="10" /></label>
+                <label className="field"><span>Fee, %</span><input value={strategyForm.agency_fee_percent} onChange={(e) => onStrategyChange('agency_fee_percent', e.target.value)} type="number" min="0" step="0.1" placeholder="10" /></label>
                 <label className="field"><span>VAT, %</span><input value={strategyForm.vat_percent} onChange={(e) => onStrategyChange('vat_percent', e.target.value)} type="number" min="0" step="0.1" placeholder="12" /></label>
                 <label className="field"><span>Funnel Awareness %</span><input value={strategyForm.split_awareness} onChange={(e) => onStrategyChange('split_awareness', e.target.value)} type="number" step="1" placeholder="40" /></label>
                 <label className="field"><span>Funnel Consideration %</span><input value={strategyForm.split_consideration} onChange={(e) => onStrategyChange('split_consideration', e.target.value)} type="number" step="1" placeholder="35" /></label>
                 <label className="field"><span>Funnel Performance %</span><input value={strategyForm.split_performance} onChange={(e) => onStrategyChange('split_performance', e.target.value)} type="number" step="1" placeholder="25" /></label>
-                <label className="field checkbox"><span>Пиксели настроены</span><input checked={Boolean(strategyForm.pixels_configured)} onChange={(e) => onStrategyChange('pixels_configured', e.target.checked)} type="checkbox" /></label>
+                <label className="field checkbox"><span>Pixels configured</span><input checked={Boolean(strategyForm.pixels_configured)} onChange={(e) => onStrategyChange('pixels_configured', e.target.checked)} type="checkbox" /></label>
               </div>
             </details>
 
             <details className="field details" style={{ marginTop: 12 }}>
               <summary>Assumptions</summary>
               <div className="form-grid" style={{ marginTop: 10 }}>
-                <label className="field"><span>Assumption profile</span><select value={strategyForm.assumption_profile} onChange={(e) => onAssumptionProfileChange(e.target.value)}><option value="">Не выбран</option><option value="base">Base</option><option value="conservative">Conservative</option><option value="aggressive">Aggressive</option></select></label>
+                <label className="field"><span>Assumption profile</span><select value={strategyForm.assumption_profile} onChange={(e) => onAssumptionProfileChange(e.target.value)}><option value="">Not selected</option><option value="base">Base</option><option value="conservative">Conservative</option><option value="aggressive">Aggressive</option></select></label>
                 <label className="field"><span>Benchmarks source</span><input value={strategyForm.assumption_benchmarks} onChange={(e) => onStrategyChange('assumption_benchmarks', e.target.value)} type="text" placeholder="Market benchmarks" /></label>
                 <label className="field"><span>History source</span><input value={strategyForm.assumption_history} onChange={(e) => onStrategyChange('assumption_history', e.target.value)} type="text" placeholder="Client history / CRM" /></label>
-                <label className="field"><span>Methodology</span><input value={strategyForm.assumption_method} onChange={(e) => onStrategyChange('assumption_method', e.target.value)} type="text" placeholder="Методология расчёта" /></label>
-                <label className="field"><span>Recalc after 7 days</span><input value={strategyForm.assumption_recalc} onChange={(e) => onStrategyChange('assumption_recalc', e.target.value)} type="text" placeholder="Что пересчитываем после learning phase" /></label>
+                <label className="field"><span>Methodology</span><input value={strategyForm.assumption_method} onChange={(e) => onStrategyChange('assumption_method', e.target.value)} type="text" placeholder="Calculation methodology" /></label>
+                <label className="field"><span>Recalc after 7 days</span><input value={strategyForm.assumption_recalc} onChange={(e) => onStrategyChange('assumption_recalc', e.target.value)} type="text" placeholder="What to recalculate after learning phase" /></label>
               </div>
             </details>
           </section>
@@ -819,10 +819,10 @@ export default function PlanPage() {
           <section className="panel">
             <div className="panel-head">
               <div>
-                <p className="eyebrow">Плейсменты</p>
-                <h2>Включайте и отключайте инвентарь</h2>
+                <p className="eyebrow">Placements</p>
+                <h2>Enable and disable inventory</h2>
               </div>
-              <span className="chip chip-ghost">По умолчанию включены все</span>
+              <span className="chip chip-ghost">All enabled by default</span>
             </div>
             <div className="placement-grid">
               {PLATFORM_ORDER.map((platform) => (
@@ -848,11 +848,11 @@ export default function PlanPage() {
           <section className="panel" id="month-panel">
             <div className="panel-head">
               <div>
-                <p className="eyebrow">Агентский режим</p>
-                <h2>Календарь по месяцам</h2>
+                <p className="eyebrow">Agency mode</p>
+                <h2>Monthly calendar</h2>
               </div>
               <label className="field checkbox" style={{ maxWidth: 280 }}>
-                <span>Включить сплит по месяцам</span>
+                <span>Enable monthly split</span>
                 <input type="checkbox" checked={agencyMode} onChange={(e) => setAgencyMode(e.target.checked)} />
               </label>
             </div>
@@ -861,7 +861,7 @@ export default function PlanPage() {
                 <table className="table month-table">
                   <thead>
                     <tr>
-                      <th>Платформа</th>
+                      <th>Platform</th>
                       {Array.from({ length: monthsCount }, (_, i) => (
                         <th key={`mh-${i}`}>M{i + 1}</th>
                       ))}
@@ -897,8 +897,8 @@ export default function PlanPage() {
       <section className="panel">
         <div className="panel-head">
           <div>
-            <p className="eyebrow">Модули каналов</p>
-            <h2>Свои вводные для Meta, Google Search, Telegram</h2>
+            <p className="eyebrow">Channel modules</p>
+            <h2>Custom inputs for Meta, Google Search, Telegram</h2>
           </div>
           <span className="chip chip-ghost">Overrides</span>
         </div>
@@ -914,21 +914,21 @@ export default function PlanPage() {
       </section>
 
       <section className="grid-3" id="kpi-cards">
-        <article className="stat"><p className="eyebrow">План</p><h3>Бюджет (net)</h3><p className="stat-value">{totals ? usd(totals.budget, 2) : '—'}</p></article>
-        <article className="stat"><p className="eyebrow">План</p><h3>Комиссия/VAT</h3><p className="stat-value">{totals ? usd(totalOverhead, 2) : '—'}</p></article>
-        <article className="stat"><p className="eyebrow">План</p><h3>Бюджет (gross)</h3><p className="stat-value">{totals ? usd(totalGross, 2) : '—'}</p></article>
-        <article className="stat"><p className="eyebrow">План</p><h3>Охват</h3><p className="stat-value">{totals ? num(totals.reach) : '—'}</p></article>
-        <article className="stat"><p className="eyebrow">План</p><h3>Клики</h3><p className="stat-value">{totals ? num(totals.clicks) : '—'}</p></article>
-        <article className="stat"><p className="eyebrow">План</p><h3>Лиды</h3><p className="stat-value">{totals ? num(totals.leads) : '—'}</p></article>
-        <article className="stat"><p className="eyebrow">План</p><h3>Конверсии</h3><p className="stat-value">{totals ? num(totals.conversions) : '—'}</p></article>
+        <article className="stat"><p className="eyebrow">Plan</p><h3>Budget (net)</h3><p className="stat-value">{totals ? usd(totals.budget, 2) : '—'}</p></article>
+        <article className="stat"><p className="eyebrow">Plan</p><h3>Fee/VAT</h3><p className="stat-value">{totals ? usd(totalOverhead, 2) : '—'}</p></article>
+        <article className="stat"><p className="eyebrow">Plan</p><h3>Budget (gross)</h3><p className="stat-value">{totals ? usd(totalGross, 2) : '—'}</p></article>
+        <article className="stat"><p className="eyebrow">Plan</p><h3>Reach</h3><p className="stat-value">{totals ? num(totals.reach) : '—'}</p></article>
+        <article className="stat"><p className="eyebrow">Plan</p><h3>Clicks</h3><p className="stat-value">{totals ? num(totals.clicks) : '—'}</p></article>
+        <article className="stat"><p className="eyebrow">Plan</p><h3>Leads</h3><p className="stat-value">{totals ? num(totals.leads) : '—'}</p></article>
+        <article className="stat"><p className="eyebrow">Plan</p><h3>Conversions</h3><p className="stat-value">{totals ? num(totals.conversions) : '—'}</p></article>
       </section>
 
       {planMode === 'strategy' ? (
         <section className="panel">
-          <div className="panel-head"><div><p className="eyebrow">Выходы</p><h2>Стандартный формат</h2></div></div>
+          <div className="panel-head"><div><p className="eyebrow">Outputs</p><h2>Standard format</h2></div></div>
           <div className="table-wrapper">
             <table className="table">
-              <thead><tr><th>Метрика</th><th>Значение</th><th>Тип</th></tr></thead>
+              <thead><tr><th>Metric</th><th>Value</th><th>Type</th></tr></thead>
               <tbody>{outputRows.map((row) => <tr key={row[0]}><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td></tr>)}</tbody>
             </table>
           </div>
@@ -936,17 +936,17 @@ export default function PlanPage() {
       ) : null}
 
       <section className="panel" id="ai-assistant-panel">
-        <div className="panel-head"><div><p className="eyebrow">AI ассистент</p><h2>Рекомендации по медиаплану</h2></div><span className="chip chip-ghost">MVP</span></div>
+        <div className="panel-head"><div><p className="eyebrow">AI assistant</p><h2>Media plan recommendations</h2></div><span className="chip chip-ghost">MVP</span></div>
         {!assistant ? (
-          <div id="ai-assistant-output" className="muted">Нажмите «AI-черновик», чтобы получить рекомендации.</div>
+          <div id="ai-assistant-output" className="muted">Click "AI draft" to get recommendations.</div>
         ) : (
           <div id="ai-assistant-output">
             <div className="chips">
-              <span className="chip chip-ghost">Источник: {assistant.source}</span>
-              <span className="chip chip-ghost">Профиль: {assistant.profile}</span>
+              <span className="chip chip-ghost">Source: {assistant.source}</span>
+              <span className="chip chip-ghost">Profile: {assistant.profile}</span>
               <span className="chip chip-ghost">Confidence: {Math.round((assistant.confidence || 0) * 100)}%</span>
-              <span className="chip chip-ghost">Бюджет: {usd(assistant.budget, 2)}</span>
-              <span className="chip chip-ghost">Период: {assistant.periodDays} дн.</span>
+              <span className="chip chip-ghost">Budget: {usd(assistant.budget, 2)}</span>
+              <span className="chip chip-ghost">Period: {assistant.periodDays} days</span>
             </div>
             {assistant.rationale ? <p style={{ marginTop: 10 }}>{assistant.rationale}</p> : null}
             {assistant.recommendations.length ? <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>{assistant.recommendations.map((item, idx) => <li key={`${item}-${idx}`}>{item}</li>)}</ul> : null}
@@ -957,32 +957,32 @@ export default function PlanPage() {
       <section className="panel">
         <div className="panel-head">
           <div>
-            <p className="eyebrow">Расчеты</p>
-            <h2>Медиасплит и расчётные метрики</h2>
+            <p className="eyebrow">Calculations</p>
+            <h2>Media split and calculated metrics</h2>
           </div>
           <div className="warnings" id="warnings">
-            {!warnings.length ? <span className="chip chip-good">Валидации пройдены</span> : warnings.map((w, i) => <span className="chip chip-warn" key={`${w}-${i}`}>{w}</span>)}
+            {!warnings.length ? <span className="chip chip-good">Validations passed</span> : warnings.map((w, i) => <span className="chip chip-warn" key={`${w}-${i}`}>{w}</span>)}
           </div>
         </div>
 
         {!plan?.lines?.length ? (
-          <p className="muted">Пока нет данных. Выполните расчет.</p>
+          <p className="muted">No data yet. Run estimate.</p>
         ) : (
           <div className="table-wrapper">
             <table className="table" id="plan-table">
               <thead>
                 <tr>
-                  <th>Платформа</th>
-                  <th>Зачем канал</th>
-                  {planMode === 'strategy' ? <th>Доля</th> : null}
-                  <th>Бюджет (net)</th>
-                  <th>Комиссия/VAT</th>
-                  <th>Пополнение (gross)</th>
-                  <th>Охват</th>
-                  <th>Показы</th>
-                  <th>Клики</th>
-                  <th>Лиды</th>
-                  <th>Конв.</th>
+                  <th>Platform</th>
+                  <th>Channel purpose</th>
+                  {planMode === 'strategy' ? <th>Share</th> : null}
+                  <th>Budget (net)</th>
+                  <th>Fee/VAT</th>
+                  <th>Top-up (gross)</th>
+                  <th>Reach</th>
+                  <th>Impressions</th>
+                  <th>Clicks</th>
+                  <th>Leads</th>
+                  <th>Conv.</th>
                   {planMode === 'strategy' ? <th>CPM</th> : null}
                   {planMode === 'strategy' ? <th>CPC</th> : null}
                   {planMode === 'strategy' ? <th>CVR</th> : null}
@@ -1021,16 +1021,16 @@ export default function PlanPage() {
         <section className="panel">
           <div className="panel-head">
             <div>
-              <p className="eyebrow">Бюджет по периодам</p>
-              <h2>Месяцы и недели</h2>
+              <p className="eyebrow">Budget by periods</p>
+              <h2>Months and weeks</h2>
             </div>
-            <span className="chip chip-ghost">Авто-сплит по period_days</span>
+            <span className="chip chip-ghost">Auto split by period_days</span>
           </div>
           <div className="table-wrapper">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Платформа</th>
+                  <th>Platform</th>
                   {Array.from({ length: monthsCount }, (_, i) => <th key={`m-head-${i}`}>M{i + 1}</th>)}
                 </tr>
               </thead>
@@ -1045,12 +1045,12 @@ export default function PlanPage() {
             </table>
           </div>
           <details className="collapse" style={{ marginTop: 12 }}>
-            <summary>Показать поквартально/недельно ({flightData.weeksCount} нед.)</summary>
+            <summary>Show quarterly/weekly ({flightData.weeksCount} wks)</summary>
             <div className="table-wrapper" style={{ marginTop: 8 }}>
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Платформа</th>
+                    <th>Platform</th>
                     {Array.from({ length: flightData.weeksCount }, (_, i) => <th key={`w-head-${i}`}>W{i + 1}</th>)}
                   </tr>
                 </thead>
@@ -1065,7 +1065,7 @@ export default function PlanPage() {
               </table>
             </div>
           </details>
-          <p className="muted" style={{ marginTop: 10 }}>Итого к оплате (gross): {usd(totalGross, 2)} за {payload.period_days} дней</p>
+          <p className="muted" style={{ marginTop: 10 }}>Total payable (gross): {usd(totalGross, 2)} for {payload.period_days} days</p>
         </section>
       ) : null}
     </AppShell>
