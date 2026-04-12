@@ -37,6 +37,10 @@ export default function AdminLegalEntitiesPage() {
     short_name: '',
     full_name: '',
     legal_address: '',
+    issuer_type: 'too',
+    tax_mode: 'with_vat',
+    contract_number: '',
+    contract_date: '',
   })
 
   async function safeFetch(path, options = {}) {
@@ -64,6 +68,10 @@ export default function AdminLegalEntitiesPage() {
       short_name: '',
       full_name: '',
       legal_address: '',
+      issuer_type: 'too',
+      tax_mode: 'with_vat',
+      contract_number: '',
+      contract_date: '',
     })
     setNotice('')
   }
@@ -82,6 +90,10 @@ export default function AdminLegalEntitiesPage() {
       short_name: row.short_name || row.name || '',
       full_name: row.full_name || row.name || '',
       legal_address: row.legal_address || row.address || '',
+      issuer_type: row.issuer_type || 'too',
+      tax_mode: row.tax_mode || 'without_vat',
+      contract_number: row.contract_number || '',
+      contract_date: row.contract_date || '',
     })
     setNotice('')
     setModalOpen(true)
@@ -94,6 +106,10 @@ export default function AdminLegalEntitiesPage() {
       short_name: form.short_name.trim(),
       full_name: form.full_name.trim(),
       legal_address: form.legal_address.trim(),
+      issuer_type: form.issuer_type || 'too',
+      tax_mode: form.tax_mode || 'without_vat',
+      contract_number: form.contract_number.trim() || null,
+      contract_date: form.contract_date.trim() || null,
     }
     if (!payload.user_email || !payload.bin || !payload.short_name || !payload.full_name || !payload.legal_address) {
       setNotice('Fill in all fields.')
@@ -149,11 +165,11 @@ export default function AdminLegalEntitiesPage() {
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
-              <tr><th>Date</th><th>Client</th><th>BIN / IIN</th><th>Short Name</th><th>Full Name</th><th>Legal Address</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
+              <tr><th>Date</th><th>Client</th><th>BIN / IIN</th><th>Issuer</th><th>VAT Mode</th><th>Contract</th><th>Short Name</th><th>Full Name</th><th>Legal Address</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
             </thead>
             <tbody>
               {!rows.length ? (
-                <tr><td colSpan={7}>No legal entities found.</td></tr>
+                <tr><td colSpan={10}>No legal entities found.</td></tr>
               ) : (
                 rows.map((row) => (
                   <tr key={row.id}>
@@ -163,6 +179,9 @@ export default function AdminLegalEntitiesPage() {
                       <span className={styles.tableMeta}>Entity #{row.id}</span>
                     </td>
                     <td>{row.bin || '—'}</td>
+                    <td>{row.issuer_type === 'ip' ? 'IP' : 'TOO'}</td>
+                    <td>{row.tax_mode === 'with_vat' ? 'With VAT' : 'Without VAT'}</td>
+                    <td>{row.contract_number ? `${row.contract_number}${row.contract_date ? ` · ${row.contract_date}` : ''}` : '—'}</td>
                     <td>{row.short_name || row.name || '—'}</td>
                     <td>{row.full_name || row.name || '—'}</td>
                     <td>{row.legal_address || row.address || '—'}</td>
@@ -218,6 +237,30 @@ export default function AdminLegalEntitiesPage() {
                     <span className={styles.fieldLabel}>Legal Address</span>
                     <textarea className={styles.textarea} value={form.legal_address} onChange={(e) => setForm((s) => ({ ...s, legal_address: e.target.value }))} />
                   </label>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Issuer Type</span>
+                    <select className={styles.select} value={form.issuer_type} onChange={(e) => {
+                      const issuerType = e.target.value
+                      setForm((s) => ({
+                        ...s,
+                        issuer_type: issuerType,
+                        tax_mode: issuerType === 'ip' ? 'without_vat' : 'with_vat',
+                      }))
+                    }}>
+                      <option value="too">TOO (With VAT)</option>
+                      <option value="ip">IP (Without VAT)</option>
+                    </select>
+                  </label>
+                  <div className={styles.filters}>
+                    <label className={styles.field}>
+                      <span className={styles.fieldLabel}>Contract Number</span>
+                      <input className={styles.input} value={form.contract_number} onChange={(e) => setForm((s) => ({ ...s, contract_number: e.target.value }))} />
+                    </label>
+                    <label className={styles.field}>
+                      <span className={styles.fieldLabel}>Contract Date</span>
+                      <input className={styles.input} type="date" value={form.contract_date} onChange={(e) => setForm((s) => ({ ...s, contract_date: e.target.value }))} />
+                    </label>
+                  </div>
                 </div>
               </div>
 

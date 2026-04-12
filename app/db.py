@@ -143,6 +143,42 @@ def apply_schema():
             conn.execute("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS notifications_seen_at TIMESTAMPTZ")
             conn.execute("ALTER TABLE topups ADD COLUMN IF NOT EXISTS hold_applied INTEGER DEFAULT 0")
             conn.execute("ALTER TABLE user_tokens ADD COLUMN IF NOT EXISTS login_email TEXT")
+            conn.execute("ALTER TABLE legal_entities ADD COLUMN IF NOT EXISTS tax_mode TEXT DEFAULT 'without_vat'")
+            conn.execute("ALTER TABLE legal_entities ADD COLUMN IF NOT EXISTS issuer_type TEXT DEFAULT 'too'")
+            conn.execute("ALTER TABLE legal_entities ADD COLUMN IF NOT EXISTS contract_number TEXT")
+            conn.execute("ALTER TABLE legal_entities ADD COLUMN IF NOT EXISTS contract_date TEXT")
+            conn.execute("ALTER TABLE wallet_topup_requests ADD COLUMN IF NOT EXISTS amount_kind TEXT DEFAULT 'gross'")
+            conn.execute("ALTER TABLE wallet_topup_requests ADD COLUMN IF NOT EXISTS tax_mode TEXT DEFAULT 'without_vat'")
+            conn.execute("ALTER TABLE wallet_topup_requests ADD COLUMN IF NOT EXISTS vat_rate DOUBLE PRECISION DEFAULT 0")
+            conn.execute("ALTER TABLE wallet_topup_requests ADD COLUMN IF NOT EXISTS issuer_type TEXT DEFAULT 'too'")
+            conn.execute("ALTER TABLE wallet_topup_requests ADD COLUMN IF NOT EXISTS contract_number TEXT")
+            conn.execute("ALTER TABLE wallet_topup_requests ADD COLUMN IF NOT EXISTS contract_date TEXT")
+            conn.execute("ALTER TABLE wallet_topup_requests ADD COLUMN IF NOT EXISTS issuer_name TEXT")
+            conn.execute("ALTER TABLE wallet_topup_requests ADD COLUMN IF NOT EXISTS issuer_bin TEXT")
+            conn.execute("ALTER TABLE wallet_topup_requests ADD COLUMN IF NOT EXISTS issuer_iin TEXT")
+            conn.execute("ALTER TABLE wallet_topup_requests ADD COLUMN IF NOT EXISTS issuer_legal_address TEXT")
+            conn.execute("ALTER TABLE wallet_topup_requests ADD COLUMN IF NOT EXISTS issuer_factual_address TEXT")
+            conn.execute("ALTER TABLE wallet_topup_requests ADD COLUMN IF NOT EXISTS issuer_bank TEXT")
+            conn.execute("ALTER TABLE wallet_topup_requests ADD COLUMN IF NOT EXISTS issuer_iban TEXT")
+            conn.execute("ALTER TABLE wallet_topup_requests ADD COLUMN IF NOT EXISTS issuer_bic TEXT")
+            conn.execute("ALTER TABLE wallet_topup_requests ADD COLUMN IF NOT EXISTS issuer_kbe TEXT")
+            conn.execute("ALTER TABLE wallet_topup_requests ADD COLUMN IF NOT EXISTS issuer_currency TEXT")
+            conn.execute("""
+            CREATE TABLE IF NOT EXISTS billing_issuers (
+              issuer_type TEXT PRIMARY KEY,
+              name TEXT,
+              bin TEXT,
+              iin TEXT,
+              legal_address TEXT,
+              factual_address TEXT,
+              bank TEXT,
+              iban TEXT,
+              bic TEXT,
+              kbe TEXT,
+              currency TEXT DEFAULT 'KZT',
+              updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+            )
+            """)
             conn.execute("""
             CREATE TABLE IF NOT EXISTS agencies (
               id BIGSERIAL PRIMARY KEY,
@@ -457,12 +493,30 @@ def apply_schema():
               currency TEXT DEFAULT 'KZT',
               note TEXT,
               status TEXT DEFAULT 'requested',
+              amount_kind TEXT DEFAULT 'gross',
+              issuer_type TEXT DEFAULT 'too',
+              tax_mode TEXT DEFAULT 'without_vat',
+              vat_rate DOUBLE PRECISION DEFAULT 0,
+              contract_number TEXT,
+              contract_date TEXT,
+              issuer_name TEXT,
+              issuer_bin TEXT,
+              issuer_iin TEXT,
+              issuer_legal_address TEXT,
+              issuer_factual_address TEXT,
+              issuer_bank TEXT,
+              issuer_iban TEXT,
+              issuer_bic TEXT,
+              issuer_kbe TEXT,
+              issuer_currency TEXT,
               legal_entity_id INTEGER REFERENCES legal_entities(id),
               client_name TEXT,
               client_bin TEXT,
               client_address TEXT,
               client_email TEXT,
               order_ref TEXT,
+              invoice_number TEXT,
+              invoice_date TEXT,
               created_at TEXT DEFAULT CURRENT_TIMESTAMP
             );
             """,
@@ -559,6 +613,10 @@ def apply_schema():
             CREATE TABLE IF NOT EXISTS legal_entities (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               name TEXT NOT NULL,
+              issuer_type TEXT DEFAULT 'too',
+              tax_mode TEXT DEFAULT 'without_vat',
+              contract_number TEXT,
+              contract_date TEXT,
               bin TEXT,
               address TEXT,
               email TEXT,
@@ -637,6 +695,26 @@ def apply_schema():
         )
         _ensure_table(
             conn,
+            "billing_issuers",
+            """
+            CREATE TABLE IF NOT EXISTS billing_issuers (
+              issuer_type TEXT PRIMARY KEY,
+              name TEXT,
+              bin TEXT,
+              iin TEXT,
+              legal_address TEXT,
+              factual_address TEXT,
+              bank TEXT,
+              iban TEXT,
+              bic TEXT,
+              kbe TEXT,
+              currency TEXT DEFAULT 'KZT',
+              updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+            """,
+        )
+        _ensure_table(
+            conn,
             "ad_account_stats",
             """
             CREATE TABLE IF NOT EXISTS ad_account_stats (
@@ -703,9 +781,29 @@ def apply_schema():
         _ensure_column(conn, "wallet_topup_requests", "legal_entity_id", "INTEGER")
         _ensure_column(conn, "wallet_topup_requests", "invoice_number", "TEXT")
         _ensure_column(conn, "wallet_topup_requests", "invoice_date", "TEXT")
+        _ensure_column(conn, "wallet_topup_requests", "amount_kind", "TEXT")
+        _ensure_column(conn, "wallet_topup_requests", "issuer_type", "TEXT")
+        _ensure_column(conn, "wallet_topup_requests", "tax_mode", "TEXT")
+        _ensure_column(conn, "wallet_topup_requests", "vat_rate", "DOUBLE PRECISION")
+        _ensure_column(conn, "wallet_topup_requests", "contract_number", "TEXT")
+        _ensure_column(conn, "wallet_topup_requests", "contract_date", "TEXT")
+        _ensure_column(conn, "wallet_topup_requests", "issuer_name", "TEXT")
+        _ensure_column(conn, "wallet_topup_requests", "issuer_bin", "TEXT")
+        _ensure_column(conn, "wallet_topup_requests", "issuer_iin", "TEXT")
+        _ensure_column(conn, "wallet_topup_requests", "issuer_legal_address", "TEXT")
+        _ensure_column(conn, "wallet_topup_requests", "issuer_factual_address", "TEXT")
+        _ensure_column(conn, "wallet_topup_requests", "issuer_bank", "TEXT")
+        _ensure_column(conn, "wallet_topup_requests", "issuer_iban", "TEXT")
+        _ensure_column(conn, "wallet_topup_requests", "issuer_bic", "TEXT")
+        _ensure_column(conn, "wallet_topup_requests", "issuer_kbe", "TEXT")
+        _ensure_column(conn, "wallet_topup_requests", "issuer_currency", "TEXT")
         _ensure_column(conn, "legal_entities", "short_name", "TEXT")
         _ensure_column(conn, "legal_entities", "full_name", "TEXT")
         _ensure_column(conn, "legal_entities", "legal_address", "TEXT")
+        _ensure_column(conn, "legal_entities", "issuer_type", "TEXT")
+        _ensure_column(conn, "legal_entities", "tax_mode", "TEXT")
+        _ensure_column(conn, "legal_entities", "contract_number", "TEXT")
+        _ensure_column(conn, "legal_entities", "contract_date", "TEXT")
         _ensure_column(conn, "account_requests", "manager_email", "TEXT")
         _ensure_column(conn, "account_requests", "contract_code", "TEXT")
         _ensure_column(conn, "account_requests", "account_code", "TEXT")

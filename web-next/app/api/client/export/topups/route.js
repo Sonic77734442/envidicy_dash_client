@@ -36,6 +36,29 @@ function normalizeStatus(status) {
   return 'Pending'
 }
 
+function withinDateRange(value, fromStr, toStr) {
+  const date = String(value || '').slice(0, 10)
+  if (!date) return false
+  if (fromStr && date < fromStr) return false
+  if (toStr && date > toStr) return false
+  return true
+}
+
+function filterRows(rows, searchParams) {
+  const from = String(searchParams.get('date_from') || '').trim()
+  const to = String(searchParams.get('date_to') || '').trim()
+  const status = String(searchParams.get('status') || '').trim().toLowerCase()
+  const platform = String(searchParams.get('platform') || '').trim().toLowerCase()
+  const accountId = String(searchParams.get('account_id') || '').trim()
+  return (rows || []).filter((row) => {
+    if (!withinDateRange(row?.created_at, from, to)) return false
+    if (status && String(row?.status || '').trim().toLowerCase() !== status) return false
+    if (platform && String(row?.account_platform || row?.platform || '').trim().toLowerCase() !== platform) return false
+    if (accountId && String(row?.account_id || '') !== accountId) return false
+    return true
+  })
+}
+
 function buildCsv(rows) {
   const header = [
     'Date',
@@ -90,7 +113,8 @@ export async function GET(request) {
   }
 
   const rows = await upstreamRes.json().catch(() => [])
-  const csv = buildCsv(Array.isArray(rows) ? rows : [])
+  const filteredRows = filterRows(Array.isArray(rows) ? rows : [], request.nextUrl.searchParams)
+  const csv = buildCsv(filteredRows)
   return new NextResponse(csv, {
     status: 200,
     headers: {
@@ -99,4 +123,3 @@ export async function GET(request) {
     },
   })
 }
-

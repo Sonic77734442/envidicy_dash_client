@@ -28,6 +28,16 @@ export async function GET(request) {
   })
   const data = await upstreamRes.json().catch(() => ({}))
   if (!upstreamRes.ok) {
+    if (upstreamRes.status === 404) {
+      return NextResponse.json(
+        {
+          detail:
+            'Upstream backend does not support /accounts/finance/summary. Switch NEXT_PUBLIC_API_BASE to the new backend deployment.',
+          upstream_status: 404,
+        },
+        { status: 502 }
+      )
+    }
     return NextResponse.json(
       { detail: data?.detail || 'Failed to load account finance summary' },
       { status: upstreamRes.status || 500 }

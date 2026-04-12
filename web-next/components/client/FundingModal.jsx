@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 import styles from './client.module.css'
 import { getAuthToken } from '../../lib/auth'
 import { calculateFundingPreview, formatEditableAmount, formatMoney } from '../../lib/client/funding'
+import { useI18n } from '../../lib/i18n/client'
 
 export default function FundingModal({ accountId, open, onClose, onSubmitted }) {
+  const { tr } = useI18n()
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [context, setContext] = useState(null)
@@ -16,7 +18,12 @@ export default function FundingModal({ accountId, open, onClose, onSubmitted }) 
   useEffect(() => {
     if (!open || !accountId) return
     const token = getAuthToken()
-    if (!token) return
+    if (!token) {
+      setContext(null)
+      setLoading(false)
+      setError(tr('Session expired. Please sign in again.', 'Сессия истекла. Войдите снова.'))
+      return
+    }
 
     let cancelled = false
 
@@ -29,13 +36,13 @@ export default function FundingModal({ accountId, open, onClose, onSubmitted }) 
           cache: 'no-store',
         })
         const payload = await res.json().catch(() => ({}))
-        if (!res.ok) throw new Error(payload?.detail || 'Failed to load funding context')
+        if (!res.ok) throw new Error(payload?.detail || tr('Failed to load funding context', 'Не удалось загрузить контекст пополнения'))
         if (cancelled) return
         setContext(payload)
         setInputCurrency(payload?.funding?.defaultInputCurrency || 'KZT')
         setAmountInput('')
       } catch (e) {
-        if (!cancelled) setError(e?.message || 'Failed to load funding context')
+        if (!cancelled) setError(e?.message || tr('Failed to load funding context', 'Не удалось загрузить контекст пополнения'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -95,7 +102,11 @@ export default function FundingModal({ accountId, open, onClose, onSubmitted }) 
 
   async function handleSubmit() {
     const token = getAuthToken()
-    if (!token || !canSubmit) return
+    if (!token) {
+      setError(tr('Session expired. Please sign in again.', 'Сессия истекла. Войдите снова.'))
+      return
+    }
+    if (!canSubmit) return
 
     setSubmitting(true)
     setError('')
@@ -113,11 +124,11 @@ export default function FundingModal({ accountId, open, onClose, onSubmitted }) 
         }),
       })
       const payload = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(payload?.detail || 'Failed to create top-up request')
+      if (!res.ok) throw new Error(payload?.detail || tr('Failed to create top-up request', 'Не удалось создать запрос на пополнение'))
       if (onSubmitted) await onSubmitted(payload)
       onClose()
     } catch (e) {
-      setError(e?.message || 'Failed to create top-up request')
+      setError(e?.message || tr('Failed to create top-up request', 'Не удалось создать запрос на пополнение'))
     } finally {
       setSubmitting(false)
     }
@@ -130,26 +141,26 @@ export default function FundingModal({ accountId, open, onClose, onSubmitted }) 
       <section className={styles.fundingModal} role="dialog" aria-modal="true" aria-labelledby="funding-title">
         <div className={styles.fundingHeader}>
           <div>
-            <p className={styles.fundingEyebrow}>Client Funding</p>
+            <p className={styles.fundingEyebrow}>{tr('Client Funding', 'Пополнение клиента')}</p>
             <h3 className={styles.fundingTitle} id="funding-title">
-              Top Up Account
+              {tr('Top Up Account', 'Пополнить аккаунт')}
             </h3>
             <p className={styles.fundingSubtitle}>
-              {context?.account?.platformLabel || 'Account'} · {context?.account?.name || 'Loading…'}
+              {context?.account?.platformLabel || tr('Account', 'Аккаунт')} · {context?.account?.name || tr('Loading…', 'Загрузка…')}
             </p>
           </div>
-          <button className={styles.fundingClose} onClick={onClose} type="button" aria-label="Close">
+          <button className={styles.fundingClose} onClick={onClose} type="button" aria-label={tr('Close', 'Закрыть')}>
             ×
           </button>
         </div>
 
         {loading ? (
-          <div className={styles.fundingLoading}>Loading funding context…</div>
+          <div className={styles.fundingLoading}>{tr('Loading funding context…', 'Загрузка контекста пополнения…')}</div>
         ) : context ? (
           <>
             <div className={styles.fundingStage}>
               <article className={styles.fundingStageCard}>
-                <span className={styles.fundingStageLabel}>Client Wallet</span>
+                <span className={styles.fundingStageLabel}>{tr('Client Wallet', 'Кошелёк клиента')}</span>
                 <strong className={styles.fundingStageValue}>{context.wallet.displayValue}</strong>
                 <div className={styles.fundingStageMeta}>
                   {context.wallet.hints.usdLabel ? <span>{context.wallet.hints.usdLabel}</span> : null}
@@ -162,11 +173,11 @@ export default function FundingModal({ accountId, open, onClose, onSubmitted }) 
               </div>
 
               <article className={styles.fundingStageCard}>
-                <span className={styles.fundingStageLabel}>Ad Account</span>
+                <span className={styles.fundingStageLabel}>{tr('Ad Account', 'Рекламный аккаунт')}</span>
                 <strong className={styles.fundingStageValue}>{context.account.currency}</strong>
                 <div className={styles.fundingStageMeta}>
                   <span>{context.account.name}</span>
-                  <span>{context.account.liveBalanceLabel ? `Live ${context.account.liveBalanceLabel}` : 'Ready for funding'}</span>
+                  <span>{context.account.liveBalanceLabel ? `${tr('Live', 'Live')} ${context.account.liveBalanceLabel}` : tr('Ready for funding', 'Готов к пополнению')}</span>
                 </div>
               </article>
             </div>
@@ -174,8 +185,8 @@ export default function FundingModal({ accountId, open, onClose, onSubmitted }) 
             <div className={styles.fundingInputShell}>
               <div className={styles.fundingInputHeader}>
                 <div>
-                  <span className={styles.fundingInputLabel}>Amount to top up</span>
-                  <p className={styles.fundingInputHint}>Choose the currency you want to enter. The rest is calculated automatically.</p>
+                  <span className={styles.fundingInputLabel}>{tr('Amount to top up', 'Сумма пополнения')}</span>
+                  <p className={styles.fundingInputHint}>{tr('Choose the currency you want to enter. The rest is calculated automatically.', 'Выберите валюту ввода. Остальное рассчитается автоматически.')}</p>
                 </div>
                 {context.funding.allowedInputCurrencies.length > 1 ? (
                   <div className={styles.fundingCurrencyTabs}>
@@ -210,7 +221,7 @@ export default function FundingModal({ accountId, open, onClose, onSubmitted }) 
                   <span className={styles.fundingAmountCurrency}>{inputCurrency}</span>
                 </label>
                 <div className={styles.fundingAmountMirror}>
-                  <span>{inputCurrency === 'KZT' ? 'Estimated account funding' : 'Estimated wallet debit'}</span>
+                  <span>{inputCurrency === 'KZT' ? tr('Estimated account funding', 'Оценка зачисления на аккаунт') : tr('Estimated wallet debit', 'Оценка списания с кошелька')}</span>
                   <strong>
                     {inputCurrency === 'KZT'
                       ? formatMoney(preview?.fundingAmountAccount || 0, context.account.currency, 2)
@@ -222,7 +233,7 @@ export default function FundingModal({ accountId, open, onClose, onSubmitted }) 
               <div className={styles.fundingExplainStrip}>
                 <span className={styles.fundingExplainDot}>i</span>
                 <span>
-                  Wallet debit {formatMoney(preview?.totalWalletDebitKzt || 0, 'KZT', 2)} → account receives{' '}
+                  {tr('Wallet debit', 'Списание с кошелька')} {formatMoney(preview?.totalWalletDebitKzt || 0, 'KZT', 2)} → {tr('account receives', 'зачисление на аккаунт')}{' '}
                   {formatMoney(preview?.netAccountFunding || 0, context.account.currency, 2)}
                 </span>
               </div>
@@ -230,15 +241,19 @@ export default function FundingModal({ accountId, open, onClose, onSubmitted }) 
 
             <div className={styles.fundingDetails}>
               <div className={styles.fundingDetailRow}>
-                <span>Market FX Rate ({context.account.currency}/KZT)</span>
-                <strong>{preview?.fxRate ? String(preview.fxRate) : 'Not required'}</strong>
+                <span>{tr('FX Rate', 'FX курс')} ({context.account.currency}/KZT)</span>
+                <strong>
+                  {preview?.fxRate
+                    ? Number(preview.fxRate).toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+                    : tr('Not required', 'Не требуется')}
+                </strong>
               </div>
               <div className={styles.fundingDetailRow}>
-                <span>Client Funding</span>
+                <span>{tr('Client Funding', 'Финансирование клиента')}</span>
                 <strong>{formatMoney(preview?.fundingAmountKzt || 0, 'KZT', 2)}</strong>
               </div>
               <div className={styles.fundingDetailRow}>
-                <span>Acquiring Fee ({Number(context.funding.feePercent || 0)}%)</span>
+                <span>{tr('Acquiring Fee', 'Комиссия эквайринга')} ({Number(context.funding.feePercent || 0)}%)</span>
                 <strong>{formatMoney(preview?.feeAmountKzt || 0, 'KZT', 2)}</strong>
               </div>
               <div className={styles.fundingDetailRow}>
@@ -249,21 +264,21 @@ export default function FundingModal({ accountId, open, onClose, onSubmitted }) 
 
             <div className={styles.fundingTotals}>
               <div className={styles.fundingTotalCard}>
-                <span>Total Wallet Debit</span>
+                <span>{tr('Total Wallet Debit', 'Итоговое списание с кошелька')}</span>
                 <strong>{formatMoney(preview?.totalWalletDebitKzt || 0, 'KZT', 2)}</strong>
               </div>
               <div className={`${styles.fundingTotalCard} ${styles.fundingTotalCardAccent}`}>
-                <span>Net Account Funding</span>
+                <span>{tr('Net Account Funding', 'Чистое пополнение аккаунта')}</span>
                 <strong>{formatMoney(preview?.netAccountFunding || 0, context.account.currency, 2)}</strong>
               </div>
             </div>
 
             <div className={insufficientFunds ? styles.fundingStatusWarn : styles.fundingStatusOk}>
-              <strong>{insufficientFunds ? 'Insufficient wallet balance' : 'Wallet balance is sufficient'}</strong>
+              <strong>{insufficientFunds ? tr('Insufficient wallet balance', 'Недостаточно средств в кошельке') : tr('Wallet balance is sufficient', 'Средств в кошельке достаточно')}</strong>
               <span>
                 {insufficientFunds
-                  ? 'Reduce the amount or top up the client wallet first.'
-                  : 'Once confirmed, this request will be created and will appear in Finance.'}
+                  ? tr('Reduce the amount or top up the client wallet first.', 'Уменьшите сумму или сначала пополните кошелёк клиента.')
+                  : tr('Once confirmed, this request will be created and will appear in Finance.', 'После подтверждения запрос будет создан и появится в разделе Финансы.')}
               </span>
             </div>
           </>
@@ -273,10 +288,10 @@ export default function FundingModal({ accountId, open, onClose, onSubmitted }) 
 
         <div className={styles.fundingFooter}>
           <button className={styles.fundingCancel} onClick={onClose} type="button">
-            Cancel
+            {tr('Cancel', 'Отмена')}
           </button>
           <button className={styles.fundingConfirm} disabled={!canSubmit} onClick={handleSubmit} type="button">
-            {submitting ? 'Creating…' : 'Confirm Top Up'}
+            {submitting ? tr('Creating…', 'Создание…') : tr('Confirm Top Up', 'Подтвердить пополнение')}
           </button>
         </div>
       </section>

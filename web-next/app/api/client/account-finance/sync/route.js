@@ -39,6 +39,16 @@ export async function POST(request) {
   })
   const data = await upstreamRes.json().catch(() => ({}))
   if (!upstreamRes.ok) {
+    if (upstreamRes.status === 404) {
+      return NextResponse.json(
+        {
+          detail:
+            'Upstream backend does not support /accounts/finance/sync. Switch NEXT_PUBLIC_API_BASE to the new backend deployment.',
+          upstream_status: 404,
+        },
+        { status: 502 }
+      )
+    }
     return NextResponse.json(
       { detail: data?.detail || 'Failed to sync account finance stats' },
       { status: upstreamRes.status || 500 }

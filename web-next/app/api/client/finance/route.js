@@ -3,6 +3,7 @@ import { getApiBase } from '../../../../lib/api'
 import {
   buildWalletBalanceHint,
   formatMoney,
+  getMarkedRate,
   getTopupAccountFundingUsd,
   getTopupBreakdown,
   getWalletAvailableBalance,
@@ -109,11 +110,11 @@ function buildDetailFromRow(first, financeDocs) {
       note: 'No recent financial movements were found for this period.',
       primaryAction: 'Raise a Question',
       secondaryAction: 'Download Document',
-      primaryActionHref: '#',
-      secondaryActionHref: '#',
+      primaryActionHref: null,
+      secondaryActionHref: null,
       documentName: 'No document attached',
       documentMeta: '—',
-      documentUrl: '#',
+      documentUrl: null,
       extraRows: [],
     }
   }
@@ -128,11 +129,11 @@ function buildDetailFromRow(first, financeDocs) {
     note: first.note,
     primaryAction: first.primaryAction || (first.status === 'Action Required' ? 'Resolve Issue' : 'Raise a Question'),
     secondaryAction: first.secondaryAction || (latestDoc?.file_name ? 'Open Document' : 'Download Document'),
-    primaryActionHref: first.primaryActionHref || '#',
-    secondaryActionHref: first.documentUrl || first.secondaryActionHref || '#',
+    primaryActionHref: first.primaryActionHref || null,
+    secondaryActionHref: first.documentUrl || first.secondaryActionHref || null,
     documentName: latestDoc?.file_name || 'No document attached',
     documentMeta: latestDoc ? `Uploaded ${fmtDate(latestDoc.created_at || latestDoc.document_date)}` : '—',
-    documentUrl: first.documentUrl || '#',
+    documentUrl: first.documentUrl || null,
     extraRows: Array.isArray(first.extraRows) ? first.extraRows : [],
   }
 }
@@ -158,6 +159,24 @@ function fundingRequestFingerprint(row) {
   const entity = String(row?.legal_entity_name || row?.client_name || '').trim().toLowerCase()
   const status = String(row?.status || '').trim().toLowerCase()
   return `req:${entity}:${amount}:${currency}:${status}:${createdDate}`
+}
+
+function buildRateTicks(ratesPayload) {
+  const usdRate = getMarkedRate(ratesPayload?.rates?.USD)
+  const eurRate = getMarkedRate(ratesPayload?.rates?.EUR)
+  const ticks = []
+  if (Number.isFinite(usdRate) && usdRate > 0) ticks.push({ label: 'USD/KZT', value: usdRate.toFixed(1) })
+  if (Number.isFinite(eurRate) && eurRate > 0) ticks.push({ label: 'EUR/KZT', value: eurRate.toFixed(1) })
+  return ticks
+}
+
+function buildRateStatusRows(ratesPayload) {
+  const usdRate = getMarkedRate(ratesPayload?.rates?.USD)
+  const eurRate = getMarkedRate(ratesPayload?.rates?.EUR)
+  const rows = []
+  if (Number.isFinite(usdRate) && usdRate > 0) rows.push({ icon: '$', label: `USD/KZT ${usdRate.toFixed(1)}` })
+  if (Number.isFinite(eurRate) && eurRate > 0) rows.push({ icon: '€', label: `EUR/KZT ${eurRate.toFixed(1)}` })
+  return rows
 }
 
 export async function GET(request) {
@@ -229,9 +248,9 @@ export async function GET(request) {
         note: walletTxNote(row.type, row.note),
         primaryAction: 'Raise a Question',
         secondaryAction: 'Download Document',
-        primaryActionHref: '#',
-        secondaryActionHref: '#',
-        documentUrl: '#',
+        primaryActionHref: null,
+        secondaryActionHref: null,
+        documentUrl: null,
         rawCreatedAt: row.created_at || '',
       }
     })
@@ -257,9 +276,9 @@ export async function GET(request) {
         note: row.status === 'completed' ? 'Funding delivered to the ad account.' : 'Funding request is still in progress.',
         primaryAction: row.status === 'completed' ? 'View Funding' : 'Review Funding',
         secondaryAction: 'Download Document',
-        primaryActionHref: '#',
-        secondaryActionHref: '#',
-        documentUrl: '#',
+        primaryActionHref: null,
+        secondaryActionHref: null,
+        documentUrl: null,
         extraRows: [
           { label: 'Funding Currency', value: breakdown.inputCurrency },
           { label: 'Client Funding', value: fmtMoney(breakdown.inputAmount, breakdown.inputCurrency, 2) },
@@ -291,9 +310,9 @@ export async function GET(request) {
       note: row.status === 'invoice_ready' ? 'Invoice is ready for payment.' : 'Invoice is still being prepared.',
       primaryAction: 'View Invoice',
       secondaryAction: 'Download PDF',
-      primaryActionHref: row.id ? `/api/client/wallet-topup-requests/${row.id}/invoice` : '#',
-      secondaryActionHref: row.id ? `/api/client/wallet-topup-requests/${row.id}/pdf-generated` : '#',
-      documentUrl: row.id ? `/api/client/wallet-topup-requests/${row.id}/invoice` : '#',
+      primaryActionHref: row.id ? `/api/client/wallet-topup-requests/${row.id}/invoice` : null,
+      secondaryActionHref: row.id ? `/api/client/wallet-topup-requests/${row.id}/pdf-generated` : null,
+      documentUrl: row.id ? `/api/client/wallet-topup-requests/${row.id}/invoice` : null,
       rawCreatedAt: row.created_at || '',
     }))
     .sort((a, b) => String(b.rawCreatedAt).localeCompare(String(a.rawCreatedAt)))
@@ -314,9 +333,9 @@ export async function GET(request) {
       note: 'Client finance document uploaded to the vault.',
       primaryAction: 'Open Document',
       secondaryAction: 'Download Document',
-      primaryActionHref: '#',
-      secondaryActionHref: row.id ? `/api/client/finance-documents/${row.id}` : '#',
-      documentUrl: row.id ? `/api/client/finance-documents/${row.id}` : '#',
+      primaryActionHref: row.id ? `/api/client/finance-documents/${row.id}` : null,
+      secondaryActionHref: row.id ? `/api/client/finance-documents/${row.id}` : null,
+      documentUrl: row.id ? `/api/client/finance-documents/${row.id}` : null,
       rawCreatedAt: row.created_at || '',
     }))
     .sort((a, b) => String(b.rawCreatedAt).localeCompare(String(a.rawCreatedAt)))
@@ -364,15 +383,9 @@ export async function GET(request) {
       label: `Showing 1-${Math.min(normalizedTransactions.length, 25)} of ${normalizedTransactions.length} transactions`,
     },
     detail: selectedDetail,
-    ticks: [
-      { label: 'USD/KZT', value: '471.2' },
-      { label: 'EUR/USD', value: '1.08' },
-    ],
+    ticks: buildRateTicks(ratesPayload),
     statusAlerts: openInvoiceRequests.length ? `${openInvoiceRequests.length} Alerts` : 'No Alerts',
-    statusRows: [
-      { icon: '$', label: 'USD/KZT 471.2' },
-      { icon: '€', label: 'EUR/USD 1.08' },
-    ],
+    statusRows: buildRateStatusRows(ratesPayload),
     financeDocsCount: Array.isArray(financeDocs) ? financeDocs.length : 0,
     invoiceRequestsCount: openInvoiceRequests.length,
     lastUpdated: relativeTime(normalizedTransactions[0]?.rawCreatedAt),

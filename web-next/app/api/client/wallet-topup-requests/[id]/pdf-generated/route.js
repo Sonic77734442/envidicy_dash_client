@@ -8,7 +8,12 @@ function apiBase() {
 }
 
 function authHeader(request) {
-  return (request.headers.get('authorization') || '').trim()
+  const direct = (request.headers.get('authorization') || '').trim()
+  if (direct) return direct
+  const cookieToken = (request.cookies?.get('auth_token')?.value || '').trim()
+  if (cookieToken) return `Bearer ${cookieToken}`
+  const token = (request.nextUrl?.searchParams?.get('token') || '').trim()
+  return token ? `Bearer ${token}` : ''
 }
 
 async function upstreamFetch(path, auth, options = {}) {
@@ -27,17 +32,19 @@ async function proxyBinaryResponse(upstreamRes, fallbackName) {
     const data = await upstreamRes.json().catch(() => ({}))
     return NextResponse.json({ detail: data?.detail || 'Failed to fetch generated pdf' }, { status: upstreamRes.status || 500 })
   }
-
-  const bytes = await upstreamRes.arrayBuffer()
+  const headers = new Headers()
   const contentType = upstreamRes.headers.get('content-type') || 'application/pdf'
-  const contentLength = upstreamRes.headers.get('content-length')
   const contentDisposition = upstreamRes.headers.get('content-disposition') || `attachment; filename="${fallbackName}"`
-  const headers = new Headers({
-    'Content-Type': contentType,
-    'Content-Disposition': contentDisposition,
-  })
-  if (contentLength) headers.set('Content-Length', contentLength)
-  return new NextResponse(bytes, { status: 200, headers })
+  headers.set('Content-Type', contentType)
+  headers.set('Content-Disposition', contentDisposition)
+
+  const passThroughHeaders = ['cache-control', 'pragma', 'expires', 'last-modified', 'etag']
+  for (const name of passThroughHeaders) {
+    const value = upstreamRes.headers.get(name)
+    if (value) headers.set(name, value)
+  }
+
+  return new NextResponse(upstreamRes.body, { status: upstreamRes.status || 200, headers })
 }
 
 export async function GET(request, { params }) {

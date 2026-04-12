@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getApiBase } from '../../../../lib/api'
 
 export const dynamic = 'force-dynamic'
+const SUPPORTED_PLATFORMS = new Set(['google', 'meta', 'tiktok'])
 
 function apiBase() {
   return getApiBase().replace(/\/$/, '')
@@ -28,6 +29,14 @@ function startOfDay(date) {
   return copy
 }
 
+function formatDateKey(date) {
+  const d = new Date(date)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function dateRange(days) {
   const to = startOfDay(new Date())
   const from = new Date(to)
@@ -35,13 +44,12 @@ function dateRange(days) {
   return {
     from,
     to,
-    fromStr: from.toISOString().slice(0, 10),
-    toStr: to.toISOString().slice(0, 10),
+    fromStr: formatDateKey(from),
+    toStr: formatDateKey(to),
   }
 }
 
-function previousRange(days) {
-  const current = dateRange(days)
+function previousRangeFor(current, days) {
   const to = new Date(current.from)
   to.setDate(to.getDate() - 1)
   const from = new Date(to)
@@ -49,9 +57,22 @@ function previousRange(days) {
   return {
     from,
     to,
-    fromStr: from.toISOString().slice(0, 10),
-    toStr: to.toISOString().slice(0, 10),
+    fromStr: formatDateKey(from),
+    toStr: formatDateKey(to),
   }
+}
+
+function parseIsoDate(value) {
+  const text = String(value || '').trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null
+  const date = new Date(`${text}T00:00:00Z`)
+  if (Number.isNaN(date.getTime())) return null
+  return date
+}
+
+function diffDaysInclusive(from, to) {
+  const ms = to.getTime() - from.getTime()
+  return Math.floor(ms / 86400000) + 1
 }
 
 function formatShortDate(value) {
@@ -109,7 +130,7 @@ function trendTone(delta) {
 }
 
 function listPlatforms(filter) {
-  if (filter && filter !== 'all') return [filter]
+  if (filter && filter !== 'all' && SUPPORTED_PLATFORMS.has(filter)) return [filter]
   return ['google', 'meta', 'tiktok']
 }
 
@@ -159,7 +180,7 @@ function buildPulseSeries(payload, range, platforms) {
 
   const rows = []
   for (let day = new Date(range.from); day <= range.to; day.setDate(day.getDate() + 1)) {
-    const date = day.toISOString().slice(0, 10)
+    const date = formatDateKey(day)
     const row = byDate.get(date) || { date, label: formatShortDate(date), spend: 0, impressions: 0, clicks: 0 }
     const ctr = row.impressions > 0 ? (row.clicks / row.impressions) * 100 : 0
     rows.push({ ...row, ctr })
@@ -224,6 +245,34 @@ function applySummarySpendFallback(rows, summaryMap) {
   })
 }
 
+function buildRowsFromSummary(summaryItems, accounts, platforms, selectedAccountId) {
+  const accountMap = new Map((accounts || []).map((item) => [String(item.id), item]))
+  return (summaryItems || [])
+    .filter((row) => SUPPORTED_PLATFORMS.has(String(row?.platform || '').toLowerCase()))
+    .filter((row) => (platforms.length ? platforms.includes(String(row?.platform || '').toLowerCase()) : true))
+    .filter((row) => (selectedAccountId ? String(row?.account_id || '') === String(selectedAccountId) : true))
+    .map((row) => {
+      const accountId = String(row?.account_id || '')
+      const account = accountMap.get(accountId)
+      return {
+        id: `${row.platform}-${accountId || 'summary'}`,
+        accountId,
+        platform: String(row?.platform || '').toLowerCase(),
+        platformLabel: platformLabel(String(row?.platform || '').toLowerCase()),
+        account: account?.name || row?.account_name || `Account ${accountId}`,
+        spend: Number(row?.spend_total || 0),
+        impressions: 0,
+        clicks: 0,
+        ctr: 0,
+        cpc: 0,
+        cpm: 0,
+        trend: [0],
+        hasDeliveryData: false,
+      }
+    })
+    .sort((a, b) => b.spend - a.spend)
+}
+
 function mapRowsForUi(rows) {
   return rows.map((row) => ({
     id: row.id,
@@ -236,12 +285,15 @@ function mapRowsForUi(rows) {
     cpc: row.cpc > 0 ? `$${formatNumber(row.cpc, 2)}` : '—',
     cpm: row.cpm > 0 ? `$${formatNumber(row.cpm, 2)}` : '—',
     trend: row.trend,
+    hasDeliveryData: row.hasDeliveryData !== false,
   }))
 }
 
 function buildMovers(currentRows, previousRows) {
+  const rowsWithDelivery = (currentRows || []).filter((row) => row.hasDeliveryData !== false)
+  if (!rowsWithDelivery.length) return []
   const previous = new Map(previousRows.map((row) => [row.accountId, row]))
-  const enriched = currentRows
+  const enriched = rowsWithDelivery
     .map((row) => {
       const prev = previous.get(row.accountId)
       return {
@@ -266,8 +318,10 @@ function buildMovers(currentRows, previousRows) {
 }
 
 function buildAttentionRows(rows) {
+  const rowsWithDelivery = (rows || []).filter((row) => row.hasDeliveryData !== false)
+  if (!rowsWithDelivery.length) return []
   const zeroDelivery = rows
-    .filter((row) => row.spend > 0 && row.impressions === 0)
+    .filter((row) => row.spend > 0 && row.impressions === 0 && row.hasDeliveryData !== false)
     .slice(0, 1)
     .map((row) => ({
       title: 'Zero Delivery',
@@ -276,7 +330,7 @@ function buildAttentionRows(rows) {
     }))
 
   const inefficient = rows
-    .filter((row) => row.spend > 0 && row.ctr > 0 && row.ctr < 1)
+    .filter((row) => row.spend > 0 && row.ctr > 0 && row.ctr < 1 && row.hasDeliveryData !== false)
     .sort((a, b) => a.ctr - b.ctr)
     .slice(0, 1)
     .map((row) => ({
@@ -324,14 +378,30 @@ export async function GET(request) {
   const preset = Math.max(7, Math.min(90, Number(searchParams.get('preset') || 30)))
   const platform = String(searchParams.get('platform') || 'all').toLowerCase()
   const accountId = String(searchParams.get('account_id') || '')
+  const dateFromRaw = searchParams.get('date_from')
+  const dateToRaw = searchParams.get('date_to')
 
-  const current = dateRange(preset)
-  const previous = previousRange(preset)
+  const parsedFrom = parseIsoDate(dateFromRaw)
+  const parsedTo = parseIsoDate(dateToRaw)
+  const hasCustomRange = Boolean(parsedFrom && parsedTo && parsedFrom <= parsedTo)
+
+  const current = hasCustomRange
+    ? {
+        from: parsedFrom,
+        to: parsedTo,
+        fromStr: dateFromRaw,
+        toStr: dateToRaw,
+      }
+    : dateRange(preset)
+  const rangeDays = diffDaysInclusive(current.from, current.to)
+  const previous = previousRangeFor(current, rangeDays)
 
   const accountsRes = await upstreamFetch('/accounts', auth)
   if (accountsRes.status === 401) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 })
-  const accounts = accountsRes.ok ? await accountsRes.json() : []
-  const selectedAccount = (accounts || []).find((item) => String(item.id) === accountId)
+  const allAccounts = accountsRes.ok ? await accountsRes.json() : []
+  const accounts = (allAccounts || []).filter((item) => SUPPORTED_PLATFORMS.has(String(item?.platform || '').toLowerCase()))
+  const validSelectedAccountId = accountId && accounts.some((item) => String(item.id) === accountId) ? accountId : ''
+  const selectedAccount = (accounts || []).find((item) => String(item.id) === validSelectedAccountId)
 
   const currentParams = buildOverviewParams(current, selectedAccount)
   const previousParams = buildOverviewParams(previous, selectedAccount)
@@ -339,11 +409,24 @@ export async function GET(request) {
   const [currentRes, previousRes, financeSummaryRes] = await Promise.all([
     upstreamFetch(`/insights/overview?${currentParams.toString()}`, auth),
     upstreamFetch(`/insights/overview?${previousParams.toString()}`, auth),
-    dbMode ? upstreamFetch('/accounts/finance/summary', auth) : Promise.resolve(null),
+    upstreamFetch('/accounts/finance/summary', auth),
   ])
 
   if (currentRes.status === 401 || previousRes.status === 401 || financeSummaryRes?.status === 401) {
     return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!currentRes.ok && !financeSummaryRes?.ok) {
+    return NextResponse.json(
+      {
+        detail: 'Performance upstream failed',
+        issues: [
+          { path: '/insights/overview', status: currentRes.status },
+          { path: '/accounts/finance/summary', status: financeSummaryRes?.status || 0 },
+        ],
+      },
+      { status: 502 }
+    )
   }
 
   const currentPayload = currentRes.ok ? await currentRes.json() : {}
@@ -361,24 +444,43 @@ export async function GET(request) {
   const ctr = currentTotals.impressions > 0 ? (currentTotals.clicks / currentTotals.impressions) * 100 : 0
   const previousCtr = previousTotals.impressions > 0 ? (previousTotals.clicks / previousTotals.impressions) * 100 : 0
 
-  let currentAccountRows = buildAccountRows(currentPayload, accounts, platforms, accountId)
-  const previousAccountRows = buildAccountRows(previousPayload, accounts, platforms, accountId)
+  let currentAccountRows = buildAccountRows(currentPayload, accounts, platforms, validSelectedAccountId)
+  currentAccountRows = currentAccountRows.map((row) => ({ ...row, hasDeliveryData: true }))
+  const previousAccountRows = buildAccountRows(previousPayload, accounts, platforms, validSelectedAccountId)
   currentAccountRows = applySummarySpendFallback(currentAccountRows, financeSummaryMap)
 
   const summarySpendTotal = (Array.isArray(financeSummaryPayload?.items) ? financeSummaryPayload.items : [])
     .filter((row) => (platform === 'all' ? true : String(row?.platform || '').toLowerCase() === platform))
-    .filter((row) => (accountId ? String(row?.account_id || '') === accountId : true))
+    .filter((row) => (validSelectedAccountId ? String(row?.account_id || '') === validSelectedAccountId : true))
     .reduce((sum, row) => sum + Number(row?.spend_total || 0), 0)
-  if (dbMode && currentTotals.spend <= 0 && summarySpendTotal > 0) {
+  if (currentTotals.spend <= 0 && summarySpendTotal > 0) {
     currentTotals.spend = summarySpendTotal
   }
+  if (!currentAccountRows.length) {
+    currentAccountRows = buildRowsFromSummary(financeSummaryPayload?.items || [], accounts, platforms, validSelectedAccountId)
+  }
+
+  const usingSummaryFallbackRows = !currentRes.ok || !currentAccountRows.length
+  const safeImpressions = usingSummaryFallbackRows ? null : currentTotals.impressions
+  const safeClicks = usingSummaryFallbackRows ? null : currentTotals.clicks
+  const safeCtr = usingSummaryFallbackRows ? null : ctr
+  const impressionsDelta = usingSummaryFallbackRows ? null : deltaPct(currentTotals.impressions, previousTotals.impressions)
+  const clicksDelta = usingSummaryFallbackRows ? null : deltaPct(currentTotals.clicks, previousTotals.clicks)
+  const ctrDelta = usingSummaryFallbackRows ? null : ctr - previousCtr
+  const pulseSeries = usingSummaryFallbackRows ? [] : buildPulseSeries(currentPayload, current, platforms)
+  const pulseInsight = usingSummaryFallbackRows
+    ? 'Delivery data is unavailable for the selected period. Spend values are shown from synced finance snapshots.'
+    : buildInsight(currentPayload?.totals || {}, previousPayload, platforms)
 
   return NextResponse.json({
     financeMode: dbMode ? 'db_fallback' : 'runtime_live',
     filters: {
       selectedPreset: preset,
       selectedPlatform: platform,
-      selectedAccountId: accountId,
+      selectedAccountId: validSelectedAccountId,
+      selectedDateFrom: current.fromStr,
+      selectedDateTo: current.toStr,
+      customRange: hasCustomRange,
       presets: [
         { value: 7, label: 'Last 7 Days' },
         { value: 30, label: 'Last 30 Days' },
@@ -399,6 +501,11 @@ export async function GET(request) {
             label: item.name || `ID ${item.id}`,
           })),
       ],
+      accountsAll: (accounts || []).map((item) => ({
+        value: String(item.id),
+        label: item.name || `ID ${item.id}`,
+        platform: String(item.platform || '').toLowerCase(),
+      })),
     },
     metrics: [
       {
@@ -409,26 +516,26 @@ export async function GET(request) {
       },
       {
         label: 'Impressions',
-        value: formatCompact(currentTotals.impressions),
-        hint: `${deltaPct(currentTotals.impressions, previousTotals.impressions) >= 0 ? '+' : ''}${deltaPct(currentTotals.impressions, previousTotals.impressions).toFixed(1)}%`,
-        tone: trendTone(deltaPct(currentTotals.impressions, previousTotals.impressions)),
+        value: safeImpressions == null ? '—' : formatCompact(safeImpressions),
+        hint: impressionsDelta == null ? 'Delivery data unavailable' : `${impressionsDelta >= 0 ? '+' : ''}${impressionsDelta.toFixed(1)}%`,
+        tone: impressionsDelta == null ? undefined : trendTone(impressionsDelta),
       },
       {
         label: 'Clicks',
-        value: formatCompact(currentTotals.clicks),
-        hint: `${deltaPct(currentTotals.clicks, previousTotals.clicks) >= 0 ? '+' : ''}${deltaPct(currentTotals.clicks, previousTotals.clicks).toFixed(1)}%`,
-        tone: trendTone(deltaPct(currentTotals.clicks, previousTotals.clicks)),
+        value: safeClicks == null ? '—' : formatCompact(safeClicks),
+        hint: clicksDelta == null ? 'Delivery data unavailable' : `${clicksDelta >= 0 ? '+' : ''}${clicksDelta.toFixed(1)}%`,
+        tone: clicksDelta == null ? undefined : trendTone(clicksDelta),
       },
       {
         label: 'CTR',
-        value: formatPct(ctr, 2),
-        hint: `${ctr - previousCtr >= 0 ? '+' : ''}${(ctr - previousCtr).toFixed(2)}%`,
-        tone: trendTone(ctr - previousCtr),
+        value: safeCtr == null ? '—' : formatPct(safeCtr, 2),
+        hint: ctrDelta == null ? 'Delivery data unavailable' : `${ctrDelta >= 0 ? '+' : ''}${ctrDelta.toFixed(2)}%`,
+        tone: ctrDelta == null ? undefined : trendTone(ctrDelta),
       },
     ],
     pulse: {
-      series: buildPulseSeries(currentPayload, current, platforms),
-      insight: buildInsight(currentPayload?.totals || {}, previousPayload, platforms),
+      series: pulseSeries,
+      insight: pulseInsight,
     },
     platformRows: mapRowsForUi(currentAccountRows),
     topMovers: buildMovers(currentAccountRows, previousAccountRows),

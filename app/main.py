@@ -269,6 +269,7 @@ def _fetch_bcc_rates() -> Dict[str, object]:
         "source": "bcc_api",
         "section": "public",
         "url": rates_url,
+        "markup_percent": _BCC_DEFAULT_MARKUP_PERCENT,
         "rates": rates,
         "fetched_at": datetime.utcnow().isoformat() + "Z",
         "dateTime": updated_at,
@@ -2712,6 +2713,55 @@ def _get_company_profile(conn) -> Dict[str, object]:
     return base
 
 
+def _normalize_issuer_type(value: object, default: str = "too") -> str:
+    raw = str(value or "").strip().lower()
+    if raw in {"too", "тоо", "llp"}:
+        return "too"
+    if raw in {"ip", "ип", "sp"}:
+        return "ip"
+    return default
+
+
+def _tax_mode_for_issuer(issuer_type: str) -> str:
+    return "with_vat" if _normalize_issuer_type(issuer_type, "too") == "too" else "without_vat"
+
+
+def _get_billing_issuer_profile(conn, issuer_type: object) -> Dict[str, object]:
+    normalized = _normalize_issuer_type(issuer_type, "too")
+    row = conn.execute("SELECT * FROM billing_issuers WHERE issuer_type=?", (normalized,)).fetchone()
+    if row:
+        out = dict(row)
+        # normalize to invoice payload keys
+        out["name"] = _repair_mojibake_text(out.get("name"))
+        out["bank"] = _repair_mojibake_text(out.get("bank"))
+        out["legal_address"] = _repair_mojibake_text(out.get("legal_address"))
+        out["factual_address"] = _repair_mojibake_text(out.get("factual_address"))
+        iban_normalized = _normalize_ascii_code(out.get("iban"))
+        bic_normalized = _normalize_ascii_code(out.get("bic"))
+        if iban_normalized:
+            out["iban"] = iban_normalized
+        if bic_normalized:
+            out["bic"] = bic_normalized
+        return out
+    # backward-compatible fallback
+    return _get_company_profile(conn)
+
+
+def _request_issuer_snapshot(req: Dict[str, object], fallback: Dict[str, object]) -> Dict[str, object]:
+    return {
+        "name": req.get("issuer_name") or fallback.get("name"),
+        "bin": req.get("issuer_bin") or fallback.get("bin"),
+        "iin": req.get("issuer_iin") or fallback.get("iin"),
+        "legal_address": req.get("issuer_legal_address") or fallback.get("legal_address"),
+        "factual_address": req.get("issuer_factual_address") or fallback.get("factual_address"),
+        "bank": req.get("issuer_bank") or fallback.get("bank"),
+        "iban": req.get("issuer_iban") or fallback.get("iban"),
+        "bic": req.get("issuer_bic") or fallback.get("bic"),
+        "kbe": req.get("issuer_kbe") or fallback.get("kbe"),
+        "currency": req.get("issuer_currency") or fallback.get("currency"),
+    }
+
+
 def _next_invoice_number(conn) -> str:
     now = datetime.utcnow()
     year = now.year
@@ -2731,6 +2781,51 @@ def _format_legal_entity_name(entity: Dict[str, object]) -> Optional[str]:
     if full and short and full != short:
         return f"{full} ({short})"
     return full or short or None
+
+
+def _normalize_tax_mode(value: object, default: str = "without_vat") -> str:
+    raw = str(value or "").strip().lower()
+    if raw in {"with_vat", "vat", "with-nds", "nds", "с_ндс", "сндс"}:
+        return "with_vat"
+    if raw in {"without_vat", "no_vat", "without-nds", "no_nds", "без_ндс", "безндс"}:
+        return "without_vat"
+    return default
+
+
+def _normalize_vat_rate_for_mode(tax_mode: str, vat_rate: object) -> float:
+    if tax_mode != "with_vat":
+        return 0.0
+    try:
+        value = float(vat_rate)
+    except Exception:
+        value = 12.0
+    if value < 0:
+        value = 0.0
+    return round(value, 4)
+
+
+def _invoice_tax_breakdown(amount: float, tax_mode: str, vat_rate: float) -> Dict[str, object]:
+    total = round(float(amount or 0), 2)
+    if tax_mode != "with_vat" or vat_rate <= 0:
+        return {
+            "tax_mode": "without_vat",
+            "vat_rate": 0.0,
+            "net_amount": total,
+            "vat_amount": 0.0,
+            "total_amount": total,
+            "vat_note": "Услуги Исполнителя НДС не облагаются (п.п. 46 ст.394 Налогового кодекса Казахстана).",
+        }
+    denom = 1.0 + (vat_rate / 100.0)
+    net = round(total / denom, 2) if denom > 0 else total
+    vat_amount = round(total - net, 2)
+    return {
+        "tax_mode": "with_vat",
+        "vat_rate": vat_rate,
+        "net_amount": net,
+        "vat_amount": vat_amount,
+        "total_amount": total,
+        "vat_note": f"В том числе НДС {vat_rate:g}%: {_format_amount(vat_amount)}.",
+    }
 
 
 def _invoice_number(prefix: str, created_at, inv_id: int) -> str:
@@ -2829,6 +2924,11 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
     description = payload.get("description", "")
     contract_note = payload.get("contract_note", "")
     amount_words = payload.get("amount_words", "")
+    tax_mode = _normalize_tax_mode(payload.get("tax_mode"), "without_vat")
+    vat_rate = _normalize_vat_rate_for_mode(tax_mode, payload.get("vat_rate"))
+    amount_net = payload.get("amount_net", amount)
+    vat_amount = payload.get("vat_amount", "0.00")
+    vat_note = payload.get("vat_note", "")
     request_id = payload.get("request_id", "")
     token = payload.get("token", "")
     token_query = f"?token={token}" if token else ""
@@ -3013,6 +3113,16 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
       </table>
 
       <table class="no-border">
+        {f'''
+        <tr>
+          <td class="right">Стоимость без НДС:</td>
+          <td class="right nowrap" style="width:160px;">{amount_net}</td>
+        </tr>
+        <tr>
+          <td class="right">НДС {vat_rate:g}%:</td>
+          <td class="right nowrap" style="width:160px;">{vat_amount}</td>
+        </tr>
+        ''' if tax_mode == "with_vat" else ""}
         <tr>
           <td class="right"><strong>Итого:</strong></td>
           <td class="right nowrap" style="width:160px;"><strong>{amount}</strong></td>
@@ -3020,7 +3130,7 @@ def _invoice_1c_html(payload: Dict[str, object]) -> str:
       </table>
 
       <p class="small">Всего наименований 1, на сумму {amount} {currency}</p>
-      <p class="small"><strong>Всего к оплате:</strong> {amount_words}. Услуги Исполнителя НДС не облагаются (п.п. 46 ст.394 Налогового кодекса Казахстана).</p>
+      <p class="small"><strong>Всего к оплате:</strong> {amount_words}. {vat_note}</p>
     </div>
   </body>
 </html>
@@ -3203,6 +3313,7 @@ def bcc_rates() -> Dict[str, object]:
             }
         return {
             "source": "bcc_unavailable",
+            "markup_percent": _BCC_DEFAULT_MARKUP_PERCENT,
             "rates": {"USD": None, "EUR": None},
             "fetched_at": datetime.utcnow().isoformat() + "Z",
             "warning": str(exc),
@@ -3942,6 +4053,9 @@ class WalletTopupRequestPayload(BaseModel):
     amount: float = Field(..., gt=0)
     currency: str = "KZT"
     note: Optional[str] = None
+    amount_kind: Optional[str] = None
+    tax_mode: Optional[str] = None
+    vat_rate: Optional[float] = None
     legal_entity_id: Optional[int] = None
     client_name: Optional[str] = None
     client_bin: Optional[str] = None
@@ -3954,6 +4068,10 @@ class LegalEntityPayload(BaseModel):
     name: str
     short_name: Optional[str] = None
     full_name: Optional[str] = None
+    issuer_type: Optional[str] = None
+    tax_mode: Optional[str] = None
+    contract_number: Optional[str] = None
+    contract_date: Optional[str] = None
     bin: Optional[str] = None
     address: Optional[str] = None
     legal_address: Optional[str] = None
@@ -3970,6 +4088,10 @@ class AdminLegalEntityPayload(BaseModel):
     short_name: str
     full_name: str
     legal_address: str
+    issuer_type: Optional[str] = None
+    tax_mode: Optional[str] = None
+    contract_number: Optional[str] = None
+    contract_date: Optional[str] = None
 
 
 class CompanyProfilePayload(BaseModel):
@@ -3978,6 +4100,19 @@ class CompanyProfilePayload(BaseModel):
     iin: Optional[str] = None
     legal_address: Optional[str] = None
     factual_address: Optional[str] = None
+
+
+class BillingIssuerPayload(BaseModel):
+    name: Optional[str] = None
+    bin: Optional[str] = None
+    iin: Optional[str] = None
+    legal_address: Optional[str] = None
+    factual_address: Optional[str] = None
+    bank: Optional[str] = None
+    iban: Optional[str] = None
+    bic: Optional[str] = None
+    kbe: Optional[str] = None
+    currency: Optional[str] = None
 
 
 @app.post("/topup/request")
@@ -4718,6 +4853,26 @@ def _finance_resolve_client_id(conn, account: Dict[str, object]) -> int:
         return 0
     payload = dict(row)
     return int(payload.get("user_id") or 0)
+
+
+def _find_existing_account(conn, *, user_id: int, platform: str, name: str):
+    normalized_platform = str(platform or "").strip().lower()
+    normalized_name = str(name or "").strip().lower()
+    if not normalized_platform or not normalized_name:
+        return None
+    row = conn.execute(
+        """
+        SELECT *
+        FROM ad_accounts
+        WHERE user_id=?
+          AND LOWER(TRIM(platform))=?
+          AND LOWER(TRIM(name))=?
+        ORDER BY id ASC
+        LIMIT 1
+        """,
+        (int(user_id), normalized_platform, normalized_name),
+    ).fetchone()
+    return dict(row) if row else None
 
 
 def _finance_collect_daily_rows_for_account(account: Dict[str, object], date_from: str, date_to: str) -> List[Dict[str, object]]:
@@ -7882,6 +8037,109 @@ def admin_get_company_profile(admin_user=Depends(get_admin_user)):
         return _get_company_profile(conn)
 
 
+def _ensure_billing_issuers_seed(conn) -> None:
+    rows = conn.execute("SELECT issuer_type FROM billing_issuers").fetchall()
+    existing = {str(row["issuer_type"]).lower() for row in rows}
+    if {"too", "ip"}.issubset(existing):
+        return
+    base = _get_company_profile(conn)
+    if "too" not in existing:
+        conn.execute(
+            """
+            INSERT INTO billing_issuers
+            (issuer_type, name, bin, iin, legal_address, factual_address, bank, iban, bic, kbe, currency, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """,
+            (
+                "too",
+                base.get("name"),
+                base.get("bin"),
+                base.get("iin"),
+                base.get("legal_address"),
+                base.get("factual_address"),
+                base.get("bank"),
+                base.get("iban"),
+                base.get("bic"),
+                base.get("kbe"),
+                base.get("currency") or "KZT",
+            ),
+        )
+    if "ip" not in existing:
+        conn.execute(
+            """
+            INSERT INTO billing_issuers
+            (issuer_type, name, bin, iin, legal_address, factual_address, bank, iban, bic, kbe, currency, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """,
+            (
+                "ip",
+                base.get("name"),
+                None,
+                base.get("iin"),
+                base.get("legal_address"),
+                base.get("factual_address"),
+                base.get("bank"),
+                base.get("iban"),
+                base.get("bic"),
+                base.get("kbe"),
+                base.get("currency") or "KZT",
+            ),
+        )
+    conn.commit()
+
+
+@app.get("/admin/billing-issuers")
+def admin_list_billing_issuers(admin_user=Depends(get_admin_user)):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    with get_conn() as conn:
+        _ensure_billing_issuers_seed(conn)
+        rows = conn.execute("SELECT * FROM billing_issuers ORDER BY CASE issuer_type WHEN 'too' THEN 0 ELSE 1 END, issuer_type").fetchall()
+        return [dict(row) for row in rows]
+
+
+@app.put("/admin/billing-issuers/{issuer_type}")
+def admin_update_billing_issuer(issuer_type: str, payload: BillingIssuerPayload, admin_user=Depends(get_admin_user)):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+    normalized = _normalize_issuer_type(issuer_type, "")
+    if normalized not in {"too", "ip"}:
+        raise HTTPException(status_code=400, detail="issuer_type must be too or ip")
+    with get_conn() as conn:
+        _ensure_billing_issuers_seed(conn)
+        row = conn.execute("SELECT * FROM billing_issuers WHERE issuer_type=?", (normalized,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Issuer profile not found")
+        profile = dict(row)
+        for key in ("name", "bin", "iin", "legal_address", "factual_address", "bank", "iban", "bic", "kbe", "currency"):
+            value = getattr(payload, key, None)
+            if value is not None:
+                profile[key] = str(value).strip() or None
+        conn.execute(
+            """
+            UPDATE billing_issuers
+            SET name=?, bin=?, iin=?, legal_address=?, factual_address=?, bank=?, iban=?, bic=?, kbe=?, currency=?, updated_at=CURRENT_TIMESTAMP
+            WHERE issuer_type=?
+            """,
+            (
+                profile.get("name"),
+                profile.get("bin"),
+                profile.get("iin"),
+                profile.get("legal_address"),
+                profile.get("factual_address"),
+                profile.get("bank"),
+                profile.get("iban"),
+                profile.get("bic"),
+                profile.get("kbe"),
+                profile.get("currency") or "KZT",
+                normalized,
+            ),
+        )
+        conn.commit()
+        updated = conn.execute("SELECT * FROM billing_issuers WHERE issuer_type=?", (normalized,)).fetchone()
+        return dict(updated) if updated else {}
+
+
 @app.put("/admin/company-profile")
 def admin_update_company_profile(payload: CompanyProfilePayload, admin_user=Depends(get_admin_user)):
     if not get_conn:
@@ -7960,18 +8218,24 @@ def admin_create_legal_entity(payload: AdminLegalEntityPayload, admin_user=Depen
     if not payload.bin.strip() or not payload.short_name.strip() or not payload.full_name.strip() or not payload.legal_address.strip():
         raise HTTPException(status_code=400, detail="bin, short_name, full_name and legal_address are required")
     with get_conn() as conn:
+        issuer_type = _normalize_issuer_type(payload.issuer_type, "too")
+        tax_mode = _tax_mode_for_issuer(issuer_type)
         user = conn.execute("SELECT id FROM users WHERE email=?", (user_email,)).fetchone()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         cur = conn.execute(
             """
-            INSERT INTO legal_entities (name, short_name, full_name, bin, address, legal_address)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO legal_entities (name, short_name, full_name, issuer_type, tax_mode, contract_number, contract_date, bin, address, legal_address)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 payload.short_name.strip(),
                 payload.short_name.strip(),
                 payload.full_name.strip(),
+                issuer_type,
+                tax_mode,
+                (payload.contract_number or "").strip() or None,
+                (payload.contract_date or "").strip() or None,
                 payload.bin.strip(),
                 payload.legal_address.strip(),
                 payload.legal_address.strip(),
@@ -8001,22 +8265,28 @@ def admin_update_legal_entity(entity_id: int, payload: AdminLegalEntityPayload, 
     if not payload.bin.strip() or not payload.short_name.strip() or not payload.full_name.strip() or not payload.legal_address.strip():
         raise HTTPException(status_code=400, detail="bin, short_name, full_name and legal_address are required")
     with get_conn() as conn:
-        entity = conn.execute("SELECT id FROM legal_entities WHERE id=?", (entity_id,)).fetchone()
+        entity = conn.execute("SELECT id, tax_mode, issuer_type FROM legal_entities WHERE id=?", (entity_id,)).fetchone()
         if not entity:
             raise HTTPException(status_code=404, detail="Legal entity not found")
+        issuer_type = _normalize_issuer_type(payload.issuer_type, _normalize_issuer_type(entity.get("issuer_type"), "too"))
+        tax_mode = _tax_mode_for_issuer(issuer_type)
         user = conn.execute("SELECT id FROM users WHERE email=?", (user_email,)).fetchone()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         conn.execute(
             """
             UPDATE legal_entities
-            SET name=?, short_name=?, full_name=?, bin=?, address=?, legal_address=?
+            SET name=?, short_name=?, full_name=?, issuer_type=?, tax_mode=?, contract_number=?, contract_date=?, bin=?, address=?, legal_address=?
             WHERE id=?
             """,
             (
                 payload.short_name.strip(),
                 payload.short_name.strip(),
                 payload.full_name.strip(),
+                issuer_type,
+                tax_mode,
+                (payload.contract_number or "").strip() or None,
+                (payload.contract_date or "").strip() or None,
                 payload.bin.strip(),
                 payload.legal_address.strip(),
                 payload.legal_address.strip(),
@@ -8041,32 +8311,57 @@ def admin_update_legal_entity(entity_id: int, payload: AdminLegalEntityPayload, 
 def create_wallet_topup_request(payload: WalletTopupRequestPayload, current_user=Depends(get_current_user)):
     if not get_conn:
         raise HTTPException(status_code=500, detail="DB not initialized")
+    if not payload.legal_entity_id:
+        raise HTTPException(status_code=400, detail="legal_entity_id is required")
     with get_conn() as conn:
         legal_entity = None
-        if payload.legal_entity_id:
-            legal_entity = conn.execute(
-                """
-                SELECT le.*
-                FROM legal_entities le
-                JOIN user_legal_entities ule ON ule.legal_entity_id = le.id
-                WHERE le.id=? AND ule.user_id=?
-                """,
-                (payload.legal_entity_id, current_user["id"]),
-            ).fetchone()
-            if not legal_entity:
-                raise HTTPException(status_code=404, detail="Legal entity not found")
-            legal_entity = dict(legal_entity)
+        legal_entity = conn.execute(
+            """
+            SELECT le.*
+            FROM legal_entities le
+            JOIN user_legal_entities ule ON ule.legal_entity_id = le.id
+            WHERE le.id=? AND ule.user_id=?
+            """,
+            (payload.legal_entity_id, current_user["id"]),
+        ).fetchone()
+        if not legal_entity:
+            raise HTTPException(status_code=404, detail="Legal entity not found")
+        legal_entity = dict(legal_entity)
         entity_name = _format_legal_entity_name(legal_entity) if legal_entity else None
         entity_address = (legal_entity.get("legal_address") or legal_entity.get("address")) if legal_entity else None
         client_name = payload.client_name or entity_name
         client_bin = payload.client_bin or (legal_entity.get("bin") if legal_entity else None)
         client_address = payload.client_address or entity_address
         client_email = payload.client_email or (legal_entity.get("email") if legal_entity else None)
+        issuer_type = _normalize_issuer_type((legal_entity or {}).get("issuer_type"), "too")
+        amount_kind = "gross"
+        tax_mode = _tax_mode_for_issuer(issuer_type)
+        vat_rate = _normalize_vat_rate_for_mode(tax_mode, payload.vat_rate if payload.vat_rate is not None else 12.0)
+        contract_number = ((legal_entity or {}).get("contract_number") or "").strip() or None
+        contract_date = ((legal_entity or {}).get("contract_date") or "").strip() or None
+        if issuer_type == "too" and (not contract_number or not contract_date):
+            raise HTTPException(
+                status_code=400,
+                detail="Contract number and contract date are required for TOO issuer",
+            )
+        issuer_profile = _get_billing_issuer_profile(conn, issuer_type)
+        issuer_name = issuer_profile.get("name")
+        issuer_bin = issuer_profile.get("bin")
+        issuer_iin = issuer_profile.get("iin")
+        issuer_legal_address = issuer_profile.get("legal_address")
+        issuer_factual_address = issuer_profile.get("factual_address")
+        issuer_bank = issuer_profile.get("bank")
+        issuer_iban = issuer_profile.get("iban")
+        issuer_bic = issuer_profile.get("bic")
+        issuer_kbe = issuer_profile.get("kbe")
+        issuer_currency = issuer_profile.get("currency") or "KZT"
+        invoice_number = _next_invoice_number(conn)
+        invoice_date = datetime.utcnow().date().isoformat()
         cur = conn.execute(
             """
             INSERT INTO wallet_topup_requests
-            (user_id, amount, currency, note, status, legal_entity_id, client_name, client_bin, client_address, client_email, order_ref)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (user_id, amount, currency, note, status, amount_kind, issuer_type, tax_mode, vat_rate, contract_number, contract_date, issuer_name, issuer_bin, issuer_iin, issuer_legal_address, issuer_factual_address, issuer_bank, issuer_iban, issuer_bic, issuer_kbe, issuer_currency, legal_entity_id, client_name, client_bin, client_address, client_email, order_ref, invoice_number, invoice_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 current_user["id"],
@@ -8074,12 +8369,30 @@ def create_wallet_topup_request(payload: WalletTopupRequestPayload, current_user
                 payload.currency,
                 payload.note,
                 "requested",
+                amount_kind,
+                issuer_type,
+                tax_mode,
+                vat_rate,
+                contract_number,
+                contract_date,
+                issuer_name,
+                issuer_bin,
+                issuer_iin,
+                issuer_legal_address,
+                issuer_factual_address,
+                issuer_bank,
+                issuer_iban,
+                issuer_bic,
+                issuer_kbe,
+                issuer_currency,
                 payload.legal_entity_id,
                 client_name,
                 client_bin,
                 client_address,
                 client_email,
                 payload.order_ref,
+                invoice_number,
+                invoice_date,
             ),
         )
         conn.commit()
@@ -8096,12 +8409,30 @@ def create_wallet_topup_request(payload: WalletTopupRequestPayload, current_user
                         "amount": payload.amount,
                         "currency": payload.currency,
                         "note": payload.note,
+                        "amount_kind": amount_kind,
                         "legal_entity_id": payload.legal_entity_id,
                         "client_name": client_name,
                         "client_bin": client_bin,
                         "client_address": client_address,
                         "client_email": client_email,
                         "order_ref": payload.order_ref,
+                        "tax_mode": tax_mode,
+                        "vat_rate": vat_rate,
+                        "issuer_type": issuer_type,
+                        "contract_number": contract_number,
+                        "contract_date": contract_date,
+                        "issuer_name": issuer_name,
+                        "issuer_bin": issuer_bin,
+                        "issuer_iin": issuer_iin,
+                        "issuer_legal_address": issuer_legal_address,
+                        "issuer_factual_address": issuer_factual_address,
+                        "issuer_bank": issuer_bank,
+                        "issuer_iban": issuer_iban,
+                        "issuer_bic": issuer_bic,
+                        "issuer_kbe": issuer_kbe,
+                        "issuer_currency": issuer_currency,
+                        "invoice_number": invoice_number,
+                        "invoice_date": invoice_date,
                     },
                     timeout=10,
                 )
@@ -8123,6 +8454,9 @@ def create_wallet_topup_request(payload: WalletTopupRequestPayload, current_user
         return {
             "id": request_id,
             "status": "requested",
+            "amount_kind": amount_kind,
+            "invoice_number": invoice_number,
+            "invoice_date": invoice_date,
             "invoice_url": f"/wallet/topup-requests/{request_id}/invoice",
         }
 
@@ -8168,18 +8502,6 @@ def wallet_topup_invoice_page(
         ).fetchone()
         if not request_row:
             raise HTTPException(status_code=404, detail="Request not found")
-        invoice_row = conn.execute(
-            "SELECT * FROM invoice_uploads WHERE request_id=? ORDER BY created_at DESC LIMIT 1",
-            (request_id,),
-        ).fetchone()
-        if invoice_row and invoice_row.get("pdf_path"):
-            return HTMLResponse(
-                content=_wallet_invoice_page_html(
-                    dict(request_row),
-                    dict(invoice_row),
-                    token,
-                )
-            )
         req = dict(request_row)
         try:
             created_at = req["created_at"]
@@ -8202,16 +8524,31 @@ def wallet_topup_invoice_page(
             except ValueError:
                 pass
         date_str = _format_date_ru(dt)
-        amount = _format_amount(req.get("amount") or 0)
+        amount_val = float(req.get("amount") or 0)
+        amount = _format_amount(amount_val)
         currency = req.get("currency") or "KZT"
-        amount_words = _amount_to_words_ru(req.get("amount") or 0)
-        date_str = f"{date_str} Рі."
-        company = _get_company_profile(conn)
+        amount_words = _amount_to_words_ru(amount_val)
+        date_str = f"{date_str} г."
+        tax_mode = _normalize_tax_mode(req.get("tax_mode"), "without_vat")
+        vat_rate = _normalize_vat_rate_for_mode(tax_mode, req.get("vat_rate"))
+        tax = _invoice_tax_breakdown(amount_val, tax_mode, vat_rate)
+        issuer_type = _normalize_issuer_type(req.get("issuer_type"), "too")
+        issuer_profile = _get_billing_issuer_profile(conn, issuer_type)
+        company = _request_issuer_snapshot(req, issuer_profile)
         company_name = company.get("name") or BENEFICIARY["name"]
         description = (
             f"За услуги по использованию Программного обеспечения Исполнителя "
             f"\"{company_name}\" по счету {number} от {dt.strftime('%d.%m.%Y')} г."
         )
+        contract_number = (req.get("contract_number") or "").strip()
+        contract_date = (req.get("contract_date") or "").strip()
+        contract_note = "Публичный договор возмездного оказания услуг от 22.04.2025 г."
+        if contract_number and contract_date:
+            contract_note = f"Договор № {contract_number} от {contract_date}"
+        elif contract_number:
+            contract_note = f"Договор № {contract_number}"
+        elif contract_date:
+            contract_note = f"Договор от {contract_date}"
         beneficiary_bin = company.get("bin") or company.get("iin") or BENEFICIARY["bin"]
         payload = {
             "request_id": request_id,
@@ -8229,10 +8566,15 @@ def wallet_topup_invoice_page(
             "payer_bin": req.get("client_bin") or "ИИН/БИН не указан",
             "payer_address": req.get("client_address") or "Адрес не указан",
             "description": description,
-            "contract_note": "Публичный договор возмездного оказания услуг от 22.04.2025 г.",
+            "contract_note": contract_note,
             "amount": amount,
             "currency": currency,
             "amount_words": amount_words,
+            "tax_mode": tax["tax_mode"],
+            "vat_rate": tax["vat_rate"],
+            "amount_net": _format_amount(tax["net_amount"]),
+            "vat_amount": _format_amount(tax["vat_amount"]),
+            "vat_note": tax["vat_note"],
             "token": token or "",
         }
         return HTMLResponse(content=_invoice_1c_html(payload))
@@ -8311,16 +8653,31 @@ def wallet_topup_invoice_generated_pdf(
                 dt = datetime.utcnow()
         else:
             dt = datetime.utcnow()
-        date_str = _format_date_ru(dt) + " Рі."
-        amount = _format_amount(req.get("amount") or 0)
+        date_str = _format_ru_date(dt.isoformat()) + " г."
+        amount_val = float(req.get("amount") or 0)
+        amount = _format_amount(amount_val)
         currency = req.get("currency") or "KZT"
-        amount_words = _amount_to_words_ru(req.get("amount") or 0)
-        company = _get_company_profile(conn)
+        amount_words = _amount_to_words_ru(amount_val)
+        tax_mode = _normalize_tax_mode(req.get("tax_mode"), "without_vat")
+        vat_rate = _normalize_vat_rate_for_mode(tax_mode, req.get("vat_rate"))
+        tax = _invoice_tax_breakdown(amount_val, tax_mode, vat_rate)
+        issuer_type = _normalize_issuer_type(req.get("issuer_type"), "too")
+        issuer_profile = _get_billing_issuer_profile(conn, issuer_type)
+        company = _request_issuer_snapshot(req, issuer_profile)
         beneficiary_bin = company.get("bin") or company.get("iin") or BENEFICIARY["bin"]
         description = (
             f"За услуги по использованию Программного обеспечения Исполнителя "
             f"\"{company.get('name') or BENEFICIARY['name']}\" по счету {number} от {dt.strftime('%d.%m.%Y')} г."
         )
+        contract_number = (req.get("contract_number") or "").strip()
+        contract_date = (req.get("contract_date") or "").strip()
+        contract_note = "Публичный договор возмездного оказания услуг от 22.04.2025 г."
+        if contract_number and contract_date:
+            contract_note = f"Договор № {contract_number} от {contract_date}"
+        elif contract_number:
+            contract_note = f"Договор № {contract_number}"
+        elif contract_date:
+            contract_note = f"Договор от {contract_date}"
         payload = {
             "request_id": request_id,
             "number": number,
@@ -8337,10 +8694,15 @@ def wallet_topup_invoice_generated_pdf(
             "payer_bin": req.get("client_bin") or "ИИН/БИН не указан",
             "payer_address": req.get("client_address") or "Адрес не указан",
             "description": description,
-            "contract_note": "Публичный договор возмездного оказания услуг от 22.04.2025 г.",
+            "contract_note": contract_note,
             "amount": amount,
             "currency": currency,
             "amount_words": amount_words,
+            "tax_mode": tax["tax_mode"],
+            "vat_rate": tax["vat_rate"],
+            "amount_net": _format_amount(tax["net_amount"]),
+            "vat_amount": _format_amount(tax["vat_amount"]),
+            "vat_note": tax["vat_note"],
         }
         html = _invoice_1c_html(payload)
         try:
@@ -8389,16 +8751,22 @@ def create_legal_entity(payload: LegalEntityPayload, current_user=Depends(get_cu
     short_name = (payload.short_name or name).strip()
     full_name = (payload.full_name or name).strip()
     legal_address = (payload.legal_address or payload.address or "").strip() or None
+    issuer_type = _normalize_issuer_type(payload.issuer_type, "too")
+    tax_mode = _tax_mode_for_issuer(issuer_type)
     with get_conn() as conn:
         cur = conn.execute(
             """
-            INSERT INTO legal_entities (name, short_name, full_name, bin, address, legal_address, email, bank, iban, bic, kbe)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO legal_entities (name, short_name, full_name, issuer_type, tax_mode, contract_number, contract_date, bin, address, legal_address, email, bank, iban, bic, kbe)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 name,
                 short_name,
                 full_name,
+                issuer_type,
+                tax_mode,
+                (payload.contract_number or "").strip() or None,
+                (payload.contract_date or "").strip() or None,
                 payload.bin,
                 payload.address,
                 legal_address,
@@ -8434,7 +8802,7 @@ def update_legal_entity(entity_id: int, payload: LegalEntityPayload, current_use
     with get_conn() as conn:
         row = conn.execute(
             """
-            SELECT le.id FROM legal_entities le
+            SELECT le.id, le.tax_mode, le.issuer_type FROM legal_entities le
             JOIN user_legal_entities ule ON ule.legal_entity_id = le.id
             WHERE le.id=? AND ule.user_id=?
             """,
@@ -8442,16 +8810,22 @@ def update_legal_entity(entity_id: int, payload: LegalEntityPayload, current_use
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Legal entity not found")
+        issuer_type = _normalize_issuer_type(payload.issuer_type, _normalize_issuer_type(row.get("issuer_type"), "too"))
+        tax_mode = _tax_mode_for_issuer(issuer_type)
         conn.execute(
             """
             UPDATE legal_entities
-            SET name=?, short_name=?, full_name=?, bin=?, address=?, legal_address=?, email=?, bank=?, iban=?, bic=?, kbe=?
+            SET name=?, short_name=?, full_name=?, issuer_type=?, tax_mode=?, contract_number=?, contract_date=?, bin=?, address=?, legal_address=?, email=?, bank=?, iban=?, bic=?, kbe=?
             WHERE id=?
             """,
             (
                 name,
                 short_name,
                 full_name,
+                issuer_type,
+                tax_mode,
+                (payload.contract_number or "").strip() or None,
+                (payload.contract_date or "").strip() or None,
                 payload.bin,
                 payload.address,
                 legal_address,
@@ -8926,6 +9300,53 @@ def admin_create_account(payload: AdminAccountCreate, admin_user=Depends(get_adm
         user = conn.execute("SELECT id FROM users WHERE id=?", (payload.user_id,)).fetchone()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
+        existing = _find_existing_account(
+            conn,
+            user_id=int(payload.user_id),
+            platform=payload.platform,
+            name=payload.name,
+        )
+        if existing:
+            agency = _get_or_create_default_agency(conn, payload.user_id)
+            conn.execute(
+                """
+                UPDATE ad_accounts
+                SET external_id=?,
+                    account_code=?,
+                    visible_to_client=?,
+                    currency=?,
+                    status=?
+                WHERE id=?
+                """,
+                (
+                    payload.external_id,
+                    payload.account_code,
+                    1 if payload.visible_to_client is None else (1 if payload.visible_to_client else 0),
+                    normalized_currency,
+                    payload.status or "pending",
+                    existing["id"],
+                ),
+            )
+            if agency:
+                _ensure_agency_account_mapping(
+                    conn,
+                    int(agency["id"]),
+                    int(existing["id"]),
+                    label=payload.name,
+                    status=payload.status or "pending",
+                )
+            conn.commit()
+            return {
+                "id": existing["id"],
+                "user_id": payload.user_id,
+                "platform": payload.platform,
+                "name": payload.name,
+                "external_id": payload.external_id,
+                "account_code": payload.account_code,
+                "visible_to_client": 1 if payload.visible_to_client is None else (1 if payload.visible_to_client else 0),
+                "currency": normalized_currency,
+                "status": payload.status or "pending",
+            }
         cur = conn.execute(
             """
             INSERT INTO ad_accounts (user_id, platform, name, external_id, account_code, visible_to_client, currency, status)
@@ -9607,13 +10028,6 @@ def admin_update_topup_status(topup_id: int, status: TopUpStatus, admin_user=Dep
                 )
                 conn.execute("UPDATE topups SET status=? WHERE id=?", (next_status, topup_id))
 
-            acc = conn.execute("SELECT budget_total FROM ad_accounts WHERE id=?", (row["account_id"],)).fetchone()
-            base_amount = row["amount_net"] if row["amount_net"] else row["amount_input"]
-            new_total = (acc["budget_total"] or 0) + (base_amount or 0)
-            conn.execute(
-                "UPDATE ad_accounts SET budget_total=? WHERE id=?",
-                (new_total, row["account_id"]),
-            )
             account_row = conn.execute("SELECT platform, name, currency FROM ad_accounts WHERE id=?", (row["account_id"],)).fetchone()
             topup_payload = _attach_topup_account_amount(
                 [
@@ -9624,6 +10038,14 @@ def admin_update_topup_status(topup_id: int, status: TopUpStatus, admin_user=Dep
                     }
                 ]
             )[0]
+            budget_delta = float(topup_payload.get("amount_account") or 0)
+            if budget_delta > 0:
+                acc = conn.execute("SELECT budget_total FROM ad_accounts WHERE id=?", (row["account_id"],)).fetchone()
+                current_total = float(acc["budget_total"] or 0) if acc else 0.0
+                conn.execute(
+                    "UPDATE ad_accounts SET budget_total=? WHERE id=?",
+                    (current_total + budget_delta, row["account_id"]),
+                )
             _record_account_funding_event(
                 conn,
                 account_id=int(row["account_id"]),
@@ -9767,35 +10189,56 @@ def admin_update_account_request_status(
                 (payload.contract_code, request_id),
             )
         default_currency = "EUR" if row["platform"] == "telegram" else "USD"
+        ensured_account_id: Optional[int] = None
         if payload.budget_total is not None:
-            existing_acc = conn.execute(
-                "SELECT id, currency FROM ad_accounts WHERE user_id=? AND platform=? AND name=?",
-                (row["user_id"], row["platform"], row["name"]),
-            ).fetchone()
+            existing_acc = _find_existing_account(
+                conn,
+                user_id=int(row["user_id"]),
+                platform=str(row["platform"] or ""),
+                name=str(row["name"] or ""),
+            )
             if existing_acc:
+                ensured_account_id = int(existing_acc["id"])
                 conn.execute(
                     "UPDATE ad_accounts SET budget_total=? WHERE id=?",
                     (payload.budget_total, existing_acc["id"]),
                 )
             elif payload.status == "approved":
-                conn.execute(
+                cur = conn.execute(
                     "INSERT INTO ad_accounts (user_id, platform, name, external_id, currency, account_code, budget_total) VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (row["user_id"], row["platform"], row["name"], None, default_currency, payload.account_code, payload.budget_total),
                 )
+                ensured_account_id = int(cur.lastrowid)
         if payload.status == "approved":
-            existing = conn.execute(
-                "SELECT id FROM ad_accounts WHERE user_id=? AND platform=? AND name=?",
-                (row["user_id"], row["platform"], row["name"]),
-            ).fetchone()
+            existing = _find_existing_account(
+                conn,
+                user_id=int(row["user_id"]),
+                platform=str(row["platform"] or ""),
+                name=str(row["name"] or ""),
+            )
             if not existing:
-                conn.execute(
+                cur = conn.execute(
                     "INSERT INTO ad_accounts (user_id, platform, name, external_id, currency, account_code, budget_total) VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (row["user_id"], row["platform"], row["name"], None, default_currency, payload.account_code, payload.budget_total),
                 )
+                ensured_account_id = int(cur.lastrowid)
             elif payload.account_code:
                 conn.execute(
                     "UPDATE ad_accounts SET account_code=? WHERE id=?",
                     (payload.account_code, existing["id"]),
+                )
+                ensured_account_id = int(existing["id"])
+            elif existing:
+                ensured_account_id = int(existing["id"])
+        if ensured_account_id:
+            agency = _get_or_create_default_agency(conn, int(row["user_id"]))
+            if agency:
+                _ensure_agency_account_mapping(
+                    conn,
+                    int(agency["id"]),
+                    int(ensured_account_id),
+                    label=str(row["name"] or ""),
+                    status=payload.status or str(row.get("status") or "new"),
                 )
         conn.execute("UPDATE account_requests SET status=? WHERE id=?", (payload.status, request_id))
         _insert_request_event(
@@ -9958,13 +10401,8 @@ def list_accounts_period_spend(
     if from_dt > to_dt:
         raise HTTPException(status_code=400, detail="date_from must be less than or equal to date_to")
 
-    def _to_float(value: object) -> float:
-        try:
-            return float(value)
-        except Exception:
-            return 0.0
-
     with get_conn() as conn:
+        account_rows = _list_accessible_accounts(conn, current_user)
         accounts = [
             {
                 "id": row["id"],
@@ -9974,48 +10412,102 @@ def list_accounts_period_spend(
                 "name": row.get("name"),
                 "currency": row.get("currency"),
             }
-            for row in _list_accessible_accounts(conn, current_user)
+            for row in account_rows
         ]
+        account_ids = [int(row.get("id") or 0) for row in accounts if int(row.get("id") or 0) > 0]
+        spend_map: Dict[int, float] = {}
+        if account_ids:
+            placeholders = ",".join(["?"] * len(account_ids))
+            spend_rows = conn.execute(
+                f"""
+                SELECT account_id, COALESCE(SUM(spend), 0) AS spend_total
+                FROM ad_account_stats
+                WHERE account_id IN ({placeholders})
+                  AND stat_date BETWEEN ? AND ?
+                GROUP BY account_id
+                """,
+                [*account_ids, date_from, date_to],
+            ).fetchall()
+            spend_map = {int(row["account_id"]): float(row.get("spend_total") or 0) for row in spend_rows}
         conn.commit()
 
     items: List[Dict[str, object]] = []
     for acc in accounts:
-        account_id = acc.get("id")
+        account_id = int(acc.get("id") or 0)
         platform = str(acc.get("platform") or "").lower().strip()
-        external_id = acc.get("external_id") or acc.get("account_code")
         currency = acc.get("currency") or "USD"
         payload: Dict[str, object] = {
             "account_id": account_id,
             "platform": platform,
             "currency": currency,
-            "spend": None,
+            "spend": float(spend_map.get(account_id, 0.0)),
         }
-
-        if platform not in {"meta", "google", "tiktok"}:
-            items.append(payload)
-            continue
-        if not external_id:
-            items.append(payload)
-            continue
-
-        try:
-            if platform == "meta":
-                daily_rows = _meta_fetch_daily(str(external_id), date_from, date_to)
-                payload["spend"] = sum(_to_float(row.get("spend")) for row in daily_rows)
-            elif platform == "google":
-                normalized_google_id = _google_valid_customer_id_or_none(external_id)
-                if normalized_google_id:
-                    daily_rows = _google_fetch_daily(normalized_google_id, date_from, date_to)
-                    payload["spend"] = sum(_to_float(row.get("spend")) for row in daily_rows)
-            elif platform == "tiktok":
-                daily_rows = _tiktok_fetch_daily(_tiktok_normalize_advertiser_id(str(external_id)), date_from, date_to)
-                payload["spend"] = sum(_to_float(row.get("spend")) for row in daily_rows)
-        except Exception as exc:
-            payload["error"] = str(exc)
-
         items.append(payload)
 
     return {"date_from": date_from, "date_to": date_to, "items": items}
+
+
+@app.get("/accounts/spend/daily")
+def list_accounts_period_spend_daily(
+    date_from: str,
+    date_to: str,
+    current_user=Depends(get_current_user),
+):
+    if not get_conn:
+        return {"date_from": date_from, "date_to": date_to, "items": []}
+    if not date_from or not date_to:
+        raise HTTPException(status_code=400, detail="date_from and date_to are required")
+    try:
+        from_dt = datetime.strptime(date_from, "%Y-%m-%d").date()
+        to_dt = datetime.strptime(date_to, "%Y-%m-%d").date()
+    except Exception:
+        raise HTTPException(status_code=400, detail="date_from/date_to must be in YYYY-MM-DD format")
+    if from_dt > to_dt:
+        raise HTTPException(status_code=400, detail="date_from must be less than or equal to date_to")
+
+    with get_conn() as conn:
+        account_rows = _list_accessible_accounts(conn, current_user)
+        account_ids = [
+            int(row.get("id") or 0)
+            for row in account_rows
+            if int(row.get("id") or 0) > 0 and str(row.get("platform") or "").lower().strip() in {"meta", "google", "tiktok"}
+        ]
+
+        spend_by_date: Dict[str, float] = {}
+        if account_ids:
+            placeholders = ",".join(["?"] * len(account_ids))
+            rows = conn.execute(
+                f"""
+                SELECT stat_date, COALESCE(SUM(spend), 0) AS spend
+                FROM ad_account_stats
+                WHERE account_id IN ({placeholders})
+                  AND stat_date BETWEEN ? AND ?
+                GROUP BY stat_date
+                ORDER BY stat_date ASC
+                """,
+                [*account_ids, date_from, date_to],
+            ).fetchall()
+            for row in rows:
+                spend_by_date[str(row.get("stat_date") or "")] = _finance_to_float(row.get("spend"))
+        conn.commit()
+
+    items: List[Dict[str, object]] = []
+    cursor = from_dt
+    while cursor <= to_dt:
+        date_key = cursor.isoformat()
+        items.append(
+            {
+                "date": date_key,
+                "spend": round(float(spend_by_date.get(date_key, 0.0)), 6),
+            }
+        )
+        cursor += timedelta(days=1)
+
+    return {
+        "date_from": date_from,
+        "date_to": date_to,
+        "items": items,
+    }
 
 
 @app.post("/accounts/finance/sync")
@@ -10195,10 +10687,47 @@ def create_account(
     if platform not in {"meta", "google", "tiktok", "yandex", "telegram", "monochrome"}:
         raise HTTPException(status_code=400, detail="Unsupported platform")
     with get_conn() as conn:
+        existing = _find_existing_account(
+            conn,
+            user_id=int(current_user["id"]),
+            platform=platform,
+            name=name,
+        )
+        agency = _get_or_create_default_agency(conn, int(current_user["id"]))
+        if existing:
+            conn.execute(
+                "UPDATE ad_accounts SET external_id=?, currency=? WHERE id=?",
+                (external_id, currency, existing["id"]),
+            )
+            if agency:
+                _ensure_agency_account_mapping(
+                    conn,
+                    int(agency["id"]),
+                    int(existing["id"]),
+                    label=name,
+                    status=str(existing.get("status") or "active"),
+                )
+            conn.commit()
+            return {
+                "id": existing["id"],
+                "user_id": current_user["id"],
+                "platform": platform,
+                "name": name,
+                "external_id": external_id,
+                "currency": currency,
+            }
         cur = conn.execute(
             "INSERT INTO ad_accounts (user_id, platform, name, external_id, currency) VALUES (?, ?, ?, ?, ?)",
             (current_user["id"], platform, name, external_id, currency),
         )
+        if agency:
+            _ensure_agency_account_mapping(
+                conn,
+                int(agency["id"]),
+                int(cur.lastrowid),
+                label=name,
+                status="active",
+            )
         conn.commit()
         return {
             "id": cur.lastrowid,
@@ -10401,7 +10930,7 @@ def create_topup(payload: TopupCreatePayload, current_user=Depends(get_current_u
     account_id = payload.account_id
     fee_percent = payload.fee_percent
     vat_percent = payload.vat_percent
-    currency = payload.currency
+    currency = str(payload.currency or "KZT").upper()
     fx_rate = payload.fx_rate
     with get_conn() as conn:
         acc = conn.execute("SELECT platform, currency, user_id FROM ad_accounts WHERE id=?", (account_id,)).fetchone()
@@ -10433,9 +10962,19 @@ def create_topup(payload: TopupCreatePayload, current_user=Depends(get_current_u
                     f"Максимальная сумма пополнения при текущей комиссии: {max_input:.2f} {currency}."
                 ),
             )
-        if fx_rate and fx_rate > 0 and str(acc["currency"] or currency).upper() != str(currency).upper():
-            amount_net = amount_input / fx_rate
+        account_currency = str(acc["currency"] or currency).upper()
+        if account_currency != currency:
+            # Source of truth for KZT -> account-currency conversions is backend marked BCC rate.
+            if currency == "KZT" and account_currency in {"USD", "EUR"}:
+                resolved_rate = _get_marked_bcc_sell_rate(account_currency)
+                if not resolved_rate or resolved_rate <= 0:
+                    raise HTTPException(status_code=400, detail=f"FX rate is unavailable for {account_currency}/KZT")
+                fx_rate = float(resolved_rate)
+                amount_net = amount_input / fx_rate
+            else:
+                raise HTTPException(status_code=400, detail=f"Unsupported topup currency pair: {currency} -> {account_currency}")
         else:
+            fx_rate = None
             amount_net = amount_input
         cur = conn.execute(
             """

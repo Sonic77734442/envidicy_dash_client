@@ -7,7 +7,8 @@ import {
   extractLiveBalance,
   extractLiveSpend,
   formatMoney,
-  getTopupAccountFundingUsd,
+  getMarkedRate,
+  getTopupAccountFundingKzt,
   getWalletAvailableBalance,
   normalizeAccountStatus,
   platformLabel,
@@ -17,7 +18,7 @@ import {
 export const dynamic = 'force-dynamic'
 
 const DEFAULT_MEDIA_PLAN = {
-  status: 'Not connected',
+  status: 'Data unavailable',
   budgetRunway: 'No active plan',
   lastUpdated: 'Planning data unavailable',
   empty: true,
@@ -36,6 +37,33 @@ async function upstreamFetch(path, auth) {
     headers: auth ? { Authorization: auth } : {},
     cache: 'no-store',
   })
+}
+
+async function parseUpstreamJson({ name, path, response, fallback, required, issues }) {
+  const status = Number(response?.status || 0)
+  if (!response) {
+    if (required) issues.push({ name, path, status: 0, reason: 'no_response' })
+    return fallback
+  }
+  if (!response.ok) {
+    if (required) issues.push({ name, path, status, reason: 'http_error' })
+    return fallback
+  }
+
+  const contentType = String(response.headers.get('content-type') || '').toLowerCase()
+  if (status === 204) return fallback
+
+  try {
+    if (contentType.includes('application/json')) {
+      return await response.json()
+    }
+    const raw = await response.text()
+    if (!raw) return fallback
+    return JSON.parse(raw)
+  } catch {
+    if (required) issues.push({ name, path, status, reason: 'invalid_json' })
+    return fallback
+  }
 }
 
 function useDbFinanceRead() {
@@ -66,6 +94,14 @@ function startOfDay(date) {
   return copy
 }
 
+function formatDateKey(date) {
+  const d = new Date(date)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function dateRange(days) {
   const to = startOfDay(new Date())
   const from = new Date(to)
@@ -73,8 +109,8 @@ function dateRange(days) {
   return {
     from,
     to,
-    fromStr: from.toISOString().slice(0, 10),
-    toStr: to.toISOString().slice(0, 10),
+    fromStr: formatDateKey(from),
+    toStr: formatDateKey(to),
   }
 }
 
@@ -87,9 +123,35 @@ function previousRange(days) {
   return {
     from,
     to,
-    fromStr: from.toISOString().slice(0, 10),
-    toStr: to.toISOString().slice(0, 10),
+    fromStr: formatDateKey(from),
+    toStr: formatDateKey(to),
   }
+}
+
+function previousRangeFor(current, days) {
+  const to = new Date(current.from)
+  to.setDate(to.getDate() - 1)
+  const from = new Date(to)
+  from.setDate(from.getDate() - (days - 1))
+  return {
+    from,
+    to,
+    fromStr: formatDateKey(from),
+    toStr: formatDateKey(to),
+  }
+}
+
+function parseIsoDate(value) {
+  const text = String(value || '').trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null
+  const date = new Date(`${text}T00:00:00Z`)
+  if (Number.isNaN(date.getTime())) return null
+  return date
+}
+
+function diffDaysInclusive(from, to) {
+  const ms = to.getTime() - from.getTime()
+  return Math.floor(ms / 86400000) + 1
 }
 
 function mergeDailySpend(payload) {
@@ -107,6 +169,24 @@ function mergeDailySpend(payload) {
   return Array.from(byDate.values()).sort((a, b) => String(a.date).localeCompare(String(b.date)))
 }
 
+function sumAccountSpendItems(payload) {
+  const items = Array.isArray(payload?.items) ? payload.items : []
+  if (!items.length) return null
+  return items.reduce((sum, row) => sum + Number(row?.spend || 0), 0)
+}
+
+function dailySpendMapFromDb(payload) {
+  const items = Array.isArray(payload?.items) ? payload.items : []
+  if (!items.length) return null
+  const mapped = new Map()
+  for (const row of items) {
+    const date = String(row?.date || '').trim()
+    if (!date) continue
+    mapped.set(date, Number(row?.spend || 0))
+  }
+  return mapped
+}
+
 function aggregateCompletedTopups(topups, fromStr, toStr) {
   const daily = new Map()
   let total = 0
@@ -115,7 +195,7 @@ function aggregateCompletedTopups(topups, fromStr, toStr) {
     if (status !== 'completed') continue
     const date = String(row.created_at || '').slice(0, 10)
     if (!date || date < fromStr || date > toStr) continue
-    const amount = getTopupAccountFundingUsd(row)
+    const amount = getTopupAccountFundingKzt(row)
     if (!amount) continue
     total += amount
     daily.set(date, (daily.get(date) || 0) + amount)
@@ -129,7 +209,7 @@ function lastDaysSeries(current, spendDaily, topupsDaily, days = 6) {
   for (let i = days - 1; i >= 0; i -= 1) {
     const value = new Date(end)
     value.setDate(end.getDate() - i)
-    dates.push(value.toISOString().slice(0, 10))
+    dates.push(formatDateKey(value))
   }
   const rows = dates.map((date) => ({
     date,
@@ -140,8 +220,8 @@ function lastDaysSeries(current, spendDaily, topupsDaily, days = 6) {
   const max = rows.reduce((m, row) => Math.max(m, row.spend, row.topups), 0) || 1
   return rows.map((row) => ({
     ...row,
-    soft: Math.max(24, Math.round((row.topups / max) * 188)),
-    strong: Math.max(24, Math.round((row.spend / max) * 188)),
+    soft: row.topups > 0 ? Math.max(10, Math.round((row.topups / max) * 188)) : 0,
+    strong: row.spend > 0 ? Math.max(10, Math.round((row.spend / max) * 188)) : 0,
   }))
 }
 
@@ -233,6 +313,19 @@ function buildPendingSummary(accountRequests, walletTopupRequests, financeDocs) 
   }
 }
 
+function buildRateStatusRows(ratesPayload) {
+  const usdRate = getMarkedRate(ratesPayload?.rates?.USD)
+  const eurRate = getMarkedRate(ratesPayload?.rates?.EUR)
+  const rows = []
+  if (Number.isFinite(usdRate) && usdRate > 0) {
+    rows.push({ icon: '$', label: `USD/KZT ${usdRate.toFixed(1)}` })
+  }
+  if (Number.isFinite(eurRate) && eurRate > 0) {
+    rows.push({ icon: '€', label: `EUR/KZT ${eurRate.toFixed(1)}` })
+  }
+  return rows
+}
+
 function deriveBalanceState({ status, derivedBalance, monthlySpend, linkedRequest, balanceSource }) {
   if (status !== 'Active') return 'inactive'
   if (linkedRequest && ['new', 'processing', 'pending'].includes(String(linkedRequest.status || '').toLowerCase())) return 'setup'
@@ -245,10 +338,23 @@ function deriveBalanceState({ status, derivedBalance, monthlySpend, linkedReques
 
 function buildAlerts(accounts, requests, financeDocs, walletTopupRequests) {
   const alerts = []
+  const usedIds = new Set()
+  const pushAlert = (alert) => {
+    const rawId = String(alert?.id || 'alert-item')
+    let uniqueId = rawId
+    let suffix = 1
+    while (usedIds.has(uniqueId)) {
+      suffix += 1
+      uniqueId = `${rawId}-${suffix}`
+    }
+    usedIds.add(uniqueId)
+    alerts.push({ ...alert, id: uniqueId })
+  }
+
   for (const account of accounts) {
     if (account.balanceState === 'depleted' || account.balanceState === 'low') {
-      alerts.push({
-        id: `alert-account-${account.account}`,
+      pushAlert({
+        id: `alert-account-${account.platformKey || 'platform'}-${account.accountId || account.account}`,
         type: 'low_balance',
         severity: account.balanceState === 'depleted' ? 'high' : 'medium',
         title: `${account.account} requires funding`,
@@ -256,8 +362,8 @@ function buildAlerts(accounts, requests, financeDocs, walletTopupRequests) {
         accountId: account.accountId || null,
       })
     } else if (account.balanceState === 'setup') {
-      alerts.push({
-        id: `alert-setup-${account.account}`,
+      pushAlert({
+        id: `alert-setup-${account.platformKey || 'platform'}-${account.accountId || account.account}`,
         type: 'account_setup',
         severity: 'medium',
         title: `${account.account} setup is still in progress`,
@@ -268,7 +374,7 @@ function buildAlerts(accounts, requests, financeDocs, walletTopupRequests) {
   for (const row of requests || []) {
     const status = String(row.status || '').toLowerCase()
     if (status === 'new' || status === 'processing' || status === 'pending') {
-      alerts.push({
+      pushAlert({
         id: `alert-request-${row.id || row.request_id || row.created_at || row.name || row.platform}`,
         type: 'approval',
         severity: 'medium',
@@ -280,7 +386,7 @@ function buildAlerts(accounts, requests, financeDocs, walletTopupRequests) {
   for (const row of walletTopupRequests || []) {
     const status = String(row.status || '').toLowerCase()
     if (status && !['approved', 'completed', 'rejected'].includes(status)) {
-      alerts.push({
+      pushAlert({
         id: `alert-funding-${row.id || row.request_id || row.created_at || row.amount || status}`,
         type: 'funding_request',
         severity: 'low',
@@ -297,99 +403,121 @@ export async function GET(request) {
   if (!auth) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 })
 
   const dbMode = useDbFinanceRead()
-  const current = dateRange(30)
-  const previous = previousRange(30)
+  const { searchParams } = new URL(request.url)
+  const dateFromRaw = searchParams.get('date_from')
+  const dateToRaw = searchParams.get('date_to')
+  const parsedFrom = parseIsoDate(dateFromRaw)
+  const parsedTo = parseIsoDate(dateToRaw)
+  const hasCustomRange = Boolean(parsedFrom && parsedTo && parsedFrom <= parsedTo)
+  const current = hasCustomRange
+    ? {
+        from: parsedFrom,
+        to: parsedTo,
+        fromStr: dateFromRaw,
+        toStr: dateToRaw,
+      }
+    : dateRange(30)
+  const rangeDays = diffDaysInclusive(current.from, current.to)
+  const previous = previousRangeFor(current, rangeDays)
+  const endpoints = [
+    { name: 'wallet', path: '/wallet', required: true, fallback: null },
+    { name: 'rates', path: '/rates/bcc', required: false, fallback: null },
+    { name: 'spend_current', path: `/insights/overview?date_from=${current.fromStr}&date_to=${current.toStr}`, required: false, fallback: null },
+    { name: 'spend_previous', path: `/insights/overview?date_from=${previous.fromStr}&date_to=${previous.toStr}`, required: false, fallback: null },
+    { name: 'accounts', path: '/accounts?include_live_billing=1', required: true, fallback: [] },
+    { name: 'account_spend', path: `/accounts/spend?date_from=${current.fromStr}&date_to=${current.toStr}`, required: false, fallback: { items: [] } },
+    { name: 'account_spend_previous', path: `/accounts/spend?date_from=${previous.fromStr}&date_to=${previous.toStr}`, required: false, fallback: { items: [] } },
+    { name: 'account_spend_daily', path: `/accounts/spend/daily?date_from=${current.fromStr}&date_to=${current.toStr}`, required: false, fallback: { items: [] } },
+    { name: 'account_requests', path: '/account-requests', required: false, fallback: [] },
+    { name: 'notifications', path: '/notifications', required: false, fallback: { items: [] } },
+    { name: 'topups', path: '/topups', required: false, fallback: [] },
+    { name: 'wallet_topup_requests', path: '/wallet/topup-requests', required: false, fallback: [] },
+    { name: 'finance_docs', path: '/client-finance-documents', required: false, fallback: [] },
+    ...(dbMode ? [{ name: 'finance_summary', path: '/accounts/finance/summary', required: false, fallback: { items: [] } }] : []),
+  ]
 
-  const responses = await Promise.all([
-    upstreamFetch('/wallet', auth),
-    upstreamFetch('/rates/bcc', auth),
-    upstreamFetch(`/insights/overview?date_from=${current.fromStr}&date_to=${current.toStr}`, auth),
-    upstreamFetch(`/insights/overview?date_from=${previous.fromStr}&date_to=${previous.toStr}`, auth),
-    upstreamFetch('/accounts?include_live_billing=1', auth),
-    upstreamFetch('/accounts/funding-totals', auth),
-    upstreamFetch(`/accounts/spend?date_from=${current.fromStr}&date_to=${current.toStr}`, auth),
-    upstreamFetch('/account-requests', auth),
-    upstreamFetch('/notifications', auth),
-    upstreamFetch('/topups', auth),
-    upstreamFetch('/wallet/topup-requests', auth),
-    upstreamFetch('/client-finance-documents', auth),
-    dbMode ? upstreamFetch('/accounts/finance/summary', auth) : Promise.resolve(null),
-  ])
+  const responseMap = {}
+  await Promise.all(
+    endpoints.map(async (ep) => {
+      try {
+        responseMap[ep.name] = await upstreamFetch(ep.path, auth)
+      } catch {
+        responseMap[ep.name] = null
+      }
+    })
+  )
 
-  if (responses.some((res) => res.status === 401)) {
+  if (Object.values(responseMap).some((res) => res?.status === 401)) {
     return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 })
   }
 
-  const [
-    walletRes,
-    ratesRes,
-    currentSpendRes,
-    previousSpendRes,
-    accountsRes,
-    fundingRes,
-    accountSpendRes,
-    requestsRes,
-    notificationsRes,
-    topupsRes,
-    topupReqRes,
-    financeDocsRes,
-    financeSummaryRes,
-  ] = responses
-
-  const [
-    wallet,
-    ratesPayload,
-    currentSpendPayload,
-    previousSpendPayload,
-    accounts,
-    fundingPayload,
-    accountSpendPayload,
-    accountRequests,
-    notifications,
-    topups,
-    walletTopupRequests,
-    financeDocs,
-    financeSummaryPayload,
-  ] = await Promise.all([
-    walletRes.ok ? walletRes.json() : null,
-    ratesRes.ok ? ratesRes.json() : null,
-    currentSpendRes.ok ? currentSpendRes.json() : null,
-    previousSpendRes.ok ? previousSpendRes.json() : null,
-    accountsRes.ok ? accountsRes.json() : [],
-    fundingRes.ok ? fundingRes.json() : { items: [] },
-    accountSpendRes.ok ? accountSpendRes.json() : { items: [] },
-    requestsRes.ok ? requestsRes.json() : [],
-    notificationsRes.ok ? notificationsRes.json() : { items: [] },
-    topupsRes.ok ? topupsRes.json() : [],
-    topupReqRes.ok ? topupReqRes.json() : [],
-    financeDocsRes.ok ? financeDocsRes.json() : [],
-    financeSummaryRes?.ok ? financeSummaryRes.json() : { items: [] },
-  ])
-
-  const financeSummaryMap = new Map(
-    (Array.isArray(financeSummaryPayload?.items) ? financeSummaryPayload.items : [])
-      .filter((row) => row?.account_id != null)
-      .map((row) => [String(row.account_id), row])
+  const issues = []
+  const payloadMap = {}
+  await Promise.all(
+    endpoints.map(async (ep) => {
+      payloadMap[ep.name] = await parseUpstreamJson({
+        name: ep.name,
+        path: ep.path,
+        response: responseMap[ep.name],
+        fallback: ep.fallback,
+        required: ep.required,
+        issues,
+      })
+    })
   )
 
-  const currentSpend = sumOverviewSpend(currentSpendPayload)
-  const previousSpend = sumOverviewSpend(previousSpendPayload)
-  const spendDelta = fmtDeltaPct(currentSpend, previousSpend)
-  const uniqueWalletTopupRequests = dedupeBy(
-    (walletTopupRequests || []).slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || ''))),
-    fundingRequestFingerprint
-  )
-
-  const completedFundingMap = aggregateCompletedFundingByAccount(topups)
-  const periodSpendMap = new Map((accountSpendPayload?.items || []).map((row) => [String(row.account_id), row]))
-  const requestMap = new Map()
-  for (const row of accountRequests || []) {
-    const key = `${String(row.platform || '').toLowerCase()}::${String(row.name || '').toLowerCase()}`
-    if (!requestMap.has(key)) requestMap.set(key, row)
+  if (issues.length) {
+    return NextResponse.json(
+      {
+        detail: 'Overview upstream failed',
+        issues,
+      },
+      { status: 502 }
+    )
   }
 
-  const uniqueAccounts = dedupeAccounts(accounts || [])
-  const accountRows = uniqueAccounts.map((row) => {
+  try {
+    const wallet = payloadMap.wallet
+    const ratesPayload = payloadMap.rates
+    const currentSpendPayload = payloadMap.spend_current
+    const previousSpendPayload = payloadMap.spend_previous
+    const accounts = payloadMap.accounts
+    const accountSpendPayload = payloadMap.account_spend
+    const accountSpendPreviousPayload = payloadMap.account_spend_previous
+    const accountSpendDailyPayload = payloadMap.account_spend_daily
+    const accountRequests = payloadMap.account_requests
+    const notifications = payloadMap.notifications
+    const topups = payloadMap.topups
+    const walletTopupRequests = payloadMap.wallet_topup_requests
+    const financeDocs = payloadMap.finance_docs
+    const financeSummaryPayload = payloadMap.finance_summary || { items: [] }
+
+    const financeSummaryMap = new Map(
+      (Array.isArray(financeSummaryPayload?.items) ? financeSummaryPayload.items : [])
+        .filter((row) => row?.account_id != null)
+        .map((row) => [String(row.account_id), row])
+    )
+
+    const currentSpendDb = sumAccountSpendItems(accountSpendPayload)
+    const previousSpendDb = sumAccountSpendItems(accountSpendPreviousPayload)
+    const currentSpend = currentSpendDb == null ? sumOverviewSpend(currentSpendPayload) : currentSpendDb
+    const previousSpend = previousSpendDb == null ? sumOverviewSpend(previousSpendPayload) : previousSpendDb
+    const spendDelta = fmtDeltaPct(currentSpend, previousSpend)
+    const uniqueWalletTopupRequests = dedupeBy(
+      (walletTopupRequests || []).slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || ''))),
+      fundingRequestFingerprint
+    )
+
+    const completedFundingMap = aggregateCompletedFundingByAccount(topups)
+    const periodSpendMap = new Map((accountSpendPayload?.items || []).map((row) => [String(row.account_id), row]))
+    const requestMap = new Map()
+    for (const row of accountRequests || []) {
+      const key = `${String(row.platform || '').toLowerCase()}::${String(row.name || '').toLowerCase()}`
+      if (!requestMap.has(key)) requestMap.set(key, row)
+    }
+
+    const uniqueAccounts = dedupeAccounts(accounts || [])
+    const accountRows = uniqueAccounts.map((row) => {
     const dbSnapshot = financeSummaryMap.get(String(row.id))
     const spendRow = periodSpendMap.get(String(row.id))
     const platform = String(row.platform || '').toLowerCase()
@@ -501,24 +629,26 @@ export async function GET(request) {
       noteTone,
       noteAction,
     }
-  })
+    })
 
-  const pendingSummary = buildPendingSummary(accountRequests, uniqueWalletTopupRequests, financeDocs)
+    const pendingSummary = buildPendingSummary(accountRequests, uniqueWalletTopupRequests, financeDocs)
 
-  const spendDailyRows = mergeDailySpend(currentSpendPayload)
-  const spendDaily = new Map(spendDailyRows.map((row) => [row.date, Number(row.spend || 0)]))
-  const topupsNormalized = aggregateCompletedTopups(topups, current.fromStr, current.toStr)
-  const series = lastDaysSeries(current, spendDaily, topupsNormalized.daily)
-  const netFlow = topupsNormalized.total - currentSpend
+    const spendDailyDb = dailySpendMapFromDb(accountSpendDailyPayload)
+    const spendDailyRows = mergeDailySpend(currentSpendPayload)
+    const spendDailyFallback = new Map(spendDailyRows.map((row) => [row.date, Number(row.spend || 0)]))
+    const spendDaily = spendDailyDb || spendDailyFallback
+    const topupsNormalized = aggregateCompletedTopups(topups, current.fromStr, current.toStr)
+    const series = lastDaysSeries(current, spendDaily, topupsNormalized.daily, Math.min(31, Math.max(6, rangeDays)))
+    const netFlow = topupsNormalized.total - currentSpend
 
-  const recentActivity = (notifications?.items || []).slice(0, 4).map((item) => ({
+    const recentActivity = (notifications?.items || []).slice(0, 4).map((item) => ({
     title: item.type === 'topup' ? 'Top-up confirmed' : 'Account approved',
     text: item.type === 'topup' ? `${fmtMoney(item.amount || 0, item.currency || 'USD')} completed` : `${platformLabel(item.platform)} ${item.name || ''}`.trim(),
     time: relativeTime(item.created_at),
     tone: item.type === 'topup' ? 'good' : 'info',
-  }))
+    }))
 
-  const pendingRequests = [
+    const pendingRequests = [
     ...(accountRequests || [])
       .filter((row) => ['new', 'processing', 'pending', 'requested'].includes(String(row.status || '').toLowerCase()))
       .map((row, index) => ({
@@ -536,63 +666,78 @@ export async function GET(request) {
         text: `${requestLabelFromStatus(row.status)} · ${fmtMoney(row.amount || 0, row.currency || 'KZT')}`,
         marker: 'neutral',
       })),
-  ].slice(0, 3)
+    ].slice(0, 3)
 
-  const alerts = buildAlerts(accountRows, accountRequests, financeDocs, uniqueWalletTopupRequests)
-  const activeAccounts = accountRows.filter((row) => row.status === 'Active').length
-  const warnCount = accountRows.filter((row) => row.noteTone === 'warn').length
-  const pendingSetupCount = accountRows.filter((row) => row.status !== 'Active').length
-  const platformCount = new Set(uniqueAccounts.map((row) => row.platform).filter(Boolean)).size
+    const alerts = buildAlerts(accountRows, accountRequests, financeDocs, uniqueWalletTopupRequests)
+    const activeAccounts = accountRows.filter((row) => row.status === 'Active').length
+    const warnCount = accountRows.filter((row) => row.noteTone === 'warn').length
+    const pendingSetupCount = accountRows.filter((row) => row.status !== 'Active').length
+    const platformCount = new Set(uniqueAccounts.map((row) => row.platform).filter(Boolean)).size
 
-  return NextResponse.json({
-    financeMode: dbMode ? 'db_fallback' : 'runtime_live',
-    metrics: [
-      {
-        label: 'Available Balance',
-        value: fmtMoney(getWalletAvailableBalance(wallet), wallet?.currency || 'USD', 2),
-        hint: buildWalletBalanceHint(wallet, ratesPayload),
-        tone: 'good',
+    return NextResponse.json({
+      financeMode: dbMode ? 'db_fallback' : 'runtime_live',
+      metrics: [
+        {
+          label: 'Available Balance',
+          value: fmtMoney(getWalletAvailableBalance(wallet), wallet?.currency || 'USD', 2),
+          hint: buildWalletBalanceHint(wallet, ratesPayload),
+          tone: 'good',
+        },
+        {
+          label: 'Monthly Spend',
+          value: fmtMoney(currentSpend),
+          hint: spendDelta == null ? 'Current 30 days' : `vs last period ${spendDelta >= 0 ? '+' : ''}${spendDelta.toFixed(1)}%`,
+          tone: spendDelta != null && spendDelta > 0 ? 'warn' : 'good',
+        },
+        {
+          label: 'Active Accounts',
+          value: String(activeAccounts),
+          hint: `Across ${platformCount} platforms`,
+        },
+        {
+          label: 'Pending Items',
+          value: String(pendingSummary.total),
+          hint: `${pendingSummary.approvals} approvals · ${pendingSummary.funding} funding · ${pendingSummary.documents} docs`,
+          tone: pendingSummary.total > 0 ? 'warn' : undefined,
+        },
+      ],
+      pending: pendingSummary,
+      accounts: accountRows,
+      accountTags: {
+        active: activeAccounts,
+        warn: warnCount,
+        pending: pendingSetupCount,
       },
-      {
-        label: 'Monthly Spend',
-        value: fmtMoney(currentSpend),
-        hint: spendDelta == null ? 'Current 30 days' : `vs last period ${spendDelta >= 0 ? '+' : ''}${spendDelta.toFixed(1)}%`,
-        tone: spendDelta != null && spendDelta > 0 ? 'warn' : 'good',
+      capitalFlow: {
+        mode: 'topups_only',
+        spendVisible: false,
+        currency: 'KZT',
+        topupsValue: Number(topupsNormalized.total || 0),
+        spend: fmtMoney(currentSpend),
+        topups: fmtMoney(topupsNormalized.total, 'KZT'),
+        net: `${netFlow >= 0 ? '+' : '-'}${fmtMoney(Math.abs(netFlow))}`,
+        insight: 'Completed account funding by selected period.',
+        series,
       },
-      {
-        label: 'Active Accounts',
-        value: String(activeAccounts),
-        hint: `Across ${platformCount} platforms`,
+      activity: recentActivity,
+      requests: pendingRequests,
+      alerts,
+      mediaPlan: DEFAULT_MEDIA_PLAN,
+      statusAlerts: `${alerts.length} Alerts`,
+      statusRows: buildRateStatusRows(ratesPayload),
+      range: {
+        date_from: current.fromStr,
+        date_to: current.toStr,
+        custom: hasCustomRange,
       },
+    })
+  } catch (error) {
+    const message = error?.message || 'Overview normalization failed'
+    return NextResponse.json(
       {
-        label: 'Pending Items',
-        value: String(pendingSummary.total),
-        hint: `${pendingSummary.approvals} approvals · ${pendingSummary.funding} funding · ${pendingSummary.documents} docs`,
-        tone: pendingSummary.total > 0 ? 'warn' : undefined,
+        detail: message,
       },
-    ],
-    pending: pendingSummary,
-    accounts: accountRows,
-    accountTags: {
-      active: activeAccounts,
-      warn: warnCount,
-      pending: pendingSetupCount,
-    },
-    capitalFlow: {
-      spend: fmtMoney(currentSpend),
-      topups: fmtMoney(topupsNormalized.total),
-      net: `${netFlow >= 0 ? '+' : '-'}${fmtMoney(Math.abs(netFlow))}`,
-      insight: netFlow >= 0 ? 'Completed account funding is currently covering period spend.' : 'Completed account funding is trailing period spend.',
-      series,
-    },
-    activity: recentActivity,
-    requests: pendingRequests,
-    alerts,
-    mediaPlan: DEFAULT_MEDIA_PLAN,
-    statusAlerts: `${alerts.length} Alerts`,
-    statusRows: [
-      { icon: '$', label: 'USD/KZT 471.2' },
-      { icon: '€', label: 'EUR/USD 1.08' },
-    ],
-  })
+      { status: 500 }
+    )
+  }
 }

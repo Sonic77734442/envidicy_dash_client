@@ -4,10 +4,22 @@ const KEY_USER_ID = 'auth_user_id'
 const KEY_IMPERSONATION_ACTIVE = 'impersonation_active'
 const KEY_IMPERSONATION_RETURN = 'impersonation_return'
 const KEY_IMPERSONATION_LABEL = 'impersonation_label'
+const COOKIE_TOKEN = 'auth_token'
 
 function storageGet(key) {
   if (typeof window === 'undefined') return null
   return window.sessionStorage.getItem(key) || window.localStorage.getItem(key)
+}
+
+function setTokenCookie(token) {
+  if (typeof window === 'undefined') return
+  if (!token) return
+  document.cookie = `${COOKIE_TOKEN}=${encodeURIComponent(token)}; Path=/; SameSite=Lax`
+}
+
+function clearTokenCookie() {
+  if (typeof window === 'undefined') return
+  document.cookie = `${COOKIE_TOKEN}=; Path=/; Max-Age=0; SameSite=Lax`
 }
 
 function consumeImpersonationFromUrl() {
@@ -22,6 +34,7 @@ function consumeImpersonationFromUrl() {
   window.sessionStorage.setItem(KEY_IMPERSONATION_ACTIVE, '1')
   window.sessionStorage.setItem(KEY_IMPERSONATION_RETURN, params.get('impersonation_return') || '/admin/clients')
   window.sessionStorage.setItem(KEY_IMPERSONATION_LABEL, params.get('impersonate_email') || '')
+  setTokenCookie(token)
 
   params.delete('impersonate_token')
   params.delete('impersonate_email')
@@ -38,6 +51,7 @@ export function setAuth(auth) {
   localStorage.setItem(KEY_TOKEN, auth.token)
   localStorage.setItem(KEY_EMAIL, auth.email)
   localStorage.setItem(KEY_USER_ID, String(auth.id))
+  setTokenCookie(auth.token)
 }
 
 export function clearAuth() {
@@ -46,11 +60,14 @@ export function clearAuth() {
   localStorage.removeItem(KEY_TOKEN)
   localStorage.removeItem(KEY_EMAIL)
   localStorage.removeItem(KEY_USER_ID)
+  clearTokenCookie()
 }
 
 export function getAuthToken() {
   consumeImpersonationFromUrl()
-  return storageGet(KEY_TOKEN)
+  const token = storageGet(KEY_TOKEN)
+  if (token) setTokenCookie(token)
+  return token
 }
 
 export function getAuthEmail() {
@@ -84,4 +101,5 @@ export function clearImpersonation() {
   window.sessionStorage.removeItem(KEY_IMPERSONATION_ACTIVE)
   window.sessionStorage.removeItem(KEY_IMPERSONATION_RETURN)
   window.sessionStorage.removeItem(KEY_IMPERSONATION_LABEL)
+  if (!window.localStorage.getItem(KEY_TOKEN)) clearTokenCookie()
 }

@@ -33,6 +33,12 @@ function getMarkedRate(entry) {
   return null
 }
 
+function formatRate(value, locale) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric) || numeric <= 0) return '—'
+  return `${money(numeric, locale, 2)} ₸`
+}
+
 export default function AppShell({ eyebrow, title, subtitle, area = 'client', children }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -40,8 +46,10 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
 
   const [profile, setProfile] = useState({ email: '', name: '' })
   const [walletText, setWalletText] = useState(`${t('shell.balanceLabel')}: —`)
-  const [rateUsd, setRateUsd] = useState(`USD: ${t('shell.rateUnavailable')}`)
-  const [rateEur, setRateEur] = useState(`EUR: ${t('shell.rateUnavailable')}`)
+  const [rateRows, setRateRows] = useState([
+    { code: 'USD', bank: null, marked: null },
+    { code: 'EUR', bank: null, marked: null },
+  ])
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
@@ -60,24 +68,23 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
   const navItems = useMemo(() => {
     if (area === 'admin') {
       return [
-        { label: t('shell.nav.adminRequests'), href: '/admin/requests' },
-        { label: t('shell.nav.adminClients'), href: '/admin/clients' },
-        { label: t('shell.nav.adminAccounts'), href: '/admin/accounts' },
-        { label: t('shell.nav.adminTopups'), href: '/admin/topups' },
-        { label: t('shell.nav.adminWallet'), href: '/admin/wallet' },
-        { label: t('shell.nav.adminUsers'), href: '/admin/users' },
-        { label: t('shell.nav.adminAgencies'), href: '/admin/agencies' },
-        { label: t('shell.nav.adminCompany'), href: '/admin/company' },
-        { label: t('shell.nav.adminEntities'), href: '/admin/legal-entities' },
+        { key: 'admin-requests', label: t('shell.nav.adminRequests'), href: '/admin/requests' },
+        { key: 'admin-clients', label: t('shell.nav.adminClients'), href: '/admin/clients' },
+        { key: 'admin-accounts', label: t('shell.nav.adminAccounts'), href: '/admin/accounts' },
+        { key: 'admin-topups', label: t('shell.nav.adminTopups'), href: '/admin/topups' },
+        { key: 'admin-wallet', label: t('shell.nav.adminWallet'), href: '/admin/wallet' },
+        { key: 'admin-users', label: t('shell.nav.adminUsers'), href: '/admin/users' },
+        { key: 'admin-agencies', label: t('shell.nav.adminAgencies'), href: '/admin/agencies' },
+        { key: 'admin-company', label: t('shell.nav.adminCompany'), href: '/admin/company' },
+        { key: 'admin-entities', label: t('shell.nav.adminEntities'), href: '/admin/legal-entities' },
       ]
     }
     return [
-      { label: t('shell.nav.topupAccounts'), href: '/funds' },
-      { label: t('shell.nav.finance'), href: '/funds' },
-      { label: t('shell.nav.planning'), href: '/plan' },
-      { label: t('shell.nav.dashboard'), href: '/dashboard' },
-      { label: t('shell.nav.tools'), href: '/tools' },
-      { label: t('shell.nav.settings'), href: '/settings' },
+      { key: 'client-topup-accounts', label: t('shell.nav.topupAccounts'), href: '/funds' },
+      { key: 'client-finance', label: t('shell.nav.finance'), href: '/funds' },
+      { key: 'client-dashboard', label: t('shell.nav.dashboard'), href: '/dashboard' },
+      { key: 'client-tools', label: t('shell.nav.tools'), href: '/tools' },
+      { key: 'client-settings', label: t('shell.nav.settings'), href: '/settings' },
     ]
   }, [area, t])
 
@@ -111,18 +118,12 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
         const wallet = walletRes.ok ? await walletRes.json() : null
         const ratesData = ratesRes.ok ? await ratesRes.json() : null
         const balanceKzt = Number(wallet?.balance || 0)
-        const usdRate = getMarkedRate(ratesData?.rates?.USD)
-        const eurRate = getMarkedRate(ratesData?.rates?.EUR)
-
-        if (usdRate && eurRate) {
-          setWalletText(
-            `${t('shell.balanceLabel')}: ₸${money(balanceKzt, locale, 0)} · $${money(balanceKzt / usdRate, locale)} · €${money(balanceKzt / eurRate, locale)}`
-          )
-        } else {
-          setWalletText(`${t('shell.balanceLabel')}: ₸${money(balanceKzt, locale, 0)}`)
-        }
-        setRateUsd(usdRate ? `USD: 1$ = ${money(usdRate, locale)} ₸` : `USD: ${t('shell.rateUnavailable')}`)
-        setRateEur(eurRate ? `EUR: 1€ = ${money(eurRate, locale)} ₸` : `EUR: ${t('shell.rateUnavailable')}`)
+        const rates = ratesData?.rates || {}
+        setRateRows([
+          { code: 'USD', bank: Number(rates?.USD?.sell) || null, marked: getMarkedRate(rates?.USD) || null },
+          { code: 'EUR', bank: Number(rates?.EUR?.sell) || null, marked: getMarkedRate(rates?.EUR) || null },
+        ])
+        setWalletText(`${t('shell.balanceLabel')}: ₸${money(balanceKzt, locale, 0)}`)
       } catch {
         // ignore
       }
@@ -195,16 +196,23 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
         <div className="sidebar-brand">Envidicy</div>
         <div className="nav">
           {navItems.map((item) => (
-            <a key={item.href} className={`nav-link ${pathname === item.href ? 'active' : ''}`} href={item.href}>
+            <a key={item.key} className={`nav-link ${pathname === item.href ? 'active' : ''}`} href={item.href}>
               {item.label}
             </a>
           ))}
         </div>
         {area === 'client' ? (
-            <div className="sidebar-rates-panel">
+          <div className="sidebar-rates-panel">
             <div className="sidebar-rates-title">{t('shell.ratesTitle')}</div>
-            <div className="sidebar-rate-row">{rateUsd}</div>
-            <div className="sidebar-rate-row">{rateEur}</div>
+            {rateRows.map((row) => (
+              <div className="sidebar-rate-row" key={`sidebar-${row.code}`}>
+                <span className="sidebar-rate-code">{row.code}</span>
+                <span className="sidebar-rate-value">
+                  {row.code === 'USD' ? '1$ = ' : row.code === 'EUR' ? '1€ = ' : ''}
+                  {formatRate(row.marked || row.bank, locale)}
+                </span>
+              </div>
+            ))}
           </div>
         ) : null}
         <div className="nav-footer">
@@ -229,7 +237,7 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
           </div>
           <div className="nav-drawer-links">
             {navItems.map((item) => (
-              <a key={item.href} className={`nav-link ${pathname === item.href ? 'active' : ''}`} href={item.href}>
+              <a key={item.key} className={`nav-link ${pathname === item.href ? 'active' : ''}`} href={item.href}>
                 {item.label}
               </a>
             ))}
@@ -237,8 +245,15 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
           {area === 'client' ? (
             <div className="sidebar-rates-panel">
               <div className="sidebar-rates-title">{t('shell.ratesTitle')}</div>
-              <div className="sidebar-rate-row">{rateUsd}</div>
-              <div className="sidebar-rate-row">{rateEur}</div>
+              {rateRows.map((row) => (
+                <div className="sidebar-rate-row" key={`drawer-${row.code}`}>
+                  <span className="sidebar-rate-code">{row.code}</span>
+                  <span className="sidebar-rate-value">
+                    {row.code === 'USD' ? '1$ = ' : row.code === 'EUR' ? '1€ = ' : ''}
+                    {formatRate(row.marked || row.bank, locale)}
+                  </span>
+                </div>
+              ))}
             </div>
           ) : null}
           <div className="nav-drawer-footer">

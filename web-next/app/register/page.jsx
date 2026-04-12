@@ -56,7 +56,7 @@ export default function RegisterPage() {
       }
 
       setStatus(tr('Account created. Redirecting...', 'Аккаунт создан. Перенаправляем...'))
-      router.push('/plan')
+      router.push('/dashboard')
     } catch (error) {
       setStatus(error?.message || tr('Failed to create account. Check input data.', 'Не удалось создать аккаунт. Проверьте данные.'))
     } finally {

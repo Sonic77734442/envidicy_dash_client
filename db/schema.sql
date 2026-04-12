@@ -212,6 +212,22 @@ CREATE TABLE IF NOT EXISTS wallet_topup_requests (
   currency TEXT DEFAULT 'KZT',
   note TEXT,
   status TEXT DEFAULT 'requested',
+  amount_kind TEXT DEFAULT 'gross',
+  issuer_type TEXT DEFAULT 'too',
+  tax_mode TEXT DEFAULT 'without_vat',
+  vat_rate DOUBLE PRECISION DEFAULT 0,
+  contract_number TEXT,
+  contract_date TEXT,
+  issuer_name TEXT,
+  issuer_bin TEXT,
+  issuer_iin TEXT,
+  issuer_legal_address TEXT,
+  issuer_factual_address TEXT,
+  issuer_bank TEXT,
+  issuer_iban TEXT,
+  issuer_bic TEXT,
+  issuer_kbe TEXT,
+  issuer_currency TEXT,
   legal_entity_id INTEGER REFERENCES legal_entities(id),
   client_name TEXT,
   client_bin TEXT,
@@ -228,6 +244,10 @@ CREATE TABLE IF NOT EXISTS legal_entities (
   name TEXT NOT NULL,
   short_name TEXT,
   full_name TEXT,
+  issuer_type TEXT DEFAULT 'too',
+  tax_mode TEXT DEFAULT 'without_vat',
+  contract_number TEXT,
+  contract_date TEXT,
   bin TEXT,
   address TEXT,
   legal_address TEXT,
@@ -245,6 +265,21 @@ CREATE TABLE IF NOT EXISTS user_legal_entities (
   is_default INTEGER DEFAULT 0,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, legal_entity_id)
+);
+
+CREATE TABLE IF NOT EXISTS billing_issuers (
+  issuer_type TEXT PRIMARY KEY,
+  name TEXT,
+  bin TEXT,
+  iin TEXT,
+  legal_address TEXT,
+  factual_address TEXT,
+  bank TEXT,
+  iban TEXT,
+  bic TEXT,
+  kbe TEXT,
+  currency TEXT DEFAULT 'KZT',
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS invoice_uploads (

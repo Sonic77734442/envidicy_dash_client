@@ -1,8 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import styles from './client.module.css'
 import { getAuthToken } from '../../lib/auth'
+import { useI18n } from '../../lib/i18n/client'
 
 const PLATFORM_CARDS = [
   { key: 'meta', label: 'Meta', summary: 'Global reach & hyper-targeted precision.' },
@@ -19,7 +20,6 @@ const STEP_ITEMS = [
   { key: 'review', label: 'Review' },
 ]
 
-const ENTITY_OPTIONS = ['Architect Global Ltd', 'Envidicy Group LLP', 'Studio Archi-Media Ltd']
 const GOOGLE_CURRENCY_OPTIONS = ['USD', 'EUR']
 const META_CURRENCY_OPTIONS = ['USD', 'EUR']
 
@@ -31,7 +31,7 @@ function initialState() {
   return {
     platform: 'tiktok',
     name: '',
-    legalEntity: '',
+    legalEntityId: '',
     currency: 'USD',
     website: '',
     app: '',
@@ -90,10 +90,13 @@ function platformGuide(platform) {
 }
 
 export default function AccountRequestModal({ open, onClose, onSubmitted }) {
+  const { tr } = useI18n()
   const [step, setStep] = useState('platform')
   const [submitting, setSubmitting] = useState(false)
+  const [entitiesLoading, setEntitiesLoading] = useState(false)
   const [status, setStatus] = useState('')
   const [state, setState] = useState(initialState)
+  const [entityOptions, setEntityOptions] = useState([])
 
   const isTiktok = state.platform === 'tiktok'
   const isGoogle = state.platform === 'google'
@@ -101,8 +104,20 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
   const currentStep = stepIndex(step) + 1
   const progress = `${String(currentStep).padStart(2, '0')} / ${String(STEP_ITEMS.length).padStart(2, '0')}`
 
+  const entityById = useMemo(() => {
+    const map = new Map()
+    for (const row of entityOptions) {
+      const id = String(row?.id || '').trim()
+      if (!id) continue
+      map.set(id, row)
+    }
+    return map
+  }, [entityOptions])
+
+  const selectedEntity = entityById.get(String(state.legalEntityId || '').trim()) || null
+
   const canAdvanceBusiness =
-    Boolean(state.name.trim()) && Boolean(state.legalEntity.trim()) && Boolean(state.website.trim()) && Boolean(state.currency.trim())
+    Boolean(state.name.trim()) && Boolean(String(state.legalEntityId || '').trim()) && Boolean(state.website.trim()) && Boolean(state.currency.trim())
   const canAdvanceSetup =
     isTiktok
       ? state.tiktokIds.length > 0 && Boolean(state.timezone.trim()) && Boolean(state.geo.trim())
@@ -123,7 +138,7 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
 
   const reviewRows = useMemo(
     () => [
-      { label: 'Legal Name', value: state.legalEntity || '—' },
+      { label: 'Legal Name', value: selectedEntity?.name || '—' },
       {
         label: isTiktok ? 'Primary Region' : isGoogle ? 'MCC Email' : 'Business Manager ID',
         value: isTiktok ? state.geo || '—' : isGoogle ? state.mccEmail || '—' : state.bmId || '—',
@@ -131,8 +146,81 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
       { label: 'Currency', value: state.currency || '—' },
       { label: 'Website', value: state.website || '—' },
     ],
-    [isGoogle, isTiktok, state]
+    [isGoogle, isTiktok, selectedEntity?.name, state]
   )
+
+  function translatePlatformSummary(item) {
+    if (item?.key === 'meta') {
+      return tr('Global reach & hyper-targeted precision.', 'Глобальный охват и точный таргетинг.')
+    }
+    if (item?.key === 'google') {
+      return tr('Intent-based audience capture.', 'Охват аудитории по поисковому намерению.')
+    }
+    if (item?.key === 'tiktok') {
+      return tr('High engagement via short-form creative.', 'Высокая вовлеченность через короткие креативы.')
+    }
+    if (item?.key === 'telegram') {
+      return tr('Privacy-focused direct community ads.', 'Прямые объявления для комьюнити с акцентом на приватность.')
+    }
+    if (item?.key === 'yandex') {
+      return tr('Domain search and display in CIS.', 'Поиск и медийное размещение в СНГ.')
+    }
+    return item?.summary || ''
+  }
+
+  function translateReviewFieldLabel(label) {
+    const value = String(label || '')
+    if (value === 'Legal Name') return tr('Legal Name', 'Юридическое лицо')
+    if (value === 'Primary Region') return tr('Primary Region', 'Основной регион')
+    if (value === 'MCC Email') return tr('MCC Email', 'MCC Email')
+    if (value === 'Business Manager ID') return tr('Business Manager ID', 'Business Manager ID')
+    if (value === 'Currency') return tr('Currency', 'Валюта')
+    if (value === 'Website') return tr('Website', 'Сайт')
+    return value
+  }
+
+  useEffect(() => {
+    if (!open) return
+    const token = getAuthToken()
+    if (!token) return
+    let cancelled = false
+
+    async function loadEntities() {
+      setEntitiesLoading(true)
+      try {
+        const res = await fetch('/api/client/legal-entities', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        })
+        const data = await res.json().catch(() => [])
+        if (!res.ok) throw new Error(data?.detail || tr('Failed to load legal entities', 'Не удалось загрузить юридические лица'))
+        if (cancelled) return
+        const rows = Array.isArray(data) ? data : []
+        const nextOptions = rows
+          .map((row) => ({
+            id: row?.id,
+            name: String(row?.name || '').trim(),
+          }))
+          .filter((row) => row.name && row.id != null)
+        setEntityOptions(nextOptions)
+        setState((current) => {
+          const selectedId = String(current.legalEntityId || '').trim()
+          const hasSelected = selectedId && nextOptions.some((row) => String(row.id) === selectedId)
+          if (hasSelected) return current
+          return { ...current, legalEntityId: nextOptions[0] ? String(nextOptions[0].id) : '' }
+        })
+      } catch (error) {
+        if (!cancelled) setStatus(error?.message || tr('Failed to load legal entities', 'Не удалось загрузить юридические лица'))
+      } finally {
+        if (!cancelled) setEntitiesLoading(false)
+      }
+    }
+
+    loadEntities()
+    return () => {
+      cancelled = true
+    }
+  }, [open, tr])
 
   function resetAndClose() {
     setStep('platform')
@@ -145,15 +233,15 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
   function addTiktokId() {
     const value = state.tiktokIdInput.trim()
     if (!value) {
-      setStatus('Enter a TikTok Business ID.')
+      setStatus(tr('Enter a TikTok Business ID.', 'Введите TikTok Business ID.'))
       return
     }
     if (state.tiktokIds.length >= 10) {
-      setStatus('You can add up to 10 Business IDs.')
+      setStatus(tr('You can add up to 10 Business IDs.', 'Можно добавить не более 10 Business ID.'))
       return
     }
     if (state.tiktokIds.includes(value)) {
-      setStatus('This Business ID is already added.')
+      setStatus(tr('This Business ID is already added.', 'Этот Business ID уже добавлен.'))
       return
     }
     setState((current) => ({ ...current, tiktokIds: [...current.tiktokIds, value], tiktokIdInput: '' }))
@@ -163,11 +251,11 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
   function addAccess() {
     const email = state.accessEmail.trim()
     if (!email) {
-      setStatus('Enter an access email.')
+      setStatus(tr('Enter an access email.', 'Введите email для доступа.'))
       return
     }
     if (state.access.some((item) => item.email === email)) {
-      setStatus('This access email is already added.')
+      setStatus(tr('This access email is already added.', 'Этот email уже добавлен.'))
       return
     }
     setState((current) => ({
@@ -209,7 +297,8 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
         tiktok_business_ids: isTiktok ? state.tiktokIds : [],
         tiktok_timezone: isTiktok ? state.timezone : null,
         tiktok_geo: isTiktok ? state.geo : null,
-        legal_entity_name: state.legalEntity.trim(),
+        legal_entity_id: state.legalEntityId ? Number(state.legalEntityId) : null,
+        legal_entity_name: selectedEntity?.name || null,
       }
 
       const res = await fetch('/api/client/account-request', {
@@ -221,11 +310,11 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
         body: JSON.stringify({ payload }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.detail || 'Failed to create account request')
+      if (!res.ok) throw new Error(data?.detail || tr('Failed to create account request', 'Не удалось создать запрос на аккаунт'))
       if (onSubmitted) await onSubmitted(data)
       resetAndClose()
     } catch (error) {
-      setStatus(error?.message || 'Failed to create account request')
+      setStatus(error?.message || tr('Failed to create account request', 'Не удалось создать запрос на аккаунт'))
     } finally {
       setSubmitting(false)
     }
@@ -238,8 +327,8 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
       <section className={styles.requestModal} role="dialog" aria-modal="true" aria-labelledby="request-account-title">
         <aside className={styles.requestRail}>
           <div>
-            <h3 className={styles.requestRailTitle}>Onboarding</h3>
-            <p className={styles.requestRailStep}>Step {currentStep} of {STEP_ITEMS.length}</p>
+            <h3 className={styles.requestRailTitle}>{tr('Onboarding', 'Онбординг')}</h3>
+            <p className={styles.requestRailStep}>{tr(`Step ${currentStep} of ${STEP_ITEMS.length}`, `Шаг ${currentStep} из ${STEP_ITEMS.length}`)}</p>
           </div>
           <div className={styles.requestRailNav}>
             {STEP_ITEMS.map((item, index) => (
@@ -247,62 +336,70 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
                 className={index === stepIndex(step) ? `${styles.requestRailItem} ${styles.requestRailItemActive}` : styles.requestRailItem}
                 key={item.key}
               >
-                <span>{item.label}</span>
+                <span>
+                  {item.key === 'platform'
+                    ? tr('Platform', 'Платформа')
+                    : item.key === 'business'
+                      ? tr('Business', 'Бизнес')
+                      : item.key === 'setup'
+                        ? tr('Platform Setup', 'Настройка платформы')
+                        : tr('Review', 'Проверка')}
+                </span>
               </div>
             ))}
           </div>
           <div className={styles.requestSupportCard}>
-            <strong>Need help with setup?</strong>
-            <span>Schedule a consultation with AdOps.</span>
+            <strong>{tr('Need help with setup?', 'Нужна помощь с настройкой?')}</strong>
+            <span>{tr('Schedule a consultation with AdOps.', 'Запланируйте консультацию с AdOps.')}</span>
           </div>
         </aside>
 
         <div className={styles.requestCanvas}>
           <div className={styles.requestCanvasHead}>
             <div>
-              <p className={styles.requestStepEyebrow}>Step {String(currentStep).padStart(2, '0')} of {String(STEP_ITEMS.length).padStart(2, '0')}</p>
+              <p className={styles.requestStepEyebrow}>{tr(`Step ${String(currentStep).padStart(2, '0')} of ${String(STEP_ITEMS.length).padStart(2, '0')}`, `Шаг ${String(currentStep).padStart(2, '0')} из ${String(STEP_ITEMS.length).padStart(2, '0')}`)}</p>
               <h3 className={styles.requestCanvasTitle} id="request-account-title">
                 {step === 'platform'
-                  ? 'Select Platform'
+                  ? tr('Select Platform', 'Выберите платформу')
                   : step === 'business'
                     ? isGoogle
-                      ? 'Google Ads'
+                      ? tr('Google Ads', 'Google Ads')
                       : isMeta
-                        ? 'Meta Ads'
-                      : 'TikTok Ads'
+                        ? tr('Meta Ads', 'Meta Ads')
+                      : tr('TikTok Ads', 'TikTok Ads')
                     : step === 'setup'
                       ? isGoogle
-                        ? 'MCC & Access Setup'
+                        ? tr('MCC & Access Setup', 'Настройка MCC и доступов')
                         : isMeta
-                          ? 'Meta Business Setup'
-                        : 'Business Setup'
-                      : 'Review & Submit'}
+                          ? tr('Meta Business Setup', 'Настройка Meta Business')
+                        : tr('Business Setup', 'Настройка бизнеса')
+                      : tr('Review & Submit', 'Проверка и отправка')}
               </h3>
               <p className={styles.requestCanvasSubtitle}>
                 {step === 'platform'
-                  ? 'Choose the ecosystem where you want to scale your operations.'
+                  ? tr('Choose the ecosystem where you want to scale your operations.', 'Выберите экосистему, в которой хотите масштабировать работу.')
                   : step === 'business'
                     ? isGoogle
-                      ? 'Configure your Google Ads account identity and financial foundations.'
+                      ? tr('Configure your Google Ads account identity and financial foundations.', 'Настройте идентификаторы Google Ads и финансовую базу аккаунта.')
                       : isMeta
-                        ? 'Configure your Meta account identity and financial foundations.'
-                      : 'Configure your TikTok Ads business identity and financial foundations.'
+                        ? tr('Configure your Meta account identity and financial foundations.', 'Настройте идентификаторы Meta и финансовую базу аккаунта.')
+                      : tr('Configure your TikTok Ads business identity and financial foundations.', 'Настройте идентификаторы TikTok Ads и финансовую базу аккаунта.')
                     : step === 'setup'
                       ? isGoogle
-                        ? 'Provide MCC access and the emails that should receive Google Ads access.'
+                        ? tr('Provide MCC access and the emails that should receive Google Ads access.', 'Укажите доступ MCC и email, которые должны получить доступ к Google Ads.')
                         : isMeta
-                          ? 'Provide Business Manager details, GEO, connected pages and final advertiser information.'
-                        : 'Connect TikTok business IDs, timezone and primary geo targeting.'
+                          ? tr('Provide Business Manager details, GEO, connected pages and final advertiser information.', 'Укажите данные Business Manager, GEO, подключенные страницы и данные финального рекламодателя.')
+                        : tr('Connect TikTok business IDs, timezone and primary geo targeting.', 'Подключите TikTok Business ID, timezone и основной GEO таргетинг.')
                       : isGoogle
-                        ? 'Verify your Google Ads account details before submitting for review.'
+                        ? tr('Verify your Google Ads account details before submitting for review.', 'Проверьте данные Google Ads перед отправкой на проверку.')
                         : isMeta
-                          ? 'Verify your Meta account details before submitting for review.'
-                        : 'Verify your TikTok account details before submitting for review.'}
+                          ? tr('Verify your Meta account details before submitting for review.', 'Проверьте данные Meta перед отправкой на проверку.')
+                        : tr('Verify your TikTok account details before submitting for review.', 'Проверьте данные TikTok перед отправкой на проверку.')}
               </p>
             </div>
             <div className={styles.requestCanvasActions}>
               <span className={styles.requestProgressText}>{progress}</span>
-              <button className={styles.requestClose} onClick={resetAndClose} type="button" aria-label="Close">
+              <button className={styles.requestClose} onClick={resetAndClose} type="button" aria-label={tr('Close', 'Закрыть')}>
                 ×
               </button>
             </div>
@@ -320,13 +417,13 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
                       platform: item.key,
                       currency: defaultCurrencyForPlatform(item.key),
                     }))
-                    setStatus(['tiktok', 'google', 'meta'].includes(item.key) ? '' : 'TikTok, Google and Meta are the first flows implemented in the redesign. Other platforms follow next.')
+                    setStatus(['tiktok', 'google', 'meta'].includes(item.key) ? '' : tr('TikTok, Google and Meta are the first flows implemented in the redesign. Other platforms follow next.', 'TikTok, Google и Meta — первые потоки в редизайне. Остальные платформы будут добавлены далее.'))
                   }}
                   type="button"
                 >
                   <strong>{item.label}</strong>
-                  <span>{item.summary}</span>
-                  {!['tiktok', 'google', 'meta'].includes(item.key) ? <em>Next</em> : null}
+                  <span>{translatePlatformSummary(item)}</span>
+                  {!['tiktok', 'google', 'meta'].includes(item.key) ? <em>{tr('Next', 'Далее')}</em> : null}
                 </button>
               ))}
             </div>
@@ -335,56 +432,85 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
           {step === 'business' ? (
             <div className={styles.requestFormGrid}>
               <article className={styles.requestGuideCard}>
-                <strong>{platformGuide(state.platform).title}</strong>
-                <span>{platformGuide(state.platform).text}</span>
+                <strong>
+                  {tr(
+                    platformGuide(state.platform).title,
+                    platformGuide(state.platform).title === 'Business Manager'
+                      ? 'Business Manager'
+                      : platformGuide(state.platform).title === 'TikTok Business Center'
+                        ? 'TikTok Business Center'
+                        : 'Google Ads и MCC'
+                  )}
+                </strong>
+                <span>
+                  {platformGuide(state.platform).title === 'Business Manager'
+                    ? tr(
+                        'Legacy Meta onboarding required Business Manager details, GEO and connected pages before the request could be submitted.',
+                        'Для Meta укажите данные Business Manager, GEO и подключенные страницы перед отправкой запроса.'
+                      )
+                    : platformGuide(state.platform).title === 'TikTok Business Center'
+                      ? tr(
+                          'Legacy TikTok onboarding required an existing TikTok Business Center before submitting the account request.',
+                          'Для TikTok сначала нужен действующий TikTok Business Center, затем можно отправлять запрос на аккаунт.'
+                        )
+                      : tr(
+                          'Legacy Google onboarding required an existing Google Ads account and MCC access before the request could be completed.',
+                          'Для Google сначала нужен действующий Google Ads аккаунт и доступ MCC.'
+                        )}
+                </span>
                 <a
                   href={platformGuide(state.platform).link}
                   rel="noreferrer"
                   target={platformGuide(state.platform).link.startsWith('http') ? '_blank' : undefined}
                 >
-                  {platformGuide(state.platform).linkLabel}
+                  {platformGuide(state.platform).title === 'Business Manager'
+                    ? tr('Instruction: create Business Manager', 'Инструкция: создать Business Manager')
+                    : platformGuide(state.platform).title === 'TikTok Business Center'
+                      ? tr('Instruction: create TikTok Business Center', 'Инструкция: создать TikTok Business Center')
+                      : tr('Instruction: Google Ads and MCC setup', 'Инструкция: настройка Google Ads и MCC')}
                 </a>
               </article>
               <label className={styles.requestField}>
-                <span>Account Name</span>
+                <span>{tr('Account Name', 'Название аккаунта')}</span>
                 <input
                   onChange={(event) => setState((current) => ({ ...current, name: event.target.value }))}
-                  placeholder={isGoogle ? 'e.g. Architect_Search_Global' : isMeta ? 'e.g. Architect_Meta_Global' : 'e.g. Architect_Global_Performance'}
+                  placeholder={isGoogle ? tr('e.g. Architect_Search_Global', 'например: Architect_Search_Global') : isMeta ? tr('e.g. Architect_Meta_Global', 'например: Architect_Meta_Global') : tr('e.g. Architect_Global_Performance', 'например: Architect_Global_Performance')}
                   type="text"
                   value={state.name}
                 />
               </label>
               <label className={styles.requestField}>
-                <span>Website URL</span>
+                <span>{tr('Website URL', 'URL сайта')}</span>
                 <input
                   onChange={(event) => setState((current) => ({ ...current, website: event.target.value }))}
-                  placeholder="https://architect.ledger/brand"
+                  placeholder={tr('https://architect.ledger/brand', 'https://architect.ledger/brand')}
                   type="url"
                   value={state.website}
                 />
               </label>
               <label className={styles.requestField}>
-                <span>Legal Entity</span>
-                <select value={state.legalEntity} onChange={(event) => setState((current) => ({ ...current, legalEntity: event.target.value }))}>
-                  <option value="">Select Registered Entity</option>
-                  {ENTITY_OPTIONS.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
+                <span>{tr('Legal Entity', 'Юридическое лицо')}</span>
+                <select value={state.legalEntityId} onChange={(event) => setState((current) => ({ ...current, legalEntityId: event.target.value }))}>
+                  <option value="">{tr('Select Registered Entity', 'Выберите зарегистрированное юрлицо')}</option>
+                  {entityOptions.map((item) => (
+                    <option key={item.id} value={String(item.id)}>
+                      {item.name}
                     </option>
                   ))}
                 </select>
               </label>
+              {entitiesLoading ? <span className={styles.tableSubtle}>{tr('Loading legal entities…', 'Загрузка юридических лиц…')}</span> : null}
               <label className={styles.requestField}>
-                <span>App URL</span>
+                <span>{tr('App URL', 'URL приложения')}</span>
                 <input
                   onChange={(event) => setState((current) => ({ ...current, app: event.target.value }))}
-                  placeholder="App Store or Play Store Link"
+                  placeholder={tr('App Store or Play Store Link', 'Ссылка App Store или Play Store')}
                   type="url"
                   value={state.app}
                 />
               </label>
               <label className={styles.requestField}>
-                <span>Account Currency</span>
+                <span>{tr('Account Currency', 'Валюта аккаунта')}</span>
                 {isGoogle || isMeta ? (
                   <select value={state.currency} onChange={(event) => setState((current) => ({ ...current, currency: event.target.value }))}>
                     {(isGoogle ? GOOGLE_CURRENCY_OPTIONS : META_CURRENCY_OPTIONS).map((item) => (
@@ -394,12 +520,12 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
                     ))}
                   </select>
                 ) : (
-                  <input disabled readOnly type="text" value="USD - United States Dollar" />
+                  <input disabled readOnly type="text" value={tr('USD - United States Dollar', 'USD - Доллар США')} />
                 )}
               </label>
               <article className={styles.requestInfoCard}>
-                <strong>Architect Verified</strong>
-                <span>Configuration settings will be synchronized with your master financial ledger for consistent reporting across all platforms.</span>
+                <strong>{tr('Architect Verified', 'Проверено Architect')}</strong>
+                <span>{tr('Configuration settings will be synchronized with your master financial ledger for consistent reporting across all platforms.', 'Настройки будут синхронизированы с основным финансовым реестром для консистентной отчетности по всем платформам.')}</span>
               </article>
             </div>
           ) : null}
@@ -409,16 +535,16 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
               {isTiktok ? (
                 <>
                   <label className={styles.requestField}>
-                    <span>TikTok Business IDs</span>
+                    <span>{tr('TikTok Business IDs', 'TikTok Business ID')}</span>
                     <div className={styles.requestInlineField}>
                       <input
                         onChange={(event) => setState((current) => ({ ...current, tiktokIdInput: event.target.value }))}
-                        placeholder="Enter Business Center ID"
+                        placeholder={tr('Enter Business Center ID', 'Введите Business Center ID')}
                         type="text"
                         value={state.tiktokIdInput}
                       />
                       <button className={styles.requestGhostButton} onClick={addTiktokId} type="button">
-                        Add
+                        {tr('Add', 'Добавить')}
                       </button>
                     </div>
                   </label>
@@ -442,19 +568,19 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
                   </div>
                   <div className={styles.requestFormGridTwo}>
                     <label className={styles.requestField}>
-                      <span>Timezone</span>
+                      <span>{tr('Timezone', 'Часовой пояс')}</span>
                       <input
                         onChange={(event) => setState((current) => ({ ...current, timezone: event.target.value }))}
-                        placeholder="Asia/Almaty"
+                        placeholder={tr('Asia/Almaty', 'Asia/Almaty')}
                         type="text"
                         value={state.timezone}
                       />
                     </label>
                     <label className={styles.requestField}>
-                      <span>Primary Geo Target</span>
+                      <span>{tr('Primary Geo Target', 'Основной GEO таргет')}</span>
                       <input
                         onChange={(event) => setState((current) => ({ ...current, geo: event.target.value }))}
-                        placeholder="Kazakhstan, Uzbekistan"
+                        placeholder={tr('Kazakhstan, Uzbekistan', 'Казахстан, Узбекистан')}
                         type="text"
                         value={state.geo}
                       />
@@ -466,25 +592,25 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
               {isGoogle ? (
                 <>
                   <label className={styles.requestField}>
-                    <span>MCC Access Email</span>
-                    <input
-                      onChange={(event) => setState((current) => ({ ...current, mccEmail: event.target.value }))}
-                      placeholder="user@company.com"
-                      type="email"
-                      value={state.mccEmail}
-                    />
+                    <span>{tr('MCC Access Email', 'MCC email для доступа')}</span>
+                      <input
+                        onChange={(event) => setState((current) => ({ ...current, mccEmail: event.target.value }))}
+                      placeholder={tr('user@company.com', 'user@company.com')}
+                        type="email"
+                        value={state.mccEmail}
+                      />
                   </label>
                   <label className={styles.requestField}>
-                    <span>Access Emails</span>
+                    <span>{tr('Access Emails', 'Email доступа')}</span>
                     <div className={styles.requestInlineField}>
                       <input
                         onChange={(event) => setState((current) => ({ ...current, accessEmail: event.target.value }))}
-                        placeholder="user@company.com"
+                        placeholder={tr('user@company.com', 'user@company.com')}
                         type="email"
                         value={state.accessEmail}
                       />
                       <button className={styles.requestGhostButton} onClick={addAccess} type="button">
-                        Add
+                        {tr('Add', 'Добавить')}
                       </button>
                     </div>
                   </label>
@@ -513,19 +639,19 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
                 <>
                   <div className={styles.requestFormGridTwo}>
                     <label className={styles.requestField}>
-                      <span>Business Manager ID</span>
+                      <span>{tr('Business Manager ID', 'Business Manager ID')}</span>
                       <input
                         onChange={(event) => setState((current) => ({ ...current, bmId: event.target.value }))}
-                        placeholder="e.g. 123456789012345"
+                        placeholder={tr('e.g. 123456789012345', 'например: 123456789012345')}
                         type="text"
                         value={state.bmId}
                       />
                     </label>
                     <label className={styles.requestField}>
-                      <span>GEO</span>
+                      <span>{tr('GEO', 'GEO')}</span>
                       <input
                         onChange={(event) => setState((current) => ({ ...current, metaGeo: event.target.value }))}
-                        placeholder="Kazakhstan"
+                        placeholder={tr('Kazakhstan', 'Казахстан')}
                         type="text"
                         value={state.metaGeo}
                       />
@@ -533,35 +659,35 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
                   </div>
                   <div className={styles.requestFormGridTwo}>
                     <label className={styles.requestField}>
-                      <span>Facebook Page</span>
+                      <span>{tr('Facebook Page', 'Страница Facebook')}</span>
                       <input
                         onChange={(event) => setState((current) => ({ ...current, facebookPage: event.target.value }))}
-                        placeholder="https://facebook.com/your-page"
+                        placeholder={tr('https://facebook.com/your-page', 'https://facebook.com/your-page')}
                         type="url"
                         value={state.facebookPage}
                       />
                     </label>
                     <label className={styles.requestField}>
-                      <span>Instagram Page</span>
+                      <span>{tr('Instagram Page', 'Страница Instagram')}</span>
                       <input
                         onChange={(event) => setState((current) => ({ ...current, instagramPage: event.target.value }))}
-                        placeholder="https://instagram.com/your-page"
+                        placeholder={tr('https://instagram.com/your-page', 'https://instagram.com/your-page')}
                         type="url"
                         value={state.instagramPage}
                       />
                     </label>
                   </div>
                   <label className={styles.requestField}>
-                    <span>Are you the final advertiser?</span>
+                    <span>{tr('Are you the final advertiser?', 'Вы финальный рекламодатель?')}</span>
                     <select value={state.finalAdvertiser} onChange={(event) => setState((current) => ({ ...current, finalAdvertiser: event.target.value }))}>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
+                      <option value="yes">{tr('Yes', 'Да')}</option>
+                      <option value="no">{tr('No', 'Нет')}</option>
                     </select>
                   </label>
                   {state.finalAdvertiser === 'no' ? (
                     <div className={styles.requestFormGridTwo}>
                       <label className={styles.requestField}>
-                        <span>Final Advertiser Name</span>
+                        <span>{tr('Final Advertiser Name', 'Название финального рекламодателя')}</span>
                         <input
                           onChange={(event) => setState((current) => ({ ...current, finalName: event.target.value }))}
                           type="text"
@@ -569,7 +695,7 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
                         />
                       </label>
                       <label className={styles.requestField}>
-                        <span>Country</span>
+                        <span>{tr('Country', 'Страна')}</span>
                         <input
                           onChange={(event) => setState((current) => ({ ...current, finalCountry: event.target.value }))}
                           type="text"
@@ -577,7 +703,7 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
                         />
                       </label>
                       <label className={styles.requestField}>
-                        <span>Tax ID</span>
+                        <span>{tr('Tax ID', 'Налоговый ID')}</span>
                         <input
                           onChange={(event) => setState((current) => ({ ...current, finalTaxId: event.target.value }))}
                           type="text"
@@ -585,7 +711,7 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
                         />
                       </label>
                       <label className={styles.requestField}>
-                        <span>Address</span>
+                        <span>{tr('Address', 'Адрес')}</span>
                         <input
                           onChange={(event) => setState((current) => ({ ...current, finalAddress: event.target.value }))}
                           type="text"
@@ -593,10 +719,10 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
                         />
                       </label>
                       <label className={styles.requestField}>
-                        <span>Ownership Share</span>
+                        <span>{tr('Ownership Share', 'Доля владения')}</span>
                         <input
                           onChange={(event) => setState((current) => ({ ...current, finalOwnership: event.target.value }))}
-                          placeholder="100%"
+                          placeholder={tr('100%', '100%')}
                           type="text"
                           value={state.finalOwnership}
                         />
@@ -611,44 +737,44 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
           {step === 'review' ? (
             <div className={styles.requestReviewStack}>
               <section className={styles.requestReviewSection}>
-                <p className={styles.requestReviewLabel}>Basic Account Summary</p>
+                <p className={styles.requestReviewLabel}>{tr('Basic Account Summary', 'Базовая сводка аккаунта')}</p>
                 <div className={styles.requestReviewGrid}>
                   {reviewRows.map((item) => (
                     <div className={styles.requestReviewCard} key={item.label}>
-                      <span>{item.label}</span>
+                      <span>{translateReviewFieldLabel(item.label)}</span>
                       <strong>{item.value}</strong>
                     </div>
                   ))}
                 </div>
               </section>
               <section className={styles.requestReviewSection}>
-                <p className={styles.requestReviewLabel}>{isGoogle ? 'Google Access Setup' : isMeta ? 'Meta Business Setup' : 'TikTok Business Setup'}</p>
+                <p className={styles.requestReviewLabel}>{isGoogle ? tr('Google Access Setup', 'Настройка Google доступа') : isMeta ? tr('Meta Business Setup', 'Настройка Meta Business') : tr('TikTok Business Setup', 'Настройка TikTok Business')}</p>
                 <div className={styles.requestBusinessList}>
                   {isTiktok
                     ? state.tiktokIds.map((item, index) => (
                         <div className={styles.requestBusinessItem} key={`${item}-${index}`}>
-                          <strong>TikTok BC #{index + 1}</strong>
+                          <strong>{tr('TikTok BC', 'TikTok BC')} #{index + 1}</strong>
                           <span>{item}</span>
                         </div>
                       ))
                     : isGoogle
                       ? state.access.map((item, index) => (
                         <div className={styles.requestBusinessItem} key={`${item.email}-${index}`}>
-                          <strong>Access Email #{index + 1}</strong>
+                          <strong>{tr('Access Email', 'Email доступа')} #{index + 1}</strong>
                           <span>{item.email}</span>
                         </div>
                         ))
                       : [
                           <div className={styles.requestBusinessItem} key="meta-bm">
-                            <strong>Business Manager ID</strong>
+                            <strong>{tr('Business Manager ID', 'Business Manager ID')}</strong>
                             <span>{state.bmId}</span>
                           </div>,
                           <div className={styles.requestBusinessItem} key="meta-pages">
-                            <strong>Connected Pages</strong>
+                            <strong>{tr('Connected Pages', 'Подключенные страницы')}</strong>
                             <span>{state.facebookPage}</span>
                           </div>,
                           <div className={styles.requestBusinessItem} key="meta-instagram">
-                            <strong>Instagram Page</strong>
+                            <strong>{tr('Instagram Page', 'Instagram страница')}</strong>
                             <span>{state.instagramPage}</span>
                           </div>,
                         ]}
@@ -656,21 +782,21 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
                 <div className={styles.requestReviewMeta}>
                   {isTiktok ? (
                     <>
-                      <span>Timezone: {state.timezone}</span>
-                      <span>Primary GEO: {state.geo}</span>
+                      <span>{tr('Timezone', 'Часовой пояс')}: {state.timezone}</span>
+                      <span>{tr('Primary GEO', 'Основной GEO')}: {state.geo}</span>
                     </>
                   ) : isGoogle ? (
-                    <span>MCC Email: {state.mccEmail}</span>
+                    <span>{tr('MCC Email', 'MCC Email')}: {state.mccEmail}</span>
                   ) : (
                     <>
-                      <span>GEO: {state.metaGeo}</span>
-                      <span>Final Advertiser: {state.finalAdvertiser === 'yes' ? 'Yes' : 'No'}</span>
+                      <span>{tr('GEO', 'GEO')}: {state.metaGeo}</span>
+                      <span>{tr('Final Advertiser', 'Финальный рекламодатель')}: {state.finalAdvertiser === 'yes' ? tr('Yes', 'Да') : tr('No', 'Нет')}</span>
                     </>
                   )}
                 </div>
               </section>
               <div className={styles.requestPolicyNote}>
-                By submitting this request, you confirm the onboarding details are correct. Account verification may take 2-4 business days.
+                {tr('By submitting this request, you confirm the onboarding details are correct. Account verification may take 2-4 business days.', 'Отправляя запрос, вы подтверждаете корректность данных. Проверка аккаунта может занять 2–4 рабочих дня.')}
               </div>
             </div>
           ) : null}
@@ -687,7 +813,7 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
               type="button"
               disabled={step === 'platform' || submitting}
             >
-              Back
+              {tr('Back', 'Назад')}
             </button>
 
             <div className={styles.requestFooterRight}>
@@ -698,7 +824,7 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
                     setStatus('')
                     if (step === 'platform') {
                       if (!['tiktok', 'google', 'meta'].includes(state.platform)) {
-                        setStatus('TikTok, Google and Meta are the first flows implemented in the redesign. Select one of them to continue.')
+                        setStatus(tr('TikTok, Google and Meta are the first flows implemented in the redesign. Select one of them to continue.', 'TikTok, Google и Meta — первые потоки в редизайне. Выберите одну из них для продолжения.'))
                         return
                       }
                       setStep('business')
@@ -706,7 +832,7 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
                     }
                     if (step === 'business') {
                       if (!canAdvanceBusiness) {
-                        setStatus('Complete the required business fields before continuing.')
+                        setStatus(tr('Complete the required business fields before continuing.', 'Заполните обязательные поля бизнеса перед продолжением.'))
                         return
                       }
                       setStep('setup')
@@ -716,10 +842,10 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
                       if (!canAdvanceSetup) {
                         setStatus(
                           isGoogle
-                            ? 'Add MCC email and at least one access email before continuing.'
+                            ? tr('Add MCC email and at least one access email before continuing.', 'Добавьте MCC email и минимум один email доступа перед продолжением.')
                             : isMeta
-                              ? 'Complete Business Manager, GEO, pages and final advertiser details before continuing.'
-                            : 'Add at least one TikTok Business ID, timezone and primary GEO.'
+                              ? tr('Complete Business Manager, GEO, pages and final advertiser details before continuing.', 'Заполните Business Manager, GEO, страницы и данные финального рекламодателя перед продолжением.')
+                            : tr('Add at least one TikTok Business ID, timezone and primary GEO.', 'Добавьте минимум один TikTok Business ID, часовой пояс и основной GEO.')
                         )
                         return
                       }
@@ -728,11 +854,11 @@ export default function AccountRequestModal({ open, onClose, onSubmitted }) {
                   }}
                   type="button"
                 >
-                  Save & Continue
+                  {tr('Save & Continue', 'Сохранить и продолжить')}
                 </button>
               ) : (
                 <button className={styles.requestPrimary} disabled={submitting} onClick={submitRequest} type="button">
-                  {submitting ? 'Requesting…' : 'Request Account'}
+                  {submitting ? tr('Requesting…', 'Отправка…') : tr('Request Account', 'Запросить аккаунт')}
                 </button>
               )}
             </div>
