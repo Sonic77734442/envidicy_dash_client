@@ -70,7 +70,7 @@ export default function AppShell({ eyebrow, title, subtitle, area = 'client', ch
       ]
     }
     return [
-      { label: 'Пополнение аккаунтов', href: '/topup' },
+      { label: 'Пополнение аккаунтов', href: '/funds' },
       { label: 'Финансы', href: '/funds' },
       { label: 'Медиапланирование', href: '/plan' },
       { label: 'Дашборд', href: '/dashboard' },

@@ -1,15 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import AppShell from '../../../components/layout/AppShell'
-import { apiFetch } from '../../../lib/api'
+import AdminShell from '../../../components/admin/AdminShell'
 import { clearAuth, getAuthToken } from '../../../lib/auth'
-
-function authHeaders() {
-  const token = getAuthToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
 
 function formatMoney(value) {
   const num = Number(value || 0)
@@ -24,48 +18,23 @@ function formatDate(value) {
 }
 
 function financeDocumentTypeLabel(value) {
-  return String(value || '').toLowerCase() === 'avr' ? 'АВР' : 'Счет'
+  return String(value || '').toLowerCase() === 'avr' ? 'Completion Act' : 'Invoice'
 }
 
 function walletTypeLabel(value) {
   const key = String(value || '')
-  if (key === 'adjustment') return 'Ручная корректировка'
-  if (key === 'topup_hold') return 'Холд пополнения'
-  if (key === 'topup_hold_release') return 'Возврат холда'
-  if (key === 'topup') return 'Списание пополнения'
+  if (key === 'adjustment') return 'Manual adjustment'
+  if (key === 'topup_hold') return 'Topup hold'
+  if (key === 'topup_hold_release') return 'Topup hold release'
+  if (key === 'topup') return 'Topup debit'
   return key || '—'
-}
-
-function getTopupAccountAmount(row) {
-  if (row?.amount_account != null) return Number(row.amount_account)
-  return row?.amount_net != null ? Number(row.amount_net) : Number(row?.amount_input || 0)
-}
-
-function getTopupAccountDisplayCurrency(row) {
-  const inputCurrency = String(row?.currency || 'KZT').toUpperCase()
-  const accountCurrency = String(row?.account_currency || inputCurrency || 'USD').toUpperCase()
-  const fx = Number(row?.fx_rate || 0)
-  if (inputCurrency !== accountCurrency && !(Number.isFinite(fx) && fx > 0)) return inputCurrency
-  return accountCurrency
-}
-
-function formatLiveBillingCell(liveBilling, fallbackCurrency) {
-  if (!liveBilling) return '—'
-  if (liveBilling.error) return 'Ошибка API'
-  const currency = liveBilling.currency || fallbackCurrency || ''
-  const spend = liveBilling.spend
-  const limit = liveBilling.limit
-  if (spend == null && limit == null) return 'Нет данных'
-  if (spend != null && limit != null) return `${formatMoney(spend)} / ${formatMoney(limit)} ${currency}`
-  if (spend != null) return `${formatMoney(spend)} ${currency}`
-  return `${formatMoney(limit)} ${currency}`
 }
 
 export default function AdminClientsPage() {
   const router = useRouter()
 
   const [rows, setRows] = useState([])
-  const [status, setStatus] = useState('Загрузка клиентов...')
+  const [status, setStatus] = useState('Loading clients...')
   const [activeTab, setActiveTab] = useState('requests')
   const [modalOpen, setModalOpen] = useState(false)
   const [selected, setSelected] = useState(null)
@@ -78,6 +47,8 @@ export default function AdminClientsPage() {
   const [clientProfile, setClientProfile] = useState(null)
   const [clientFees, setClientFees] = useState(null)
   const [clientDocuments, setClientDocuments] = useState([])
+  const [clientSummary, setClientSummary] = useState(null)
+  const [clientIssues, setClientIssues] = useState([])
   const [documentsForm, setDocumentsForm] = useState({
     document_type: 'invoice',
     title: '',
@@ -99,47 +70,49 @@ export default function AdminClientsPage() {
     monochrome: '',
   })
 
-  async function safeFetch(path, options = {}) {
-    const res = await apiFetch(path, { ...options, headers: { ...(options.headers || {}), ...authHeaders() } })
+  async function adminRouteFetch(path, options = {}) {
+    const token = getAuthToken()
+    const res = await fetch(path, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      cache: 'no-store',
+    })
     if (res.status === 401) {
       clearAuth()
       router.push('/login')
       throw new Error('Unauthorized')
     }
-    if (res.status === 403) throw new Error('Нет доступа к админке.')
+    if (res.status === 403) throw new Error('Admin access denied.')
     return res
   }
 
   async function fetchClients() {
     try {
-      const res = await safeFetch('/admin/clients')
-      if (!res.ok) throw new Error('Ошибка загрузки клиентов.')
+      const res = await adminRouteFetch('/api/admin/clients')
+      if (!res.ok) throw new Error('Failed to load clients.')
       const data = await res.json()
-      setRows(Array.isArray(data) ? data : [])
+      setRows(Array.isArray(data?.items) ? data.items : [])
       setStatus('')
     } catch (e) {
-      setStatus(e?.message || 'Ошибка загрузки клиентов.')
+      setStatus(e?.message || 'Failed to load clients.')
     }
   }
 
   async function fetchClientDetails(userId) {
-    const [requestsRes, topupsRes, walletRes, accountsRes, profileRes, feesRes, documentsRes] = await Promise.all([
-      safeFetch(`/admin/clients/${userId}/requests`),
-      safeFetch(`/admin/clients/${userId}/topups`),
-      safeFetch(`/admin/clients/${userId}/wallet-transactions`),
-      safeFetch(`/admin/clients/${userId}/accounts`),
-      safeFetch(`/admin/clients/${userId}/profile`),
-      safeFetch(`/admin/users/${userId}/fees`),
-      safeFetch(`/admin/clients/${userId}/documents`),
-    ])
-
-    const requests = requestsRes.ok ? await requestsRes.json() : []
-    const topups = topupsRes.ok ? await topupsRes.json() : []
-    const wallet = walletRes.ok ? await walletRes.json() : []
-    const accounts = accountsRes.ok ? await accountsRes.json() : []
-    const profile = profileRes.ok ? await profileRes.json() : null
-    const fees = feesRes.ok ? await feesRes.json() : null
-    const documents = documentsRes.ok ? await documentsRes.json() : []
+    const res = await adminRouteFetch(`/api/admin/clients/${userId}`)
+    if (!res.ok) throw new Error('Failed to load client card.')
+    const data = await res.json()
+    const requests = Array.isArray(data?.requests) ? data.requests : []
+    const topups = Array.isArray(data?.topups) ? data.topups : []
+    const wallet = Array.isArray(data?.walletTransactions) ? data.walletTransactions : []
+    const accounts = Array.isArray(data?.accounts) ? data.accounts : []
+    const profile = data?.profile || null
+    const fees = data?.fees || null
+    const documents = Array.isArray(data?.documents) ? data.documents : []
+    const issues = Array.isArray(data?.issues) ? data.issues : []
 
     setClientRequests(Array.isArray(requests) ? requests : [])
     setClientTopups(Array.isArray(topups) ? topups : [])
@@ -148,6 +121,8 @@ export default function AdminClientsPage() {
     setClientProfile(profile || null)
     setClientFees(fees || null)
     setClientDocuments(Array.isArray(documents) ? documents : [])
+    setClientSummary(data?.summary || null)
+    setClientIssues(issues)
     setFeesForm({
       meta: fees?.meta ?? '',
       google: fees?.google ?? '',
@@ -172,11 +147,11 @@ export default function AdminClientsPage() {
   async function uploadClientDocument() {
     if (!selected) return
     if (!documentsForm.title.trim()) {
-      setModalStatus('Укажите название документа.')
+      setModalStatus('Enter a document title.')
       return
     }
     if (!documentsForm.file) {
-      setModalStatus('Выберите файл для загрузки.')
+      setModalStatus('Choose a file to upload.')
       return
     }
     try {
@@ -189,12 +164,12 @@ export default function AdminClientsPage() {
       if (documentsForm.amount !== '') form.append('amount', documentsForm.amount)
       if (documentsForm.currency.trim()) form.append('currency', documentsForm.currency.trim().toUpperCase())
       if (documentsForm.note.trim()) form.append('note', documentsForm.note.trim())
-      const res = await safeFetch(`/admin/clients/${selected.id}/documents/upload`, {
+      const res = await adminRouteFetch(`/api/admin/clients/${selected.id}/documents/upload`, {
         method: 'POST',
         body: form,
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.detail || 'Ошибка загрузки документа.')
+      if (!res.ok) throw new Error(data?.detail || 'Failed to upload document.')
       setClientDocuments((prev) => [data, ...prev])
       setDocumentsForm({
         document_type: 'invoice',
@@ -206,48 +181,48 @@ export default function AdminClientsPage() {
         note: '',
         file: null,
       })
-      setModalStatus('Документ загружен.')
+      setModalStatus('Document uploaded.')
     } catch (e) {
-      setModalStatus(e?.message || 'Ошибка загрузки документа.')
+      setModalStatus(e?.message || 'Failed to upload document.')
     }
   }
 
   async function deleteClientDocument(docId) {
     if (!selected) return
-    const ok = window.confirm('Удалить документ?')
+    const ok = window.confirm('Delete this document?')
     if (!ok) return
     try {
-      const res = await safeFetch(`/admin/clients/${selected.id}/documents/${docId}`, {
+      const res = await adminRouteFetch(`/api/admin/clients/${selected.id}/documents/${docId}`, {
         method: 'DELETE',
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.detail || 'Ошибка удаления документа.')
+      if (!res.ok) throw new Error(data?.detail || 'Failed to delete document.')
       setClientDocuments((prev) => prev.filter((row) => row.id !== docId))
-      setModalStatus('Документ удален.')
+      setModalStatus('Document deleted.')
     } catch (e) {
-      setModalStatus(e?.message || 'Ошибка удаления документа.')
+      setModalStatus(e?.message || 'Failed to delete document.')
     }
   }
 
   async function openClientModal(row) {
     setSelected(row)
     setModalOpen(true)
-    setModalStatus('Загрузка карточки клиента...')
+    setModalStatus('Loading client card...')
     try {
       await fetchClientDetails(row.id)
       setModalStatus('')
-      await safeFetch(`/admin/clients/${row.id}/mark-seen`, { method: 'POST' })
+      await adminRouteFetch(`/api/admin/clients/${row.id}/mark-seen`, { method: 'POST' })
       await fetchClients()
     } catch (e) {
-      setModalStatus(e?.message || 'Ошибка загрузки карточки клиента.')
+      setModalStatus(e?.message || 'Failed to load client card.')
     }
   }
 
   async function impersonateClient(userId, email) {
     try {
-      const res = await safeFetch(`/admin/users/${userId}/impersonate`, { method: 'POST' })
+      const res = await adminRouteFetch(`/api/admin/clients/${userId}/impersonate`, { method: 'POST' })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.detail || 'Не удалось войти как клиент')
+      if (!res.ok) throw new Error(data?.detail || 'Failed to impersonate client')
       const params = new URLSearchParams({
         impersonate_token: data.token,
         impersonate_email: data.email || email || '',
@@ -256,7 +231,7 @@ export default function AdminClientsPage() {
       })
       window.open(`/dashboard?${params.toString()}`, '_blank', 'noopener')
     } catch (e) {
-      setStatus(e?.message || 'Не удалось войти в кабинет клиента.')
+      setStatus(e?.message || 'Failed to open client workspace.')
     }
   }
 
@@ -268,28 +243,36 @@ export default function AdminClientsPage() {
 
     try {
       if (fxRate !== null || amountNet !== null) {
-        const patchRes = await safeFetch(`/admin/topups/${topupId}`, {
+        const patchRes = await adminRouteFetch(`/api/admin/topups/${topupId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ fx_rate: fxRate, amount_net: amountNet }),
         })
-        if (!patchRes.ok) throw new Error('Ошибка сохранения параметров пополнения.')
+        if (!patchRes.ok) throw new Error('Failed to save topup parameters.')
       }
 
       if (action === 'complete') {
-        const res = await safeFetch(`/admin/topups/${topupId}/status?status=completed`, { method: 'POST' })
-        if (!res.ok) throw new Error('Ошибка подтверждения пополнения.')
+        const res = await adminRouteFetch(`/api/admin/topups/${topupId}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'completed' }),
+        })
+        if (!res.ok) throw new Error('Failed to complete topup.')
       } else if (action === 'reject') {
-        const ok = window.confirm('Отклонить заявку на пополнение? Средства в холде будут возвращены клиенту.')
+        const ok = window.confirm('Reject this topup request? Held funds will be released back to the client.')
         if (!ok) return
-        const res = await safeFetch(`/admin/topups/${topupId}/status?status=failed`, { method: 'POST' })
-        if (!res.ok) throw new Error('Ошибка отклонения пополнения.')
+        const res = await adminRouteFetch(`/api/admin/topups/${topupId}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'failed' }),
+        })
+        if (!res.ok) throw new Error('Failed to reject topup.')
       }
 
       await fetchClientDetails(selected.id)
       await fetchClients()
     } catch (e) {
-      setModalStatus(e?.message || 'Ошибка обновления заявки.')
+      setModalStatus(e?.message || 'Failed to update request.')
     }
   }
 
@@ -304,17 +287,17 @@ export default function AdminClientsPage() {
       monochrome: feesForm.monochrome === '' ? null : Number(feesForm.monochrome),
     }
     try {
-      const res = await safeFetch(`/admin/users/${selected.id}/fees`, {
+      const res = await adminRouteFetch(`/api/admin/clients/${selected.id}/fees`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      if (!res.ok) throw new Error('Ошибка сохранения комиссий.')
+      if (!res.ok) throw new Error('Failed to save fees.')
       const data = await res.json()
       setClientFees(data)
-      setModalStatus('Комиссии сохранены.')
+      setModalStatus('Fees saved.')
     } catch (e) {
-      setModalStatus(e?.message || 'Ошибка сохранения комиссий.')
+      setModalStatus(e?.message || 'Failed to save fees.')
     }
   }
 
@@ -322,39 +305,49 @@ export default function AdminClientsPage() {
     fetchClients()
   }, [])
 
-  const summary = useMemo(() => {
-    const topupCompletedTotal = clientTopups.reduce((sum, row) => {
-      const value = Number(row?.amount_input || 0)
-      if (!Number.isFinite(value) || value <= 0) return sum
-      return sum + value
-    }, 0)
-    const profitTotal = clientTopups.reduce((sum, row) => {
-      const value = Number(row?.profit_total_kzt || 0)
-      return sum + (Number.isFinite(value) ? value : 0)
-    }, 0)
-    return {
-      pendingCount: clientRequests.length,
-      completedTotal:
-        Number.isFinite(Number(selected?.completed_total_kzt)) && Number(selected?.completed_total_kzt) > 0
-          ? Number(selected.completed_total_kzt)
-          : topupCompletedTotal,
-      accountsCount: clientAccounts.length,
-      profitTotal,
+  async function downloadClientDocument(row) {
+    if (!selected) return
+    try {
+      const query = new URLSearchParams()
+      if (row?.document_type) query.set('document_type', row.document_type)
+      if (row?.document_number) query.set('document_number', row.document_number)
+      if (row?.title) query.set('title', row.title)
+      if (row?.file_name) query.set('file_name', row.file_name)
+      const suffix = query.toString() ? `?${query.toString()}` : ''
+      const res = await adminRouteFetch(`/api/admin/clients/${selected.id}/documents/${row.id}${suffix}`)
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.detail || 'Failed to download document.')
+      }
+
+      const blob = await res.blob()
+      const href = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = href
+      link.download = row?.file_name || row?.title || `document-${row.id}`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(href)
+    } catch (e) {
+      setModalStatus(e?.message || 'Failed to download document.')
     }
-  }, [clientRequests, clientTopups, clientAccounts, selected])
+  }
+
+  const summary = clientSummary || {
+    pendingCount: clientRequests.length,
+    completedTotalKzt: Number(selected?.completed_total_kzt || 0),
+    accountsCount: clientAccounts.length,
+    profitTotalKzt: 0,
+  }
 
   return (
-    <AppShell
-      area="admin"
-      eyebrow="Envidicy · Admin"
-      title="Клиенты"
-      subtitle="Заявки, подтверждённые пополнения и аккаунты клиентов."
-    >
+    <AdminShell title="Clients" subtitle="Requests, completed topups and client account operations.">
       <section className="panel">
         <div className="panel-head">
           <div>
-            <p className="eyebrow">Клиенты</p>
-            <h2>Клиенты и заявки</h2>
+            <p className="eyebrow">Clients</p>
+            <h2>Clients and requests</h2>
           </div>
           <span className="chip chip-ghost">clients</span>
         </div>
@@ -362,15 +355,15 @@ export default function AdminClientsPage() {
           <table className="table">
             <thead>
               <tr>
-                <th>Клиент</th>
-                <th>Заявки</th>
-                <th>Пополнено</th>
-                <th style={{ textAlign: 'right' }}>Действие</th>
+                <th>Client</th>
+                <th>Requests</th>
+                <th>Completed</th>
+                <th style={{ textAlign: 'right' }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {!rows.length ? (
-                <tr><td colSpan={4}>Нет данных</td></tr>
+                <tr><td colSpan={4}>No data.</td></tr>
               ) : (
                 rows.map((row) => {
                   const pending = Number(row.pending_requests || 0)
@@ -382,8 +375,8 @@ export default function AdminClientsPage() {
                       <td>{completedTotal ? `${formatMoney(completedTotal)} KZT` : '—'}</td>
                       <td style={{ textAlign: 'right' }}>
                         <div className="inline-actions">
-                          <button className="btn primary small" type="button" onClick={() => impersonateClient(row.id, row.email)}>Войти как клиент</button>
-                          <button className="btn ghost small" type="button" onClick={() => openClientModal(row)}>Открыть</button>
+                          <button className="btn primary small" type="button" onClick={() => impersonateClient(row.id, row.email)}>Impersonate</button>
+                          <button className="btn ghost small" type="button" onClick={() => openClientModal(row)}>Open</button>
                         </div>
                       </td>
                     </tr>
@@ -401,48 +394,48 @@ export default function AdminClientsPage() {
           <div className="modal-dialog modal-large">
             <div className="modal-head">
               <div>
-                <p className="eyebrow">Клиент</p>
-                <h3>{selected.email || 'Клиент'}</h3>
+                <p className="eyebrow">Client</p>
+                <h3>{selected.email || 'Client'}</h3>
               </div>
-              <button className="btn ghost small" type="button" onClick={() => setModalOpen(false)}>Закрыть</button>
+              <button className="btn ghost small" type="button" onClick={() => setModalOpen(false)}>Close</button>
             </div>
             <div className="modal-body">
               <div className="grid-3" id="client-summary">
                 <div className="stat">
-                  <p className="muted">Клиент</p>
+                  <p className="muted">Client</p>
                   <h3>{selected.email || '—'}</h3>
                   <p className="muted small">{clientProfile?.company || '—'}</p>
                 </div>
                 <div className="stat">
-                  <p className="muted">Заявки</p>
+                  <p className="muted">Requests</p>
                   <h3>{summary.pendingCount}</h3>
-                  <p className="muted small">Ожидают подтверждения</p>
+                  <p className="muted small">Waiting for review</p>
                 </div>
                 <div className="stat">
-                  <p className="muted">Пополнено</p>
-                  <h3>{summary.completedTotal ? `${formatMoney(summary.completedTotal)} KZT` : '—'}</h3>
-                  <p className="muted small">По подтверждённым пополнениям (completed), в KZT</p>
+                  <p className="muted">Completed funding</p>
+                  <h3>{summary.completedTotalKzt ? `${formatMoney(summary.completedTotalKzt)} KZT` : '—'}</h3>
+                  <p className="muted small">Completed topups only, shown in KZT</p>
                 </div>
                 <div className="stat">
-                  <p className="muted">Аккаунты</p>
+                  <p className="muted">Accounts</p>
                   <h3>{summary.accountsCount}</h3>
-                  <p className="muted small">Доступные кабинеты</p>
+                  <p className="muted small">Available ad accounts</p>
                 </div>
                 <div className="stat">
-                  <p className="muted">Заработок</p>
-                  <h3>{summary.profitTotal ? `${formatMoney(summary.profitTotal)} KZT` : '—'}</h3>
-                  <p className="muted small">Курс + комиссия</p>
+                  <p className="muted">Profit</p>
+                  <h3>{summary.profitTotalKzt ? `${formatMoney(summary.profitTotalKzt)} KZT` : '—'}</h3>
+                  <p className="muted small">FX spread plus fees</p>
                 </div>
               </div>
 
               <div className="tabs">
                 <div className="tab-buttons">
-                  <button className={`tab-button ${activeTab === 'requests' ? 'active' : ''}`} onClick={() => setActiveTab('requests')} type="button">Заявки</button>
-                  <button className={`tab-button ${activeTab === 'topups' ? 'active' : ''}`} onClick={() => setActiveTab('topups')} type="button">Пополнения</button>
-                  <button className={`tab-button ${activeTab === 'accounts' ? 'active' : ''}`} onClick={() => setActiveTab('accounts')} type="button">Аккаунты</button>
-                  <button className={`tab-button ${activeTab === 'documents' ? 'active' : ''}`} onClick={() => setActiveTab('documents')} type="button">Документы</button>
-                  <button className={`tab-button ${activeTab === 'fees' ? 'active' : ''}`} onClick={() => setActiveTab('fees')} type="button">Комиссии</button>
-                  <button className={`tab-button ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')} type="button">Профиль</button>
+                  <button className={`tab-button ${activeTab === 'requests' ? 'active' : ''}`} onClick={() => setActiveTab('requests')} type="button">Requests</button>
+                  <button className={`tab-button ${activeTab === 'topups' ? 'active' : ''}`} onClick={() => setActiveTab('topups')} type="button">Topups</button>
+                  <button className={`tab-button ${activeTab === 'accounts' ? 'active' : ''}`} onClick={() => setActiveTab('accounts')} type="button">Accounts</button>
+                  <button className={`tab-button ${activeTab === 'documents' ? 'active' : ''}`} onClick={() => setActiveTab('documents')} type="button">Documents</button>
+                  <button className={`tab-button ${activeTab === 'fees' ? 'active' : ''}`} onClick={() => setActiveTab('fees')} type="button">Fees</button>
+                  <button className={`tab-button ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')} type="button">Profile</button>
                 </div>
 
                 {activeTab === 'requests' ? (
@@ -451,15 +444,15 @@ export default function AdminClientsPage() {
                       <table className="table">
                         <thead>
                           <tr>
-                            <th>Дата</th><th>Платформа</th><th>Аккаунт</th><th>Счёт</th><th>Курс</th><th>В аккаунт</th><th>Статус</th><th style={{ textAlign: 'right' }}>Действие</th>
+                            <th>Date</th><th>Platform</th><th>Account</th><th>Invoice amount</th><th>FX Rate</th><th>Net funding</th><th>Status</th><th style={{ textAlign: 'right' }}>Action</th>
                           </tr>
                         </thead>
                         <tbody>
                           {!clientRequests.length ? (
-                            <tr><td colSpan={8} className="muted">Нет заявок.</td></tr>
+                            <tr><td colSpan={8} className="muted">No requests.</td></tr>
                           ) : (
                             clientRequests.map((row) => {
-                              const accountCurrency = getTopupAccountDisplayCurrency(row)
+                              const breakdown = row.breakdown || {}
                               const edit = requestEdits[String(row.id)] || { fx_rate: '', amount_net: '' }
                               return (
                                 <tr key={row.id}>
@@ -471,13 +464,13 @@ export default function AdminClientsPage() {
                                     <input className="field-input small" type="number" step="0.0001" value={edit.fx_rate} onChange={(e) => setRequestEdits((s) => ({ ...s, [String(row.id)]: { ...s[String(row.id)], fx_rate: e.target.value } }))} />
                                   </td>
                                   <td>
-                                    <input className="field-input small" type="number" step="0.01" value={edit.amount_net} onChange={(e) => setRequestEdits((s) => ({ ...s, [String(row.id)]: { ...s[String(row.id)], amount_net: e.target.value } }))} /> {accountCurrency}
+                                    <input className="field-input small" type="number" step="0.01" value={edit.amount_net} onChange={(e) => setRequestEdits((s) => ({ ...s, [String(row.id)]: { ...s[String(row.id)], amount_net: e.target.value } }))} /> {breakdown.accountCurrency}
                                   </td>
                                   <td>{row.status || '—'}</td>
                                   <td style={{ textAlign: 'right' }}>
-                                    <button className="btn ghost small" type="button" onClick={() => updateTopup(row.id, 'save')}>Сохранить</button>{' '}
-                                    <button className="btn primary small" type="button" onClick={() => updateTopup(row.id, 'complete')}>Подтвердить</button>{' '}
-                                    <button className="btn ghost small" type="button" onClick={() => updateTopup(row.id, 'reject')}>Отклонить</button>
+                                    <button className="btn ghost small" type="button" onClick={() => updateTopup(row.id, 'save')}>Save</button>{' '}
+                                    <button className="btn primary small" type="button" onClick={() => updateTopup(row.id, 'complete')}>Complete</button>{' '}
+                                    <button className="btn ghost small" type="button" onClick={() => updateTopup(row.id, 'reject')}>Reject</button>
                                   </td>
                                 </tr>
                               )
@@ -495,25 +488,24 @@ export default function AdminClientsPage() {
                       <table className="table">
                         <thead>
                           <tr>
-                            <th>Дата</th><th>Платформа</th><th>Аккаунт</th><th>Счёт</th><th>Курс</th><th>Наш курс</th><th>В аккаунт</th><th>Доход курс</th><th>Комиссия (от В аккаунт)</th><th>Итого доход</th><th>Статус</th>
+                            <th>Date</th><th>Platform</th><th>Account</th><th>Invoice amount</th><th>Client FX</th><th>Internal FX</th><th>Net funding</th><th>FX profit</th><th>Fee profit</th><th>Total profit</th><th>Status</th>
                           </tr>
                         </thead>
                         <tbody>
                           {!clientTopups.length ? (
-                            <tr><td colSpan={11} className="muted">Нет подтверждённых пополнений.</td></tr>
+                            <tr><td colSpan={11} className="muted">No completed topups.</td></tr>
                           ) : (
                             clientTopups.map((row) => {
-                              const accountCurrency = getTopupAccountDisplayCurrency(row)
-                              const accountAmount = getTopupAccountAmount(row)
+                              const breakdown = row.breakdown || {}
                               return (
                                 <tr key={row.id}>
                                   <td>{formatDate(row.created_at)}</td>
                                   <td>{row.account_platform || '—'}</td>
                                   <td>{row.account_name || '—'}</td>
-                                  <td>{formatMoney(row.amount_input)} {row.currency || ''}</td>
-                                  <td>{row.fx_rate ?? '—'}</td>
+                                  <td>{formatMoney(breakdown.inputAmount)} {breakdown.inputCurrency}</td>
+                                  <td>{breakdown.fxRate ?? '—'}</td>
                                   <td>{row.our_rate != null ? formatMoney(Number(row.our_rate || 0)) : '—'}</td>
-                                  <td>{accountAmount == null ? '—' : `${formatMoney(accountAmount)} ${accountCurrency}`}</td>
+                                  <td>{`${formatMoney(breakdown.netAccountFunding)} ${breakdown.accountCurrency}`}</td>
                                   <td>{formatMoney(Number(row.fx_profit_kzt || 0))} KZT</td>
                                   <td>{formatMoney(Number(row.fee_amount_kzt || 0))} KZT</td>
                                   <td>{formatMoney(Number(row.profit_total_kzt || 0))} KZT</td>
@@ -527,14 +519,14 @@ export default function AdminClientsPage() {
                     </div>
 
                     <div className="table-wrapper" style={{ marginTop: 14 }}>
-                      <h4 style={{ margin: '0 0 8px 0' }}>Операции по балансу клиента</h4>
+                      <h4 style={{ margin: '0 0 8px 0' }}>Wallet operations</h4>
                       <table className="table">
                         <thead>
-                          <tr><th>Дата</th><th>Тип</th><th>Платформа</th><th>Аккаунт</th><th>Сумма</th><th>В USD</th><th>Примечание</th></tr>
+                          <tr><th>Date</th><th>Type</th><th>Platform</th><th>Account</th><th>Amount</th><th>USD</th><th>Note</th></tr>
                         </thead>
                         <tbody>
                           {!clientWalletOps.length ? (
-                            <tr><td colSpan={7} className="muted">Нет операций по балансу.</td></tr>
+                            <tr><td colSpan={7} className="muted">No wallet operations.</td></tr>
                           ) : (
                             clientWalletOps.map((row) => (
                               <tr key={row.id}>
@@ -558,19 +550,19 @@ export default function AdminClientsPage() {
                   <div className="tab-panel active">
                     <div className="table-wrapper">
                       <table className="table">
-                        <thead><tr><th>Платформа</th><th>Аккаунт</th><th>Договор</th><th>Валюта</th><th>Бюджет</th><th>Потрачено</th></tr></thead>
+                        <thead><tr><th>Platform</th><th>Account</th><th>Agreement</th><th>Currency</th><th>Budget</th><th>Spend</th></tr></thead>
                         <tbody>
                           {!clientAccounts.length ? (
-                            <tr><td colSpan={6} className="muted">Нет аккаунтов.</td></tr>
+                            <tr><td colSpan={6} className="muted">No accounts.</td></tr>
                           ) : (
                             clientAccounts.map((row) => (
                               <tr key={row.id}>
-                                <td>{row.platform || '—'}</td>
+                                <td>{row.platform_label || '—'}</td>
                                 <td>{row.name || '—'}</td>
                                 <td>{row.account_code || '—'}</td>
                                 <td>{row.currency || '—'}</td>
                                 <td>{row.budget_total != null ? `${formatMoney(row.budget_total)} ${row.currency || ''}` : '—'}</td>
-                                <td>{formatLiveBillingCell(row.live_billing, row.currency)}</td>
+                                <td>{row.live_billing_summary?.label || 'No data'}</td>
                               </tr>
                             ))
                           )}
@@ -584,38 +576,38 @@ export default function AdminClientsPage() {
                   <div className="tab-panel active">
                     <div className="form-grid">
                       <label className="field">
-                        <span>Тип документа</span>
+                        <span>Document type</span>
                         <select value={documentsForm.document_type} onChange={(e) => setDocumentsForm((s) => ({ ...s, document_type: e.target.value }))}>
-                          <option value="invoice">Счет</option>
-                          <option value="avr">АВР</option>
+                          <option value="invoice">Invoice</option>
+                          <option value="avr">Completion Act</option>
                         </select>
                       </label>
                       <label className="field">
-                        <span>Название</span>
+                        <span>Title</span>
                         <input type="text" value={documentsForm.title} onChange={(e) => setDocumentsForm((s) => ({ ...s, title: e.target.value }))} />
                       </label>
                       <label className="field">
-                        <span>Номер</span>
+                        <span>Number</span>
                         <input type="text" value={documentsForm.document_number} onChange={(e) => setDocumentsForm((s) => ({ ...s, document_number: e.target.value }))} />
                       </label>
                       <label className="field">
-                        <span>Дата документа</span>
+                        <span>Document date</span>
                         <input type="date" value={documentsForm.document_date} onChange={(e) => setDocumentsForm((s) => ({ ...s, document_date: e.target.value }))} />
                       </label>
                       <label className="field">
-                        <span>Сумма</span>
+                        <span>Amount</span>
                         <input type="number" step="0.01" value={documentsForm.amount} onChange={(e) => setDocumentsForm((s) => ({ ...s, amount: e.target.value }))} />
                       </label>
                       <label className="field">
-                        <span>Валюта</span>
+                        <span>Currency</span>
                         <input type="text" value={documentsForm.currency} onChange={(e) => setDocumentsForm((s) => ({ ...s, currency: e.target.value }))} />
                       </label>
                       <label className="field" style={{ gridColumn: '1 / -1' }}>
-                        <span>Комментарий</span>
+                        <span>Note</span>
                         <input type="text" value={documentsForm.note} onChange={(e) => setDocumentsForm((s) => ({ ...s, note: e.target.value }))} />
                       </label>
                       <label className="field" style={{ gridColumn: '1 / -1' }}>
-                        <span>Файл</span>
+                        <span>File</span>
                         <input
                           type="file"
                           onChange={(e) => setDocumentsForm((s) => ({ ...s, file: e.target.files?.[0] || null }))}
@@ -623,28 +615,27 @@ export default function AdminClientsPage() {
                       </label>
                     </div>
                     <div className="panel-actions" style={{ marginTop: 12 }}>
-                      <button className="btn primary" type="button" onClick={uploadClientDocument}>Загрузить документ</button>
+                      <button className="btn primary" type="button" onClick={uploadClientDocument}>Upload document</button>
                     </div>
 
                     <div className="table-wrapper" style={{ marginTop: 14 }}>
                       <table className="table">
                         <thead>
                           <tr>
-                            <th>Тип</th>
-                            <th>Название</th>
-                            <th>Номер</th>
-                            <th>Дата</th>
-                            <th>Сумма</th>
-                            <th>Файл</th>
-                            <th style={{ textAlign: 'right' }}>Действие</th>
+                            <th>Type</th>
+                            <th>Title</th>
+                            <th>Number</th>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>File</th>
+                            <th style={{ textAlign: 'right' }}>Action</th>
                           </tr>
                         </thead>
                         <tbody>
                           {!clientDocuments.length ? (
-                            <tr><td colSpan={7} className="muted">Нет документов.</td></tr>
+                            <tr><td colSpan={7} className="muted">No documents.</td></tr>
                           ) : (
                             clientDocuments.map((row) => {
-                              const href = `${(process.env.NEXT_PUBLIC_API_BASE || 'https://envidicy-dash-client.onrender.com').replace(/\/$/, '')}/admin/clients/${selected.id}/documents/${row.id}`
                               return (
                                 <tr key={row.id}>
                                   <td>{financeDocumentTypeLabel(row.document_type)}</td>
@@ -655,8 +646,8 @@ export default function AdminClientsPage() {
                                   <td>{row.file_name || '—'}</td>
                                   <td style={{ textAlign: 'right' }}>
                                     <div className="inline-actions" style={{ justifyContent: 'flex-end' }}>
-                                      <a className="btn ghost small" href={href} target="_blank" rel="noopener">Скачать</a>
-                                      <button className="btn ghost small" type="button" onClick={() => deleteClientDocument(row.id)}>Удалить</button>
+                                      <button className="btn ghost small" type="button" onClick={() => downloadClientDocument(row)}>Download</button>
+                                      <button className="btn ghost small" type="button" onClick={() => deleteClientDocument(row.id)}>Delete</button>
                                     </div>
                                   </td>
                                 </tr>
@@ -674,13 +665,13 @@ export default function AdminClientsPage() {
                     <div className="form-grid">
                       <label className="field"><span>Meta, %</span><input id="fee-meta" type="number" step="0.01" value={feesForm.meta} onChange={(e) => setFeesForm((s) => ({ ...s, meta: e.target.value }))} /></label>
                       <label className="field"><span>Google, %</span><input id="fee-google" type="number" step="0.01" value={feesForm.google} onChange={(e) => setFeesForm((s) => ({ ...s, google: e.target.value }))} /></label>
-                      <label className="field"><span>Яндекс, %</span><input id="fee-yandex" type="number" step="0.01" value={feesForm.yandex} onChange={(e) => setFeesForm((s) => ({ ...s, yandex: e.target.value }))} /></label>
+                      <label className="field"><span>Yandex, %</span><input id="fee-yandex" type="number" step="0.01" value={feesForm.yandex} onChange={(e) => setFeesForm((s) => ({ ...s, yandex: e.target.value }))} /></label>
                       <label className="field"><span>TikTok, %</span><input id="fee-tiktok" type="number" step="0.01" value={feesForm.tiktok} onChange={(e) => setFeesForm((s) => ({ ...s, tiktok: e.target.value }))} /></label>
                       <label className="field"><span>Telegram, %</span><input id="fee-telegram" type="number" step="0.01" value={feesForm.telegram} onChange={(e) => setFeesForm((s) => ({ ...s, telegram: e.target.value }))} /></label>
                       <label className="field"><span>Monochrome, %</span><input id="fee-monochrome" type="number" step="0.01" value={feesForm.monochrome} onChange={(e) => setFeesForm((s) => ({ ...s, monochrome: e.target.value }))} /></label>
                     </div>
                     <div className="panel-actions" style={{ marginTop: 12 }}>
-                      <button className="btn primary" type="button" onClick={saveFees}>Сохранить</button>
+                      <button className="btn primary" type="button" onClick={saveFees}>Save</button>
                     </div>
                   </div>
                 ) : null}
@@ -689,26 +680,31 @@ export default function AdminClientsPage() {
                   <div className="tab-panel active">
                     <div className="details-grid">
                       <div className="details-section">
-                        <h4>Контакты</h4>
+                        <h4>Contacts</h4>
                         <div className="details-row"><span className="details-label">Email</span><span>{clientProfile?.email || '—'}</span></div>
-                        <div className="details-row"><span className="details-label">Телефон</span><span>{clientProfile?.whatsapp_phone || '—'}</span></div>
+                        <div className="details-row"><span className="details-label">Phone</span><span>{clientProfile?.whatsapp_phone || '—'}</span></div>
                         <div className="details-row"><span className="details-label">Telegram</span><span>{clientProfile?.telegram_handle || '—'}</span></div>
                       </div>
                       <div className="details-section">
-                        <h4>Данные</h4>
-                        <div className="details-row"><span className="details-label">Имя</span><span>{clientProfile?.name || '—'}</span></div>
-                        <div className="details-row"><span className="details-label">Компания</span><span>{clientProfile?.company || '—'}</span></div>
-                        <div className="details-row"><span className="details-label">Язык</span><span>{clientProfile?.language || 'ru'}</span></div>
+                        <h4>Profile data</h4>
+                        <div className="details-row"><span className="details-label">Name</span><span>{clientProfile?.name || '—'}</span></div>
+                        <div className="details-row"><span className="details-label">Company</span><span>{clientProfile?.company || '—'}</span></div>
+                        <div className="details-row"><span className="details-label">Language</span><span>{clientProfile?.language || 'ru'}</span></div>
                       </div>
                     </div>
                   </div>
                 ) : null}
               </div>
+              {clientIssues.length ? (
+                <p className="muted" style={{ margin: 0 }}>
+                  Partial data: {clientIssues.map((item) => `${item.source} (${item.status})`).join(', ')}
+                </p>
+              ) : null}
               {modalStatus ? <p className="muted" style={{ marginTop: 10 }}>{modalStatus}</p> : null}
             </div>
           </div>
         </div>
       ) : null}
-    </AppShell>
+    </AdminShell>
   )
 }

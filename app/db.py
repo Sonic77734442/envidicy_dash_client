@@ -3,6 +3,7 @@ import re
 import sqlite3
 from urllib.parse import parse_qs, unquote, urlparse
 from contextlib import contextmanager
+from typing import Optional
 
 DB_URL = (os.getenv("DATABASE_URL") or "sqlite:///local.db").strip()
 DB_SCHEMA = (os.getenv("DB_SCHEMA") or "").strip()
@@ -13,7 +14,7 @@ def _is_postgres(url: str) -> bool:
     return scheme in {"postgres", "postgresql", "postgresql+psycopg", "postgres+psycopg"}
 
 
-def _extract_search_path(url: str) -> str | None:
+def _extract_search_path(url: str) -> Optional[str]:
     if DB_SCHEMA:
         return DB_SCHEMA
     parsed = urlparse(url)
@@ -133,8 +134,10 @@ def apply_schema():
                 if stmt.strip():
                     conn.execute(stmt)
             conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_client INTEGER DEFAULT 0")
+            conn.execute("ALTER TABLE account_requests ADD COLUMN IF NOT EXISTS contract_code TEXT")
             conn.execute("ALTER TABLE account_requests ADD COLUMN IF NOT EXISTS account_code TEXT")
             conn.execute("ALTER TABLE account_requests ADD COLUMN IF NOT EXISTS comment TEXT")
+            conn.execute("ALTER TABLE ad_accounts ADD COLUMN IF NOT EXISTS visible_to_client INTEGER DEFAULT 1")
             conn.execute("ALTER TABLE ad_accounts ADD COLUMN IF NOT EXISTS budget_total DOUBLE PRECISION")
             conn.execute("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS fee_config TEXT")
             conn.execute("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS notifications_seen_at TIMESTAMPTZ")
@@ -252,6 +255,44 @@ def apply_schema():
             conn.execute("ALTER TABLE client_finance_documents ADD COLUMN IF NOT EXISTS mime_type TEXT")
             conn.execute("ALTER TABLE client_finance_documents ADD COLUMN IF NOT EXISTS uploaded_by TEXT")
             conn.execute("ALTER TABLE client_finance_documents ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP")
+            conn.execute("""
+            CREATE TABLE IF NOT EXISTS ad_account_stats (
+              id BIGSERIAL PRIMARY KEY,
+              platform TEXT NOT NULL,
+              account_id BIGINT NOT NULL REFERENCES ad_accounts(id) ON DELETE CASCADE,
+              client_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              account_external_id TEXT,
+              stat_date DATE NOT NULL,
+              currency TEXT DEFAULT 'USD',
+              spend DOUBLE PRECISION DEFAULT 0,
+              impressions DOUBLE PRECISION DEFAULT 0,
+              clicks DOUBLE PRECISION DEFAULT 0,
+              raw_payload_json JSONB,
+              created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+              UNIQUE(account_id, stat_date)
+            )
+            """)
+            conn.execute("""
+            CREATE TABLE IF NOT EXISTS ad_account_finance_snapshots (
+              account_id BIGINT PRIMARY KEY REFERENCES ad_accounts(id) ON DELETE CASCADE,
+              platform TEXT NOT NULL,
+              client_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              account_external_id TEXT,
+              currency TEXT DEFAULT 'USD',
+              spend_today DOUBLE PRECISION DEFAULT 0,
+              spend_total DOUBLE PRECISION DEFAULT 0,
+              optional_balance DOUBLE PRECISION,
+              internal_client_balance DOUBLE PRECISION DEFAULT 0,
+              remaining_balance DOUBLE PRECISION DEFAULT 0,
+              last_synced_at TIMESTAMPTZ,
+              created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+            )
+            """)
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_ad_account_stats_client_date ON ad_account_stats(client_id, stat_date)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_ad_account_stats_platform_date ON ad_account_stats(platform, stat_date)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_ad_account_finance_snapshots_client ON ad_account_finance_snapshots(client_id)")
             conn.commit()
         return
     schema_path = os.path.join(os.path.dirname(__file__), "..", "db", "schema.sql")
@@ -298,6 +339,9 @@ def apply_schema():
               platform TEXT NOT NULL,
               name TEXT NOT NULL,
               payload JSON NOT NULL,
+              contract_code TEXT,
+              account_code TEXT,
+              comment TEXT,
               manager_email TEXT,
               status TEXT DEFAULT 'new',
               created_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -591,6 +635,52 @@ def apply_schema():
             );
             """,
         )
+        _ensure_table(
+            conn,
+            "ad_account_stats",
+            """
+            CREATE TABLE IF NOT EXISTS ad_account_stats (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              platform TEXT NOT NULL,
+              account_id INTEGER NOT NULL REFERENCES ad_accounts(id) ON DELETE CASCADE,
+              client_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              account_external_id TEXT,
+              stat_date DATE NOT NULL,
+              currency TEXT DEFAULT 'USD',
+              spend DOUBLE PRECISION DEFAULT 0,
+              impressions DOUBLE PRECISION DEFAULT 0,
+              clicks DOUBLE PRECISION DEFAULT 0,
+              raw_payload_json TEXT,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              UNIQUE(account_id, stat_date)
+            );
+            """,
+        )
+        _ensure_table(
+            conn,
+            "ad_account_finance_snapshots",
+            """
+            CREATE TABLE IF NOT EXISTS ad_account_finance_snapshots (
+              account_id INTEGER PRIMARY KEY REFERENCES ad_accounts(id) ON DELETE CASCADE,
+              platform TEXT NOT NULL,
+              client_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              account_external_id TEXT,
+              currency TEXT DEFAULT 'USD',
+              spend_today DOUBLE PRECISION DEFAULT 0,
+              spend_total DOUBLE PRECISION DEFAULT 0,
+              optional_balance DOUBLE PRECISION,
+              internal_client_balance DOUBLE PRECISION DEFAULT 0,
+              remaining_balance DOUBLE PRECISION DEFAULT 0,
+              last_synced_at TEXT,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+            """,
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_ad_account_stats_client_date ON ad_account_stats(client_id, stat_date)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_ad_account_stats_platform_date ON ad_account_stats(platform, stat_date)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_ad_account_finance_snapshots_client ON ad_account_finance_snapshots(client_id)")
         _ensure_column(conn, "wallet_transactions", "account_id", "INTEGER")
         _ensure_column(conn, "client_finance_documents", "document_type", "TEXT")
         _ensure_column(conn, "client_finance_documents", "title", "TEXT")
@@ -617,6 +707,8 @@ def apply_schema():
         _ensure_column(conn, "legal_entities", "full_name", "TEXT")
         _ensure_column(conn, "legal_entities", "legal_address", "TEXT")
         _ensure_column(conn, "account_requests", "manager_email", "TEXT")
+        _ensure_column(conn, "account_requests", "contract_code", "TEXT")
+        _ensure_column(conn, "account_requests", "account_code", "TEXT")
         _ensure_column(conn, "account_requests", "comment", "TEXT")
         _ensure_column(conn, "users", "password_hash", "TEXT")
         _ensure_column(conn, "users", "salt", "TEXT")
@@ -624,6 +716,7 @@ def apply_schema():
         _ensure_column(conn, "users", "is_client", "INTEGER")
         _ensure_column(conn, "ad_accounts", "user_id", "INTEGER")
         _ensure_column(conn, "ad_accounts", "account_code", "TEXT")
+        _ensure_column(conn, "ad_accounts", "visible_to_client", "INTEGER")
         _ensure_column(conn, "ad_accounts", "budget_total", "DOUBLE PRECISION")
         _ensure_column(conn, "topups", "user_id", "INTEGER")
         _ensure_column(conn, "topups", "seen_by_admin", "INTEGER")
@@ -632,6 +725,28 @@ def apply_schema():
         _ensure_column(conn, "account_funding_events", "reversal_for_event_id", "INTEGER")
         _ensure_column(conn, "account_funding_events", "voided_at", "TEXT")
         _ensure_column(conn, "account_funding_events", "voided_by", "TEXT")
+        _ensure_column(conn, "ad_account_stats", "platform", "TEXT")
+        _ensure_column(conn, "ad_account_stats", "account_id", "INTEGER")
+        _ensure_column(conn, "ad_account_stats", "client_id", "INTEGER")
+        _ensure_column(conn, "ad_account_stats", "account_external_id", "TEXT")
+        _ensure_column(conn, "ad_account_stats", "stat_date", "TEXT")
+        _ensure_column(conn, "ad_account_stats", "currency", "TEXT")
+        _ensure_column(conn, "ad_account_stats", "spend", "DOUBLE PRECISION")
+        _ensure_column(conn, "ad_account_stats", "impressions", "DOUBLE PRECISION")
+        _ensure_column(conn, "ad_account_stats", "clicks", "DOUBLE PRECISION")
+        _ensure_column(conn, "ad_account_stats", "raw_payload_json", "TEXT")
+        _ensure_column(conn, "ad_account_stats", "updated_at", "TEXT")
+        _ensure_column(conn, "ad_account_finance_snapshots", "platform", "TEXT")
+        _ensure_column(conn, "ad_account_finance_snapshots", "client_id", "INTEGER")
+        _ensure_column(conn, "ad_account_finance_snapshots", "account_external_id", "TEXT")
+        _ensure_column(conn, "ad_account_finance_snapshots", "currency", "TEXT")
+        _ensure_column(conn, "ad_account_finance_snapshots", "spend_today", "DOUBLE PRECISION")
+        _ensure_column(conn, "ad_account_finance_snapshots", "spend_total", "DOUBLE PRECISION")
+        _ensure_column(conn, "ad_account_finance_snapshots", "optional_balance", "DOUBLE PRECISION")
+        _ensure_column(conn, "ad_account_finance_snapshots", "internal_client_balance", "DOUBLE PRECISION")
+        _ensure_column(conn, "ad_account_finance_snapshots", "remaining_balance", "DOUBLE PRECISION")
+        _ensure_column(conn, "ad_account_finance_snapshots", "last_synced_at", "TEXT")
+        _ensure_column(conn, "ad_account_finance_snapshots", "updated_at", "TEXT")
         conn.commit()
 
 

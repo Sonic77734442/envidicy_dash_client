@@ -39,6 +39,25 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS agencies (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  owner_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  status TEXT DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS agency_members (
+  id BIGSERIAL PRIMARY KEY,
+  agency_id BIGINT REFERENCES agencies(id) ON DELETE CASCADE,
+  user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'client_viewer',
+  status TEXT DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(agency_id, user_id)
+);
+
 CREATE TABLE IF NOT EXISTS user_profiles (
   user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   name TEXT,
@@ -59,10 +78,69 @@ CREATE TABLE IF NOT EXISTS ad_accounts (
   external_id TEXT,
   name TEXT NOT NULL,
   account_code TEXT,
+  visible_to_client INTEGER DEFAULT 1,
   currency TEXT DEFAULT 'USD',
   budget_total DOUBLE PRECISION DEFAULT 0,
   status TEXT DEFAULT 'active',
   created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ad_account_stats (
+  id BIGSERIAL PRIMARY KEY,
+  platform TEXT NOT NULL,
+  account_id BIGINT NOT NULL REFERENCES ad_accounts(id) ON DELETE CASCADE,
+  client_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  account_external_id TEXT,
+  stat_date DATE NOT NULL,
+  currency TEXT DEFAULT 'USD',
+  spend DOUBLE PRECISION DEFAULT 0,
+  impressions DOUBLE PRECISION DEFAULT 0,
+  clicks DOUBLE PRECISION DEFAULT 0,
+  raw_payload_json JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(account_id, stat_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ad_account_stats_client_date ON ad_account_stats(client_id, stat_date);
+CREATE INDEX IF NOT EXISTS idx_ad_account_stats_platform_date ON ad_account_stats(platform, stat_date);
+
+CREATE TABLE IF NOT EXISTS ad_account_finance_snapshots (
+  account_id BIGINT PRIMARY KEY REFERENCES ad_accounts(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL,
+  client_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  account_external_id TEXT,
+  currency TEXT DEFAULT 'USD',
+  spend_today DOUBLE PRECISION DEFAULT 0,
+  spend_total DOUBLE PRECISION DEFAULT 0,
+  optional_balance DOUBLE PRECISION,
+  internal_client_balance DOUBLE PRECISION DEFAULT 0,
+  remaining_balance DOUBLE PRECISION DEFAULT 0,
+  last_synced_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ad_account_finance_snapshots_client ON ad_account_finance_snapshots(client_id);
+
+CREATE TABLE IF NOT EXISTS agency_ad_accounts (
+  id BIGSERIAL PRIMARY KEY,
+  agency_id BIGINT REFERENCES agencies(id) ON DELETE CASCADE,
+  ad_account_id BIGINT REFERENCES ad_accounts(id) ON DELETE CASCADE,
+  label TEXT,
+  status TEXT DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(agency_id, ad_account_id)
+);
+
+CREATE TABLE IF NOT EXISTS agency_user_account_access (
+  id BIGSERIAL PRIMARY KEY,
+  agency_id BIGINT REFERENCES agencies(id) ON DELETE CASCADE,
+  user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+  agency_ad_account_id BIGINT REFERENCES agency_ad_accounts(id) ON DELETE CASCADE,
+  access_level TEXT DEFAULT 'viewer',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(agency_id, user_id, agency_ad_account_id)
 );
 
 CREATE TABLE IF NOT EXISTS account_requests (
@@ -71,6 +149,7 @@ CREATE TABLE IF NOT EXISTS account_requests (
   platform TEXT NOT NULL,
   name TEXT NOT NULL,
   payload JSONB NOT NULL,
+  contract_code TEXT,
   account_code TEXT,
   comment TEXT,
   manager_email TEXT,

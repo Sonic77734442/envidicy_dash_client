@@ -3681,9 +3681,19 @@ def _list_user_agency_memberships(conn, user_id: int) -> List[Dict[str, object]]
 
 
 def _list_accessible_accounts(conn, current_user) -> List[Dict[str, object]]:
+    def _is_client_visible(row: Dict[str, object]) -> bool:
+        flag = row.get("visible_to_client", 1)
+        if flag is None:
+            return True
+        try:
+            return int(flag) != 0
+        except Exception:
+            return bool(flag)
+
     user_id = current_user["id"]
     fallback_rows = conn.execute("SELECT * FROM ad_accounts WHERE user_id=? ORDER BY created_at DESC", (user_id,)).fetchall()
     fallback_accounts = [dict(row) for row in fallback_rows]
+    fallback_visible = [row for row in fallback_accounts if _is_client_visible(row)]
 
     if current_user["email"] in ADMIN_EMAILS or current_user.get("primary_email") in ADMIN_EMAILS:
         rows = conn.execute("SELECT * FROM ad_accounts ORDER BY created_at DESC").fetchall()
@@ -3699,7 +3709,7 @@ def _list_accessible_accounts(conn, current_user) -> List[Dict[str, object]]:
             memberships = []
 
     if not memberships:
-        return fallback_accounts
+        return fallback_visible
 
     admin_agency_ids = [int(row["agency_id"]) for row in memberships if row.get("role") in {"owner", "agency_admin"}]
     if admin_agency_ids:
@@ -3715,10 +3725,11 @@ def _list_accessible_accounts(conn, current_user) -> List[Dict[str, object]]:
                 """,
                 admin_agency_ids,
             ).fetchall()
-            return [dict(row) for row in rows]
+            out = [dict(row) for row in rows]
+            return [row for row in out if _is_client_visible(row)]
         except Exception:
             logging.exception("Failed to list agency admin accounts for user_id=%s; fallback to direct accounts", user_id)
-            return fallback_accounts
+            return fallback_visible
 
     try:
         rows = conn.execute(
@@ -3732,10 +3743,11 @@ def _list_accessible_accounts(conn, current_user) -> List[Dict[str, object]]:
             """,
             (user_id,),
         ).fetchall()
-        return [dict(row) for row in rows]
+        out = [dict(row) for row in rows]
+        return [row for row in out if _is_client_visible(row)]
     except Exception:
         logging.exception("Failed to list delegated agency accounts for user_id=%s; fallback to direct accounts", user_id)
-        return fallback_accounts
+        return fallback_visible
 
 
 def _get_bearer_token(authorization: Optional[str]) -> Optional[str]:
@@ -3828,6 +3840,7 @@ class AccountRequestCreate(BaseModel):
 
 class AccountRequestUpdate(BaseModel):
     status: Literal["new", "processing", "approved", "rejected"]
+    contract_code: Optional[str] = None
     account_code: Optional[str] = None
     manager_email: Optional[str] = None
     comment: Optional[str] = None
@@ -3847,6 +3860,7 @@ class AdminAccountCreate(BaseModel):
     name: str
     external_id: Optional[str] = None
     account_code: Optional[str] = None
+    visible_to_client: Optional[bool] = True
     currency: str = "USD"
     status: Optional[str] = None
 
@@ -3857,6 +3871,7 @@ class AdminAccountUpdate(BaseModel):
     name: Optional[str] = None
     external_id: Optional[str] = None
     account_code: Optional[str] = None
+    visible_to_client: Optional[bool] = None
     currency: Optional[str] = None
     status: Optional[str] = None
 
@@ -4670,7 +4685,229 @@ def _attach_live_billing_many(rows: List[Dict[str, object]], force_refresh: bool
     return [_attach_live_billing(row, force_refresh=force_refresh) for row in rows]
 
 
-def _resolve_topup_account_amount(row: Dict[str, object]) -> Optional[float]:
+def _finance_to_float(value: object, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+
+def _finance_extract_optional_balance(live_billing: Optional[Dict[str, object]]) -> Optional[float]:
+    if not live_billing or not isinstance(live_billing, dict) or live_billing.get("error"):
+        return None
+    for key in ("balance", "available_balance", "cash_balance", "valid_cash_balance", "remain_cash"):
+        value = live_billing.get(key)
+        try:
+            numeric = float(value)
+            if numeric == numeric:
+                return numeric
+        except Exception:
+            continue
+    return None
+
+
+def _finance_resolve_client_id(conn, account: Dict[str, object]) -> int:
+    client_id = int(account.get("user_id") or 0)
+    if client_id > 0:
+        return client_id
+    account_id = int(account.get("id") or 0)
+    if account_id <= 0:
+        return 0
+    row = conn.execute("SELECT user_id FROM ad_accounts WHERE id=?", (account_id,)).fetchone()
+    if not row:
+        return 0
+    payload = dict(row)
+    return int(payload.get("user_id") or 0)
+
+
+def _finance_collect_daily_rows_for_account(account: Dict[str, object], date_from: str, date_to: str) -> List[Dict[str, object]]:
+    platform = str(account.get("platform") or "").lower().strip()
+    external_id = account.get("external_id") or account.get("account_code")
+    if platform not in {"meta", "google", "tiktok"} or not external_id:
+        return []
+
+    daily_map: Dict[str, Dict[str, object]] = {}
+
+    def _merge_row(date_value: object, row: Dict[str, object]) -> None:
+        date_key = str(date_value or "").strip()
+        if not date_key:
+            return
+        bucket = daily_map.get(date_key)
+        if not bucket:
+            bucket = {
+                "date": date_key,
+                "spend": 0.0,
+                "impressions": 0.0,
+                "clicks": 0.0,
+                "raw_payload_json": [],
+            }
+            daily_map[date_key] = bucket
+        bucket["spend"] += _finance_to_float(row.get("spend"))
+        bucket["impressions"] += _finance_to_float(row.get("impressions"))
+        bucket["clicks"] += _finance_to_float(row.get("clicks"))
+        casted_payload = bucket.get("raw_payload_json")
+        if isinstance(casted_payload, list):
+            casted_payload.append(dict(row))
+
+    if platform == "meta":
+        safe_from = _meta_safe_date_from(date_from)
+        rows = _meta_fetch_daily(str(external_id), safe_from, date_to)
+        for row in rows:
+            _merge_row(row.get("date_start"), row)
+    elif platform == "google":
+        customer_id = _google_valid_customer_id_or_none(external_id)
+        if not customer_id:
+            return []
+        rows = _google_fetch_daily(str(customer_id), date_from, date_to)
+        for row in rows:
+            _merge_row(row.get("date"), row)
+    elif platform == "tiktok":
+        advertiser_id = _tiktok_normalize_advertiser_id(str(external_id))
+        for chunk_from, chunk_to in _date_chunks(date_from, date_to, 30):
+            rows = _tiktok_fetch_daily(str(advertiser_id), chunk_from, chunk_to)
+            for row in rows:
+                _merge_row(row.get("date"), row)
+
+    prepared: List[Dict[str, object]] = []
+    for key in sorted(daily_map.keys()):
+        row = dict(daily_map[key])
+        raw_value = row.get("raw_payload_json")
+        if isinstance(raw_value, list):
+            row["raw_payload_json"] = json.dumps(raw_value, ensure_ascii=False)
+        prepared.append(row)
+    return prepared
+
+
+def _finance_upsert_daily_rows(conn, *, account: Dict[str, object], rows: List[Dict[str, object]]) -> None:
+    account_id = int(account.get("id") or 0)
+    client_id = _finance_resolve_client_id(conn, account)
+    if account_id <= 0 or client_id <= 0:
+        return
+    platform = str(account.get("platform") or "").lower().strip()
+    account_external_id = str(account.get("external_id") or account.get("account_code") or "")
+    currency = str(account.get("currency") or "USD").upper()
+    for row in rows:
+        stat_date = str(row.get("date") or "").strip()
+        if not stat_date:
+            continue
+        conn.execute(
+            """
+            INSERT INTO ad_account_stats
+              (platform, account_id, client_id, account_external_id, stat_date, currency, spend, impressions, clicks, raw_payload_json, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT(account_id, stat_date) DO UPDATE SET
+              platform=excluded.platform,
+              client_id=excluded.client_id,
+              account_external_id=excluded.account_external_id,
+              currency=excluded.currency,
+              spend=excluded.spend,
+              impressions=excluded.impressions,
+              clicks=excluded.clicks,
+              raw_payload_json=excluded.raw_payload_json,
+              updated_at=CURRENT_TIMESTAMP
+            """,
+            (
+                platform,
+                account_id,
+                client_id,
+                account_external_id,
+                stat_date,
+                currency,
+                _finance_to_float(row.get("spend")),
+                _finance_to_float(row.get("impressions")),
+                _finance_to_float(row.get("clicks")),
+                row.get("raw_payload_json"),
+            ),
+        )
+
+
+def _finance_refresh_snapshot_for_account(
+    conn,
+    *,
+    account: Dict[str, object],
+    refresh_live_billing: bool = False,
+) -> Dict[str, object]:
+    account_id = int(account.get("id") or 0)
+    client_id = _finance_resolve_client_id(conn, account)
+    if account_id <= 0 or client_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid account client mapping")
+    platform = str(account.get("platform") or "").lower().strip()
+    account_external_id = str(account.get("external_id") or account.get("account_code") or "")
+    currency = str(account.get("currency") or "USD").upper()
+
+    today_key = datetime.utcnow().date().isoformat()
+    total_row = conn.execute(
+        "SELECT COALESCE(SUM(spend), 0) AS total_spend FROM ad_account_stats WHERE account_id=?",
+        (account_id,),
+    ).fetchone()
+    today_row = conn.execute(
+        "SELECT COALESCE(SUM(spend), 0) AS today_spend FROM ad_account_stats WHERE account_id=? AND stat_date=?",
+        (account_id, today_key),
+    ).fetchone()
+    total_payload = dict(total_row) if total_row else {}
+    today_payload = dict(today_row) if today_row else {}
+    spend_total = _finance_to_float(total_payload.get("total_spend"))
+    spend_today = _finance_to_float(today_payload.get("today_spend"))
+
+    wallet = _get_or_create_wallet(conn, client_id)
+    internal_client_balance = _finance_to_float(wallet.get("balance"))
+
+    optional_balance = None
+    if refresh_live_billing:
+        live_payload = _attach_live_billing(account, force_refresh=True).get("live_billing")
+        optional_balance = _finance_extract_optional_balance(live_payload if isinstance(live_payload, dict) else None)
+
+    remaining_balance = internal_client_balance - spend_total
+    synced_at = datetime.utcnow().isoformat() + "Z"
+
+    conn.execute(
+        """
+        INSERT INTO ad_account_finance_snapshots
+          (account_id, platform, client_id, account_external_id, currency, spend_today, spend_total, optional_balance, internal_client_balance, remaining_balance, last_synced_at, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT(account_id) DO UPDATE SET
+          platform=excluded.platform,
+          client_id=excluded.client_id,
+          account_external_id=excluded.account_external_id,
+          currency=excluded.currency,
+          spend_today=excluded.spend_today,
+          spend_total=excluded.spend_total,
+          optional_balance=COALESCE(excluded.optional_balance, ad_account_finance_snapshots.optional_balance),
+          internal_client_balance=excluded.internal_client_balance,
+          remaining_balance=excluded.remaining_balance,
+          last_synced_at=excluded.last_synced_at,
+          updated_at=CURRENT_TIMESTAMP
+        """,
+        (
+            account_id,
+            platform,
+            client_id,
+            account_external_id,
+            currency,
+            spend_today,
+            spend_total,
+            optional_balance,
+            internal_client_balance,
+            remaining_balance,
+            synced_at,
+        ),
+    )
+
+    return {
+        "platform": platform,
+        "account_id": account_id,
+        "client_id": client_id,
+        "currency": currency,
+        "spend_today": round(spend_today, 6),
+        "spend_total": round(spend_total, 6),
+        "optional_balance": optional_balance,
+        "internal_client_balance": round(internal_client_balance, 6),
+        "remaining_balance": round(remaining_balance, 6),
+        "last_synced_at": synced_at,
+    }
+
+
+def _resolve_topup_account_amount(row: Dict[str, object], rates_data: Optional[Dict[str, object]] = None) -> Optional[float]:
     amount_input = row.get("amount_input")
     amount_net = row.get("amount_net")
     fx_rate = row.get("fx_rate")
@@ -4693,6 +4930,10 @@ def _resolve_topup_account_amount(row: Dict[str, object]) -> Optional[float]:
     except (TypeError, ValueError):
         fx_rate_value = None
 
+    fallback_rate_value = None
+    if (not fx_rate_value or fx_rate_value <= 0) and input_currency == "KZT" and account_currency in {"USD", "EUR"}:
+        fallback_rate_value = _get_marked_bcc_sell_rate(account_currency, rates_data)
+
     if account_currency and input_currency and account_currency == input_currency:
         return amount_net_value if amount_net_value is not None else amount_input_value
 
@@ -4703,6 +4944,9 @@ def _resolve_topup_account_amount(row: Dict[str, object]) -> Optional[float]:
         if amount_net_value > amount_input_value * 0.95:
             return calculated
         return amount_net_value
+
+    if fallback_rate_value and fallback_rate_value > 0 and amount_input_value is not None:
+        return amount_input_value / fallback_rate_value
 
     return amount_net_value if amount_net_value is not None else amount_input_value
 
@@ -4715,7 +4959,7 @@ def _attach_topup_account_amount(rows: List[Dict[str, object]]) -> List[Dict[str
     prepared = []
     for row in rows:
         payload = dict(row)
-        payload["amount_account"] = _resolve_topup_account_amount(payload)
+        payload["amount_account"] = _resolve_topup_account_amount(payload, rates_data)
         platform = str(payload.get("account_platform") or payload.get("platform") or "").lower()
         account_currency = payload.get("account_currency") or payload.get("currency") or "USD"
         if platform == "yandex":
@@ -4795,6 +5039,7 @@ def _record_account_funding_event(
     created_by: Optional[str] = None,
     occurred_at: Optional[str] = None,
     reversal_for_event_id: Optional[int] = None,
+    update_existing: bool = False,
 ) -> Optional[int]:
     platform_code = str(platform or "").lower()
     currency_code = str(currency or "USD").upper()
@@ -4806,6 +5051,38 @@ def _record_account_funding_event(
     if source_key:
         existing = conn.execute("SELECT id FROM account_funding_events WHERE source_key=?", (source_key,)).fetchone()
         if existing:
+            if update_existing:
+                conn.execute(
+                    """
+                    UPDATE account_funding_events
+                    SET account_id=?,
+                        user_id=?,
+                        platform=?,
+                        amount=?,
+                        currency=?,
+                        amount_usd=?,
+                        amount_kzt=?,
+                        note=?,
+                        created_by=?,
+                        reversal_for_event_id=?,
+                        created_at=?
+                    WHERE id=?
+                    """,
+                    (
+                        account_id,
+                        user_id,
+                        platform,
+                        float(amount or 0),
+                        currency_code,
+                        amount_usd,
+                        amount_kzt,
+                        note,
+                        created_by,
+                        reversal_for_event_id,
+                        occurred_at or datetime.utcnow().isoformat(),
+                        int(existing["id"]),
+                    ),
+                )
             return int(existing["id"])
     created_at = occurred_at or datetime.utcnow().isoformat()
     cur = conn.execute(
@@ -4885,6 +5162,7 @@ def _sync_completed_topup_funding_events(conn, user_id: Optional[int] = None, ac
             source_id=row.get("id"),
             note=f"Topup #{row.get('id')}",
             occurred_at=row.get("created_at"),
+            update_existing=True,
         )
 
 
@@ -8650,8 +8928,8 @@ def admin_create_account(payload: AdminAccountCreate, admin_user=Depends(get_adm
             raise HTTPException(status_code=404, detail="User not found")
         cur = conn.execute(
             """
-            INSERT INTO ad_accounts (user_id, platform, name, external_id, account_code, currency, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO ad_accounts (user_id, platform, name, external_id, account_code, visible_to_client, currency, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 payload.user_id,
@@ -8659,6 +8937,7 @@ def admin_create_account(payload: AdminAccountCreate, admin_user=Depends(get_adm
                 payload.name,
                 payload.external_id,
                 payload.account_code,
+                1 if payload.visible_to_client is None else (1 if payload.visible_to_client else 0),
                 normalized_currency,
                 payload.status or "pending",
             ),
@@ -8680,6 +8959,7 @@ def admin_create_account(payload: AdminAccountCreate, admin_user=Depends(get_adm
             "name": payload.name,
             "external_id": payload.external_id,
             "account_code": payload.account_code,
+            "visible_to_client": 1 if payload.visible_to_client is None else (1 if payload.visible_to_client else 0),
             "currency": normalized_currency,
             "status": payload.status or "pending",
         }
@@ -8717,6 +8997,9 @@ def admin_update_account(account_id: int, payload: AdminAccountUpdate, admin_use
         if payload.account_code is not None:
             updates.append("account_code=?")
             params.append(payload.account_code)
+        if payload.visible_to_client is not None:
+            updates.append("visible_to_client=?")
+            params.append(1 if payload.visible_to_client else 0)
         if payload.currency is not None:
             updates.append("currency=?")
             params.append("KZT" if next_platform == "yandex" else payload.currency)
@@ -9250,21 +9533,25 @@ def admin_export_topups(admin_user=Depends(get_admin_user)):
             """
         ).fetchall()
         for row in rows:
-            fee = (row["amount_input"] or 0) * (row["fee_percent"] or 0) / 100.0
-            vat = (row["amount_input"] or 0) * (row["vat_percent"] or 0) / 100.0
-            gross = (row["amount_input"] or 0) + fee + vat
+            payload = dict(row)
+            amount_input = float(payload.get("amount_input") or 0)
+            fee_percent = float(payload.get("fee_percent") or 0)
+            vat_percent = float(payload.get("vat_percent") or 0)
+            fee = amount_input * fee_percent / 100.0
+            vat = amount_input * vat_percent / 100.0
+            gross = amount_input + fee + vat
             ws.append(
                 [
-                    row["created_at"],
-                    row["user_email"],
-                    row["account_platform"],
-                    row["account_name"],
-                    row["amount_input"],
+                    payload.get("created_at"),
+                    payload.get("user_email"),
+                    payload.get("account_platform"),
+                    payload.get("account_name"),
+                    amount_input,
                     round(fee, 2),
                     round(vat, 2),
                     round(gross, 2),
-                    row["currency"],
-                    row["status"],
+                    payload.get("currency"),
+                    payload.get("status"),
                 ]
             )
     buf = BytesIO()
@@ -9316,7 +9603,7 @@ def admin_update_topup_status(topup_id: int, status: TopUpStatus, admin_user=Dep
                     INSERT INTO wallet_transactions (user_id, account_id, amount, currency, type, note)
                     VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                    (row["user_id"], row["account_id"], -gross_amount, row["currency"], "topup", "Account topup"),
+                    (row["user_id"], row["account_id"], -gross_amount, row["currency"], "topup", f"Account topup #{topup_id}"),
                 )
                 conn.execute("UPDATE topups SET status=? WHERE id=?", (next_status, topup_id))
 
@@ -9473,6 +9760,11 @@ def admin_update_account_request_status(
             conn.execute(
                 "UPDATE account_requests SET account_code=? WHERE id=?",
                 (payload.account_code, request_id),
+            )
+        if payload.contract_code is not None:
+            conn.execute(
+                "UPDATE account_requests SET contract_code=? WHERE id=?",
+                (payload.contract_code, request_id),
             )
         default_currency = "EUR" if row["platform"] == "telegram" else "USD"
         if payload.budget_total is not None:
@@ -9726,6 +10018,150 @@ def list_accounts_period_spend(
     return {"date_from": date_from, "date_to": date_to, "items": items}
 
 
+@app.post("/accounts/finance/sync")
+def sync_accounts_finance(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    account_id: Optional[int] = None,
+    refresh_live_billing: int = 0,
+    current_user=Depends(get_current_user),
+):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+
+    today_iso = datetime.utcnow().date().isoformat()
+    from_value = date_from or date_to or today_iso
+    to_value = date_to or from_value
+    try:
+        from_dt = datetime.strptime(from_value, "%Y-%m-%d").date()
+        to_dt = datetime.strptime(to_value, "%Y-%m-%d").date()
+    except Exception:
+        raise HTTPException(status_code=400, detail="date_from/date_to must be in YYYY-MM-DD format")
+    if from_dt > to_dt:
+        raise HTTPException(status_code=400, detail="date_from must be less than or equal to date_to")
+
+    with get_conn() as conn:
+        accounts = [dict(row) for row in _list_accessible_accounts(conn, current_user)]
+        accounts = [row for row in accounts if str(row.get("platform") or "").lower().strip() in {"meta", "google", "tiktok"}]
+        if account_id is not None:
+            accounts = [row for row in accounts if int(row.get("id") or 0) == int(account_id)]
+            if not accounts:
+                raise HTTPException(status_code=404, detail="Account not found")
+
+        items: List[Dict[str, object]] = []
+        ok_count = 0
+        for account in accounts:
+            account_payload: Dict[str, object] = {
+                "account_id": account.get("id"),
+                "platform": account.get("platform"),
+            }
+            try:
+                daily_rows = _finance_collect_daily_rows_for_account(account, from_value, to_value)
+                _finance_upsert_daily_rows(conn, account=account, rows=daily_rows)
+                snapshot = _finance_refresh_snapshot_for_account(
+                    conn,
+                    account=account,
+                    refresh_live_billing=bool(refresh_live_billing),
+                )
+                account_payload.update(snapshot)
+                account_payload["synced_days"] = len(daily_rows)
+                account_payload["status"] = "ok"
+                ok_count += 1
+            except Exception as exc:
+                logging.exception("Finance sync failed for account_id=%s", account.get("id"))
+                account_payload["status"] = "error"
+                account_payload["error"] = str(exc)
+            items.append(account_payload)
+
+        conn.commit()
+        return {
+            "ok": True,
+            "date_from": from_value,
+            "date_to": to_value,
+            "requested_count": len(accounts),
+            "synced_count": ok_count,
+            "items": items,
+        }
+
+
+@app.get("/accounts/finance/summary")
+def accounts_finance_summary(
+    account_id: Optional[int] = None,
+    current_user=Depends(get_current_user),
+):
+    if not get_conn:
+        raise HTTPException(status_code=500, detail="DB not initialized")
+
+    with get_conn() as conn:
+        accounts = [dict(row) for row in _list_accessible_accounts(conn, current_user)]
+        accounts = [row for row in accounts if str(row.get("platform") or "").lower().strip() in {"meta", "google", "tiktok"}]
+        if account_id is not None:
+            accounts = [row for row in accounts if int(row.get("id") or 0) == int(account_id)]
+            if not accounts:
+                raise HTTPException(status_code=404, detail="Account not found")
+
+        wallet = _get_or_create_wallet(conn, current_user["id"])
+        internal_client_balance = _finance_to_float(wallet.get("balance"))
+
+        snapshot_map: Dict[int, Dict[str, object]] = {}
+        if accounts:
+            account_ids = [int(row.get("id") or 0) for row in accounts if int(row.get("id") or 0) > 0]
+            if account_ids:
+                placeholders = ",".join(["?"] * len(account_ids))
+                rows = conn.execute(
+                    f"""
+                    SELECT *
+                    FROM ad_account_finance_snapshots
+                    WHERE client_id=? AND account_id IN ({placeholders})
+                    """,
+                    [current_user["id"], *account_ids],
+                ).fetchall()
+                snapshot_map = {int(row["account_id"]): dict(row) for row in rows}
+
+        items: List[Dict[str, object]] = []
+        for acc in accounts:
+            acc_id = int(acc.get("id") or 0)
+            platform = str(acc.get("platform") or "").lower().strip()
+            currency = str(acc.get("currency") or "USD").upper()
+            snapshot = snapshot_map.get(acc_id)
+            spend_today = _finance_to_float(snapshot.get("spend_today")) if snapshot else 0.0
+            spend_total = _finance_to_float(snapshot.get("spend_total")) if snapshot else 0.0
+            optional_balance = snapshot.get("optional_balance") if snapshot else None
+            remaining_balance = (
+                _finance_to_float(snapshot.get("remaining_balance"))
+                if snapshot
+                else internal_client_balance - spend_total
+            )
+            last_synced_at = snapshot.get("last_synced_at") if snapshot else None
+
+            items.append(
+                {
+                    "platform": platform,
+                    "account_id": acc_id,
+                    "client_id": int(acc.get("user_id") or current_user["id"]),
+                    "currency": currency,
+                    "spend_today": round(spend_today, 6),
+                    "spend_total": round(spend_total, 6),
+                    "optional_balance": optional_balance,
+                    "internal_client_balance": round(internal_client_balance, 6),
+                    "remaining_balance": round(remaining_balance, 6),
+                    "last_synced_at": last_synced_at,
+                    "account_name": acc.get("name"),
+                    "status": acc.get("status"),
+                    "sync_state": "ready" if last_synced_at else "pending_sync",
+                }
+            )
+
+        conn.commit()
+        return {
+            "items": items,
+            "count": len(items),
+            "client_id": current_user["id"],
+            "wallet_currency": wallet.get("currency") or "KZT",
+            "internal_client_balance": round(internal_client_balance, 6),
+        }
+
+
 @app.post("/accounts/{account_id}/refresh-live-billing")
 def refresh_account_live_billing(account_id: int, current_user=Depends(get_current_user)):
     if not get_conn:
@@ -9803,17 +10239,40 @@ def account_funding_totals(current_user=Depends(get_current_user)):
     if not get_conn:
         return {"items": []}
     with get_conn() as conn:
-        totals_map = _account_funding_totals_map(conn, current_user["id"])
-        items = [
-            {
-                "account_id": int(account_id),
-                "amount": payload["amount"],
-                "currency": payload["currency"],
-                "amount_kzt": payload["amount_kzt"],
-                "amount_usd": payload["amount_usd"],
-            }
-            for account_id, payload in sorted(totals_map.items(), key=lambda item: int(item[0]))
-        ]
+        rows = conn.execute(
+            """
+            SELECT
+              t.*,
+              a.platform as account_platform,
+              a.currency as account_currency
+            FROM topups t
+            JOIN ad_accounts a ON a.id = t.account_id
+            WHERE t.user_id=? AND t.status IN ('pending', 'completed')
+            ORDER BY t.created_at DESC
+            """,
+            (current_user["id"],),
+        ).fetchall()
+        prepared = _attach_topup_account_amount([dict(row) for row in rows])
+        totals_map: Dict[str, Dict[str, object]] = {}
+        for row in prepared:
+            account_id = row.get("account_id")
+            if not account_id:
+                continue
+            key = str(account_id)
+            bucket = totals_map.setdefault(
+                key,
+                {
+                    "account_id": int(account_id),
+                    "amount": 0.0,
+                    "currency": row.get("account_currency") or row.get("currency") or "USD",
+                    "amount_kzt": 0.0,
+                    "amount_usd": 0.0,
+                },
+            )
+            bucket["amount"] = float(bucket["amount"] or 0) + float(row.get("amount_account") or 0)
+            bucket["amount_kzt"] = float(bucket["amount_kzt"] or 0) + float(row.get("amount_account_kzt") or 0)
+            bucket["amount_usd"] = float(bucket["amount_usd"] or 0) + float(row.get("amount_account_usd") or 0)
+        items = [totals_map[key] for key in sorted(totals_map.keys(), key=lambda value: int(value))]
         conn.commit()
         return {"items": items}
 

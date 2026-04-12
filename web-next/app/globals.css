@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL,GRAD,opsz@100..700,0..1,0,24&display=swap");
 
 :root {
   --bg: #0b1021;
@@ -23,7 +23,7 @@ body {
     radial-gradient(circle at 78% 12%, rgba(61, 182, 255, 0.1), transparent 30%),
     var(--bg);
   color: var(--text);
-  font-family: "Manrope", "Space Grotesk", "Segoe UI", sans-serif;
+  font-family: "Inter", "Segoe UI", sans-serif;
 }
 
 .auth-page {
